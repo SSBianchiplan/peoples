@@ -221,6 +221,7 @@ class Config:
     idioma: str = idiomas.PADRAO
     usuario_id: str | None = None   # qual unidade é a pessoa logada
     maria_modelo: str = ""          # sobrepõe MARIA_MODEL; a chave fica no ambiente
+    maria_cota_usd: float = 20.0    # cota mensal padrão de IA por pessoa (US$); ver ia_cota
     profundidade_aberta: int = 1
     # O passo a passo de boas-vindas. Ligado por padrão: quem já sabe usar
     # desliga uma vez e nunca mais vê; quem não sabe não descobre um recurso que

@@ -227,6 +227,17 @@
       <p class="pista">{{ t('Sobrepõe <code>MARIA_MODEL</code> do ambiente. A chave da API continua vindo só do ambiente — credencial em estado gravado vai junto no backup.')|safe }}</p>
       <div class="acoes"><button class="bt" style="flex:0 0 170px">{{ t('Salvar modelo') }}</button></div>
     </form>
+
+    <h3 style="margin-top:16px">{{ t('Cota de IA do mês') }}</h3>
+    <p class="sub">{{ t('Gasto este mês: US$ {gasto} de US$ {cota}.', gasto='%.2f'|format(maria.cota.gasto_usd), cota='%.2f'|format(maria.cota.cota_usd)) }}</p>
+    {% if e_admin %}
+    <form hx-post="/maria/cota" hx-target="#area" hx-swap="innerHTML">
+      <label for="m-cota">{{ t('Cota mensal padrão por pessoa (US$)') }}</label>
+      <input id="m-cota" name="cota_usd" type="number" min="0" max="10000" step="0.01"
+             value="{{ '%.2f'|format(maria.cota.padrao_usd) }}">
+      <div class="acoes"><button class="bt" style="flex:0 0 170px">{{ t('Salvar cota') }}</button></div>
+    </form>
+    {% endif %}
   </div>
 
   {# ------------------------------------------------------------------ #}

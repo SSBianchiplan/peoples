@@ -71,6 +71,7 @@ from . import gramatica
 from . import equipes as equipesmod
 from . import m365 as m365mod
 from . import maria as mariamod
+from . import ia_cota
 from . import organogramas as orgsmod
 from . import relatorio as relatoriomod
 from . import pdf as pdfmod
@@ -4304,6 +4305,7 @@ def contexto_maria(ultima: dict | None = None, agente: dict | None = None,
         "capacidades": mariamod.CAPACIDADES,
         "escopo": rotulo,
         "resumo": mariamod.resumo(ESTADO.assistencias),
+        "cota": cota_maria(),
         "historico": list(reversed(ESTADO.assistencias))[:40],
         "ultima": ultima,
         "agente": agente,
@@ -4311,9 +4313,49 @@ def contexto_maria(ultima: dict | None = None, agente: dict | None = None,
     }
 
 
+def quem_ia() -> str:
+    """Chave da pessoa no ledger de IA: a unidade logada, ou `anon` no modo aberto."""
+    return str(acesso_vigente().usuario_id or "anon")
+
+
+def cota_padrao_ia() -> float:
+    try:
+        return ia_cota.valida_cota(ESTADO.config.maria_cota_usd)
+    except ValueError:
+        return ia_cota.COTA_PADRAO_USD
+
+
+def cota_maria() -> dict:
+    quem = quem_ia()
+    try:
+        return {"gasto_usd": round(ia_cota.gasto_do_mes(quem), 4),
+                "cota_usd": ia_cota.cota_de(quem, cota_padrao_ia()),
+                "padrao_usd": cota_padrao_ia()}
+    except Exception:                                # noqa: BLE001  tela abre sem o ledger
+        return {"gasto_usd": 0.0, "cota_usd": cota_padrao_ia(),
+                "padrao_usd": cota_padrao_ia()}
+
+
+async def corpo_ia(req: Request, tela) -> HTMLResponse | None:
+    """Teto do corpo das rotas de IA (413) antes de ler o formulário."""
+    try:
+        await ia_cota.corpo_limitado(req)
+    except ia_cota.Recusa as r:
+        return HTMLResponse(tela() + alerta(r.mensagem), status_code=r.status)
+    return None
+
+
+def status_ia(r: dict) -> int:
+    """402 (cota) e 429 (ritmo) saem com o status certo; o resto segue 200."""
+    return int(r.get("status") or 200)
+
+
 @app.post("/maria/perguntar", response_class=HTMLResponse)
 async def maria_perguntar(req: Request):
     """Uma pergunta à MarIA. Toda resposta vira registro no histórico."""
+    if (barrado := await corpo_ia(req, lambda: render(
+            "_maria.html", request=req, vista="maria", maria=contexto_maria()))):
+        return barrado
     form = await req.form()
     capacidade = str(form.get("capacidade", mariamod.DESCREVER))
     pergunta = str(form.get("pergunta", ""))
@@ -4324,7 +4366,12 @@ async def maria_perguntar(req: Request):
     r = mariamod.perguntar(
         pergunta,
         mariamod.contexto(ESTADO.unidades, mapa_cc(), ESTADO.config, ids),
-        idioma=ESTADO.config.idioma, capacidade=capacidade, modelo=modelo)
+        idioma=ESTADO.config.idioma, capacidade=capacidade, modelo=modelo,
+        quem=quem_ia(), cota_padrao=cota_padrao_ia(), recurso="perguntar")
+    if r.get("status"):
+        return HTMLResponse(render("_maria.html", request=req, vista="maria",
+                                   maria=contexto_maria(recorte=recorte))
+                            + alerta(r["mensagem"]), status_code=status_ia(r))
 
     registro = mariamod.assistencia(pergunta, r, usuario_atual(), capacidade,
                                     ESTADO.config.idioma, rotulo)
@@ -4567,6 +4614,9 @@ async def chat_perguntar(req: Request):
     MarIA responderia cada pergunta como se fosse a primeira, e conversa que
     não lembra do que foi dito não é conversa.
     """
+    if (barrado := await corpo_ia(req, lambda: render(
+            "_maria_chat.html", request=req, chat=contexto_chat()))):
+        return barrado
     form = await req.form()
     pergunta = str(form.get("pergunta", "")).strip()
     recorte = str(form.get("recorte", ""))
@@ -4590,7 +4640,14 @@ async def chat_perguntar(req: Request):
     r = mariamod.perguntar(
         entrada, mariamod.contexto(ESTADO.unidades, mapa_cc(), ESTADO.config, ids),
         idioma=ESTADO.config.idioma, capacidade=capacidade,
-        modelo=ESTADO.config.maria_modelo)
+        modelo=ESTADO.config.maria_modelo,
+        quem=quem_ia(), cota_padrao=cota_padrao_ia(), recurso="chat")
+    if r.get("status"):
+        # Cota/ritmo: a pergunta não foi respondida e não fica no fio.
+        ESTADO.conversa.pop()
+        return HTMLResponse(render("_maria_chat.html", request=req,
+                                   chat=contexto_chat(recorte, capacidade))
+                            + alerta(r["mensagem"]), status_code=status_ia(r))
 
     registro = mariamod.assistencia(pergunta, r, usuario_atual(),
                                     capacidade, ESTADO.config.idioma,
@@ -4622,6 +4679,9 @@ async def maria_agente(req: Request):
         return HTMLResponse(render("_maria.html", request=req, vista="maria",
                                    maria=contexto_maria())
                             + alerta(negado(NIVEL_EDITOR)))
+    if (barrado := await corpo_ia(req, lambda: render(
+            "_maria.html", request=req, vista="maria", maria=contexto_maria()))):
+        return barrado
     form = await req.form()
     pedido = str(form.get("pedido", "")).strip()
     recorte = str(form.get("recorte", ""))
@@ -4636,7 +4696,12 @@ async def maria_agente(req: Request):
         pedido, mariamod.contexto(ESTADO.unidades, mapa_cc(), ESTADO.config, ids),
         niveis={n["codigo"] for n in ESTADO.config.niveis if n.get("ativo", True)},
         nomes={u.nome for u in us},
-        idioma=ESTADO.config.idioma, modelo=ESTADO.config.maria_modelo)
+        idioma=ESTADO.config.idioma, modelo=ESTADO.config.maria_modelo,
+        quem=quem_ia(), cota_padrao=cota_padrao_ia())
+    if r.get("status"):
+        return HTMLResponse(render("_maria.html", request=req, vista="maria",
+                                   maria=contexto_maria())
+                            + alerta(r["mensagem"]), status_code=status_ia(r))
 
     ESTADO.assistencias.append(mariamod.assistencia(
         pedido, r, usuario_atual(), mariamod.PLANEJAR, ESTADO.config.idioma,
@@ -4810,6 +4875,54 @@ def maria_modelo(req: Request, modelo: str = Form("")):
     return HTMLResponse(render("_maria.html", request=req, vista="maria",
                                maria=contexto_maria())
                         + alerta(T("Modelo salvo: {modelo}", modelo=modelo)))
+
+
+@app.post("/maria/cota", response_class=HTMLResponse)
+def maria_cota(req: Request, cota_usd: str = Form("")):
+    """Cota mensal PADRÃO de IA por pessoa (US$). Só administrador."""
+    tela = lambda: render("_maria.html", request=req, vista="maria",  # noqa: E731
+                          maria=contexto_maria())
+    if negado(NIVEL_ADMIN):
+        return HTMLResponse(tela() + alerta(negado(NIVEL_ADMIN)), status_code=403)
+    try:
+        q = ia_cota.valida_cota(cota_usd)
+    except ValueError as e:
+        return HTMLResponse(tela() + alerta(str(e)), status_code=400)
+    ESTADO.config.maria_cota_usd = q
+    commit("alterar", "-", "cota de IA da MarIA", {"cota_usd": q})
+    return HTMLResponse(tela() + alerta(f"Cota padrão salva: US$ {q:.2f}"))
+
+
+@app.get("/maria/cota/uso")
+def maria_cota_uso():
+    """Gasto de IA do mês: todas as pessoas para o administrador, só a própria
+    para os demais."""
+    quem = None if negado(NIVEL_ADMIN) is None else quem_ia()
+    return JSONResponse({"padrao_usd": cota_padrao_ia(),
+                         "pessoas": ia_cota.resumo_do_mes(quem)})
+
+
+@app.put("/maria/cota/{usuario_id}")
+async def maria_cota_pessoa(req: Request, usuario_id: str):
+    """Cota própria de uma pessoa (`{"cota_usd": 5}`; vazio/null volta ao
+    padrão). Só administrador."""
+    if (m := negado(NIVEL_ADMIN)):
+        return JSONResponse({"erro": m}, status_code=403)
+    try:
+        await ia_cota.corpo_limitado(req, 4096)
+        d = json.loads(req._body or b"{}")
+        q = ia_cota.define_cota(usuario_id[:80], (d or {}).get("cota_usd"))
+    except ia_cota.Recusa as r:
+        return JSONResponse({"erro": r.mensagem}, status_code=r.status)
+    except (ValueError, AttributeError) as e:
+        return JSONResponse({"erro": str(e) if isinstance(e, ValueError)
+                             and str(e).startswith("Cota") else "Pedido inválido."},
+                            status_code=400)
+    registrar("alterar", "-", "cota de IA de uma pessoa",
+              {"usuario_id": usuario_id[:80], "cota_usd": q})
+    gravar()
+    return JSONResponse({"usuario_id": usuario_id[:80], "cota_usd": q,
+                         "padrao_usd": cota_padrao_ia()})
 
 
 # --- diretorio social -------------------------------------------------------

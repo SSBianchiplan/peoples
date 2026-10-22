@@ -44,10 +44,13 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 import uuid
 from datetime import datetime, timezone
+
+from . import ia_cota
 
 API = "https://api.anthropic.com/v1/messages"
 VERSAO_API = "2023-06-01"
@@ -90,7 +93,12 @@ DE_CONVERSA = tuple((c[0], c[1], c[2]) for c in CAPACIDADES
                     if c[5] and c[3] != "mutação")
 
 # USD por milhão de tokens. Mesma tabela do Planner — o custo é o mesmo modelo.
+# A geração 5.5 entra com os preços do Studio. O genérico fica no preço mais alto
+# da tabela: modelo desconhecido cobra MAIS da cota, nunca menos.
 PRECOS = {
+    "claude-opus-5-5": {"in": 4, "out": 20},
+    "claude-sonnet-5-5": {"in": 2, "out": 10},
+    "claude-haiku-5-5": {"in": 0.10, "out": 0.50},
     "claude-opus-5": {"in": 15, "out": 75},
     "claude-opus-4-8": {"in": 15, "out": 75},
     "claude-opus-4-1": {"in": 15, "out": 75},
@@ -130,9 +138,12 @@ def preco(modelo: str) -> dict:
     return PRECOS.get(prefixo or "default", PRECOS["default"])
 
 
-def custo(modelo: str, entrada: int, saida: int) -> float:
+def custo(modelo: str, entrada: int, saida: int,
+          cache_escrita: int = 0, cache_leitura: int = 0) -> float:
     p = preco(modelo)
-    return (entrada / 1e6) * p["in"] + (saida / 1e6) * p["out"]
+    return ((entrada / 1e6) * p["in"] + (saida / 1e6) * p["out"]
+            + (cache_escrita / 1e6) * p["in"] * 1.25
+            + (cache_leitura / 1e6) * p["in"] * 0.1)
 
 
 def permitida(capacidade: str) -> bool:
@@ -247,11 +258,17 @@ def prompt(capacidade: str, pergunta: str, ctx: dict, idioma: str) -> str:
 # ---------------------------------------------------------------------------
 def perguntar(texto: str, ctx: dict, idioma: str = "pt-BR",
               capacidade: str = DESCREVER, modelo: str = "",
-              max_tokens: int = 1600, tempo: int = 60) -> dict:
+              max_tokens: int = 1600, tempo: int = 60, quem: str = "",
+              cota_padrao: float | None = None, recurso: str = "") -> dict:
     """Uma chamada ao modelo. Nunca levanta: devolve `ok` e o motivo.
 
     Sem SDK: a API é um POST de JSON, e uma dependência a mais só para montar
     esse POST não se paga num projeto que não tem etapa de build.
+
+    Cota (ia_cota): antes da chamada, gasto do mês >= cota devolve `status` 402
+    e excesso de ritmo devolve 429 — sem chamar o modelo. Depois, o uso REAL
+    (`usage` da resposta) é gravado no ledger, também quando a chamada falha.
+    Mensagem de erro para a tela nunca leva o corpo da resposta da Anthropic.
     """
     if not permitida(capacidade):
         return {"ok": False, "motivo": "capacidade_indisponivel",
@@ -262,7 +279,15 @@ def perguntar(texto: str, ctx: dict, idioma: str = "pt-BR",
     if not (texto or "").strip():
         return {"ok": False, "motivo": "vazio", "mensagem": "Escreva a pergunta."}
 
-    modelo = modelo or modelo_padrao()
+    if modelo not in modelos():
+        modelo = modelo_padrao()
+    quem = quem or "anon"
+    try:
+        ia_cota.verificar(quem, cota_padrao)
+    except ia_cota.Recusa as r:
+        return {"ok": False, "motivo": "cota" if r.status == 402 else "ritmo",
+                "status": r.status, "mensagem": r.mensagem}
+    texto = texto.strip()[:8000]
     corpo = json.dumps({
         "model": modelo,
         "max_tokens": max_tokens,
@@ -275,27 +300,55 @@ def perguntar(texto: str, ctx: dict, idioma: str = "pt-BR",
         "x-api-key": chave(),
         "anthropic-version": VERSAO_API,
     })
-    try:
-        with urllib.request.urlopen(pedido, timeout=tempo) as r:
-            resposta = json.loads(r.read())
-    except urllib.error.HTTPError as erro:
-        detalhe = erro.read().decode("utf-8", "replace")[:300]
-        return {"ok": False, "motivo": "http", "mensagem": f"{erro.code}: {detalhe}"}
-    except Exception as erro:                        # noqa: BLE001
-        return {"ok": False, "motivo": "rede", "mensagem": str(erro)[:200]}
+    t0 = time.time()
+    resposta, uso, erro_curto = {}, {}, None
+    with ia_cota.em_curso(quem):
+        try:
+            with urllib.request.urlopen(pedido, timeout=tempo) as r:
+                resposta = json.loads(r.read())
+            uso = resposta.get("usage") or {}
+        except urllib.error.HTTPError as erro:
+            # O corpo da Anthropic NÃO vai à tela (pode citar conta, limites,
+            # o próprio pedido); fica só o código no ledger.
+            erro_curto = f"http_{erro.code}"
+        except Exception as erro:                    # noqa: BLE001
+            erro_curto = "rede:" + type(erro).__name__
+        finally:
+            modelo_usado = str(resposta.get("model") or modelo)
+            valor = custo(modelo_usado, int(uso.get("input_tokens") or 0),
+                          int(uso.get("output_tokens") or 0),
+                          int(uso.get("cache_creation_input_tokens") or 0),
+                          int(uso.get("cache_read_input_tokens") or 0)) if uso else 0.0
+            try:
+                ia_cota.registrar(quem, recurso or capacidade, modelo_usado, uso,
+                                  valor, erro_curto is None, erro_curto,
+                                  int((time.time() - t0) * 1000))
+            except Exception:                        # noqa: BLE001  ledger não derruba a resposta
+                pass
+
+    if erro_curto:
+        if erro_curto in ("http_401", "http_403"):
+            msg = "A chave da Anthropic foi recusada. Fale com um administrador."
+        elif erro_curto == "http_429":
+            msg = "Limite de uso da Anthropic atingido no momento. Tente em instantes."
+        elif erro_curto.startswith("http_"):
+            msg = "O serviço de IA não respondeu como esperado. Tente de novo em instantes."
+        else:
+            msg = "Sem conexão com o serviço de IA. Tente de novo em instantes."
+        return {"ok": False, "motivo": "http" if erro_curto.startswith("http_") else "rede",
+                "mensagem": msg}
 
     partes = [b.get("text", "") for b in resposta.get("content", [])
               if b.get("type") == "text"]
-    uso = resposta.get("usage") or {}
-    entrada = int(uso.get("input_tokens", 0))
-    saida = int(uso.get("output_tokens", 0))
+    entrada = int(uso.get("input_tokens") or 0)
+    saida = int(uso.get("output_tokens") or 0)
     return {
         "ok": True,
         "texto": "\n".join(partes).strip(),
-        "modelo": resposta.get("model", modelo),
+        "modelo": modelo_usado,
         "entrada": entrada,
         "saida": saida,
-        "custo_usd": round(custo(modelo, entrada, saida), 6),
+        "custo_usd": round(valor, 6),
     }
 
 
@@ -455,14 +508,16 @@ def validar_proposta(dados, niveis: set, nomes: set) -> tuple[dict | None, list]
 
 
 def propor_estrutura(pedido: str, ctx: dict, niveis: set, nomes: set,
-                     idioma: str = "pt-BR", modelo: str = "") -> dict:
+                     idioma: str = "pt-BR", modelo: str = "", quem: str = "",
+                     cota_padrao: float | None = None) -> dict:
     """Capacidade 5 (PLANEJAR): devolve a proposta. Nada é criado aqui."""
     if not configurada():
         return {"ok": False, "motivo": "sem_chave",
                 "mensagem": "Configure ANTHROPIC_API_KEY para habilitar a MarIA."}
     sistema = SISTEMA_AGENTE.replace("{niveis}", ", ".join(sorted(niveis)))
     r = perguntar(pedido, ctx, idioma=idioma, capacidade=PLANEJAR,
-                  modelo=modelo, max_tokens=2000)
+                  modelo=modelo, max_tokens=2000, quem=quem,
+                  cota_padrao=cota_padrao, recurso="agente")
     if not r.get("ok"):
         return r
     proposta, problemas = validar_proposta(extrair_json(r["texto"]), niveis, nomes)

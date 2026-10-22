@@ -7,3 +7,4 @@ pillow>=10.0          # só para embutir o logo no PDF; sem ela o PDF sai sem ma
 psycopg[binary]>=3.2  # Postgres é obrigatório em produção (ver docker-compose.yml)
 pytest>=8.0
 httpx>=0.27
+certifi>=2026.10.19  # GHSA-6q48-6c7w-9gw2 (CAs emSign)

@@ -7563,6 +7563,24 @@ CATALOGO: dict[str, dict[str, str]] = {
     "GPlanSiS|ORG — os agentes de inteligência organizacional": {
         "en-US": 'GPlanSiS|ORG — the organizational intelligence agents',
         "es": 'GPlanSiS|ORG — los agentes de inteligencia organizacional'},
+    "Cota de IA do mês": {
+        "en-US": 'Monthly AI quota',
+        "es": 'Cuota mensual de IA'},
+    "Gasto este mês: US$ {gasto} de US$ {cota}.": {
+        "en-US": 'Spent this month: US$ {gasto} of US$ {cota}.',
+        "es": 'Gastado este mes: US$ {gasto} de US$ {cota}.'},
+    "Cota mensal padrão por pessoa (US$)": {
+        "en-US": 'Default monthly quota per person (US$)',
+        "es": 'Cuota mensual predeterminada por persona (US$)'},
+    "Salvar cota": {
+        "en-US": 'Save quota',
+        "es": 'Guardar cuota'},
+    "cota de IA da MarIA": {
+        "en-US": 'MarIA AI quota',
+        "es": 'cuota de IA de MarIA'},
+    "cota de IA de uma pessoa": {
+        "en-US": "a person's AI quota",
+        "es": 'cuota de IA de una persona'},
 }
 
 

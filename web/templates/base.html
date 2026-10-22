@@ -3239,6 +3239,13 @@ function fecharPops(devolverFoco){
    nunca via `#chips`, `popAberto` ficava nulo, e o popover fechava a cada
    marcacao — era o bug da "expansao dos filtros". `oobBeforeSwap` dispara para o
    proprio #chips, antes de ele ser trocado, com o popover ainda no DOM. */
+/* Cota de IA (402), corpo grande (413) e ritmo (429): o servidor devolve a tela
+   com o aviso; sem isto o htmx descartaria a resposta de erro e o botão pareceria
+   não fazer nada. */
+document.body.addEventListener('htmx:beforeSwap', e => {
+  const st = e.detail.xhr && e.detail.xhr.status;
+  if(st === 402 || st === 413 || st === 429) { e.detail.shouldSwap = true; e.detail.isError = false; }
+});
 let popAberto = null;
 document.body.addEventListener('htmx:oobBeforeSwap', e => {
   if(e.detail.target && e.detail.target.id !== 'chips') return;

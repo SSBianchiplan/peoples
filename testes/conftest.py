@@ -71,6 +71,8 @@ def estado_isolado(tmp_path_factory):
     # cria e apaga contas, e o `dados/usuarios.json` de quem usa o sistema não
     # pode ser tocado por isso.
     os.environ["ORG_USUARIOS_ARQUIVO"] = str(tmp_path_factory.mktemp("usuarios") / "usuarios.json")
+    # O ledger de custo de IA (ia_cota) também: a suíte grava uso fictício.
+    os.environ["ORG_IA_USO_ARQUIVO"] = str(tmp_path_factory.mktemp("ia") / "ia_uso.sqlite3")
     yield
 
 
