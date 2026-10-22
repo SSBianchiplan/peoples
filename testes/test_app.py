@@ -261,7 +261,7 @@ def test_javascript_da_pagina_compila():
     # Renderizado, nao o fonte: o servidor injeta valores no script (o piso de
     # leitura), e o que precisa compilar e o que chega ao navegador.
     fonte = main.render("base.html", vista="canvas", corpo="", painel=None)
-    corpo = fonte.split("<script>")[-1].split("</script>")[0]
+    corpo = re.split(r'<script(?: nonce="[^"]*")?>', fonte)[-1].split("</script>")[0]
 
     declarados = re.findall(r"^(?:const|let|function)\s+([A-Za-z_$][\w$]*)",
                             corpo, re.M)
@@ -552,7 +552,7 @@ def test_invariantes_do_canvas_ficam_no_js():
     de servidor. Ficam travados aqui porque o custo de re-introduzi-los é alto:
     quebram o zoom e os atalhos sem erro de console."""
     corpo = main.render("base.html", vista="canvas", corpo="", painel=None)
-    js = corpo.split("<script>")[-1].split("</script>")[0]
+    js = re.split(r'<script(?: nonce="[^"]*")?>', corpo)[-1].split("</script>")[0]
 
     # `overflow:hidden` não impede rolagem programática: focar um card fora da
     # vista (seta, Tab, focus()) rola o palco e desloca a âncora do zoom.

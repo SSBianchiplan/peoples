@@ -25,7 +25,7 @@
       hx-target="{{ alvo_da_vista.get(vista, '#canvas') }}"
       hx-swap="{{ 'outerHTML' if vista not in alvo_da_vista else 'innerHTML' }}"
       hx-trigger="change, keyup changed delay:350ms, submit"
-      onsubmit="return false">
+      data-on-submit="impedir(event)">
 
   {# Tela estreita: os oito critérios e a busca viravam uma tira que rolava para
      o lado, e o que rola para o lado numa tela de 400 px é o que ninguém acha.
@@ -33,7 +33,7 @@
      a barra devolve a altura ao desenho. Na tela larga este botão não existe e
      `.filtros-corpo` some do layout: a barra de sempre continua igual. #}
   <button type="button" class="bt-filtros" id="btFiltros"
-          onclick="alternarFiltros(event)" aria-haspopup="true"
+          data-on-click="alternarFiltros(event)" aria-haspopup="true"
           aria-expanded="false" aria-controls="filtrosCorpo"
           title="{{ t('Filtros') }}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

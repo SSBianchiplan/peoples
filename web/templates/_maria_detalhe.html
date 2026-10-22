@@ -13,8 +13,8 @@
     <div class="acoes" style="margin:0">
       {# Emissão atrás do portão: o botão existe sempre, e a recusa explica. #}
       <a class="bt bt-min" href="/maria/assistencia/{{ a.id }}/pdf"
-         onclick="pdfMaria(event, this.href)">{{ t('Baixar PDF') }}</a>
-      <button class="bt" onclick="fecharDetalheMaria()">{{ t('Fechar') }}</button>
+         data-on-click="pdfMaria(event, this.href)">{{ t('Baixar PDF') }}</a>
+      <button class="bt" data-on-click="fecharDetalheMaria()">{{ t('Fechar') }}</button>
     </div>
   </div>
 

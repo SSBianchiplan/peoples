@@ -43,7 +43,7 @@
   <div class="tour-balao" id="tourBalao">
     <div class="tour-topo">
       <span class="tour-conta"><b id="tourAtual">1</b> / {{ passos_ajuda()|length }}</span>
-      <button type="button" class="tour-x" onclick="tourFechar()"
+      <button type="button" class="tour-x" data-on-click="tourFechar()"
               aria-label="{{ t('Encerrar a visita') }}"
               title="{{ t('Encerrar a visita') }}">×</button>
     </div>
@@ -54,9 +54,9 @@
         <input type="checkbox" id="tourNunca"> {{ t('Não mostrar de novo') }}
       </label>
       <div class="tour-botoes">
-        <button type="button" class="bt" id="tourAntes" onclick="tourAndar(-1)">
+        <button type="button" class="bt" id="tourAntes" data-on-click="tourAndar(-1)">
           {{ t('Anterior') }}</button>
-        <button type="button" class="bt forte" id="tourDepois" onclick="tourAndar(1)">
+        <button type="button" class="bt forte" id="tourDepois" data-on-click="tourAndar(1)">
           {{ t('Próximo') }}</button>
       </div>
     </div>

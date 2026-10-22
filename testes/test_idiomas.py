@@ -27,7 +27,8 @@ PACOTE = RAIZ_PROJETO / "orga"
 TEMPLATES = sorted((RAIZ_PROJETO / "web" / "templates").glob("*.html"))
 
 # Nos templates, `t('...')` — Jinja não concatena literais, então regex basta.
-USO_TEMPLATE = re.compile(r"""\bt\(\s*(['"])(.+?)\1""", re.S)
+# `th(` é o `t(` com parâmetros escapados (marcação do catálogo + valor seguro).
+USO_TEMPLATE = re.compile(r"""\bth?\(\s*(['"])(.+?)\1""", re.S)
 # `t('a' if x else 'b', …)`: o segundo literal também é chave. Sem limitar o
 # miolo, o `.+?` atravessa a expressão e casa aspas de outro lugar do arquivo.
 USO_TERNARIO = re.compile(

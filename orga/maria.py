@@ -44,6 +44,8 @@ from __future__ import annotations
 
 import json
 import os
+import threading
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -243,11 +245,132 @@ def prompt(capacidade: str, pergunta: str, ctx: dict, idioma: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Freio de custo — cota mensal em US$ e limite de ritmo por pessoa
+# ---------------------------------------------------------------------------
+# O modelo é o do GPlanSiS|Studio: cota mensal por pessoa (e um teto global),
+# no máximo 30 chamadas por minuto e 3 simultâneas. Sem isto, uma conta
+# comprometida (ou um insider) gerava custo sem teto na conta da Anthropic. O
+# gasto do mês fica num JSON pequeno ao lado do estado: sobrevive a restart.
+POR_MINUTO = 30
+SIMULTANEAS = 3
+PERGUNTA_MAX = 4000            # caracteres do pedido da pessoa
+ENTRADA_MAX = 16000            # pedido + fio da conversa
+MAX_TOKENS_TETO = 2000
+_FREIO = threading.Lock()
+_RECENTES: dict[str, list[float]] = {}
+_EM_CURSO: dict[str, int] = {}
+
+
+def _cota(nome: str, padrao: float) -> float:
+    try:
+        return float(_env(nome) or padrao)
+    except ValueError:
+        return padrao
+
+
+def cota_usuario() -> float:
+    return _cota("MARIA_COTA_USD_MES", 10.0)
+
+
+def cota_global() -> float:
+    return _cota("MARIA_COTA_GLOBAL_USD_MES", 100.0)
+
+
+def arquivo_uso():
+    from pathlib import Path
+    return Path(_env("MARIA_USO_ARQUIVO") or
+                Path(__file__).resolve().parent.parent / "dados" / "maria-uso.json")
+
+
+def _mes() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m")
+
+
+def _ler_uso() -> dict:
+    try:
+        d = json.loads(arquivo_uso().read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def gasto(quem: str) -> tuple[float, float]:
+    """(gasto do mês desta pessoa, gasto do mês de todos), em US$."""
+    mes = _ler_uso().get(_mes(), {})
+    return float(mes.get(quem, 0.0)), float(sum(mes.values()))
+
+
+def _somar_uso(quem: str, usd: float) -> None:
+    if usd <= 0:
+        return
+    d = _ler_uso()
+    mes = _mes()
+    d = {mes: {**d.get(mes, {}), quem: round(float(d.get(mes, {}).get(quem, 0.0)) + usd, 6)}}
+    p = arquivo_uso()
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(d), encoding="utf-8")
+        tmp.replace(p)
+    except OSError:
+        pass                                   # não derruba a resposta
+
+
+def reservar(quem: str) -> dict | None:
+    """Abre uma chamada para `quem`, ou devolve a recusa (no formato de
+    `perguntar`). Quem reserva TEM de chamar `liberar` depois."""
+    meu, todos = gasto(quem)
+    if meu >= cota_usuario() or todos >= cota_global():
+        return {"ok": False, "motivo": "cota",
+                "mensagem": "Cota mensal da MarIA atingida. Fale com um administrador."}
+    agora = time.time()
+    with _FREIO:
+        recentes = [t for t in _RECENTES.get(quem, []) if agora - t < 60]
+        if len(recentes) >= POR_MINUTO or _EM_CURSO.get(quem, 0) >= SIMULTANEAS:
+            _RECENTES[quem] = recentes
+            return {"ok": False, "motivo": "ritmo",
+                    "mensagem": "Muitas perguntas seguidas. Aguarde alguns segundos."}
+        recentes.append(agora)
+        _RECENTES[quem] = recentes
+        _EM_CURSO[quem] = _EM_CURSO.get(quem, 0) + 1
+    return None
+
+
+def liberar(quem: str, usd: float = 0.0) -> None:
+    with _FREIO:
+        _EM_CURSO[quem] = max(0, _EM_CURSO.get(quem, 0) - 1)
+    _somar_uso(quem, usd)
+
+
+# ---------------------------------------------------------------------------
 # Chamada
 # ---------------------------------------------------------------------------
 def perguntar(texto: str, ctx: dict, idioma: str = "pt-BR",
               capacidade: str = DESCREVER, modelo: str = "",
-              max_tokens: int = 1600, tempo: int = 60) -> dict:
+              max_tokens: int = 1600, tempo: int = 60,
+              quem: str = "anonimo") -> dict:
+    """Passa pelo freio de custo (`reservar`/`liberar`) e chama o modelo."""
+    if not permitida(capacidade):
+        return {"ok": False, "motivo": "capacidade_indisponivel",
+                "mensagem": "Capacidade fora de escopo desta onda."}
+    if not configurada():
+        return {"ok": False, "motivo": "sem_chave",
+                "mensagem": "Configure ANTHROPIC_API_KEY para habilitar a MarIA."}
+    if not (texto or "").strip():
+        return {"ok": False, "motivo": "vazio", "mensagem": "Escreva a pergunta."}
+    if (recusa := reservar(quem or "anonimo")):
+        return recusa
+    r: dict = {}
+    try:
+        r = _chamar(texto[:ENTRADA_MAX], ctx, idioma, capacidade, modelo,
+                    min(int(max_tokens), MAX_TOKENS_TETO), tempo)
+        return r
+    finally:
+        liberar(quem or "anonimo", float(r.get("custo_usd", 0.0) or 0.0))
+
+
+def _chamar(texto: str, ctx: dict, idioma: str, capacidade: str, modelo: str,
+            max_tokens: int, tempo: int) -> dict:
     """Uma chamada ao modelo. Nunca levanta: devolve `ok` e o motivo.
 
     Sem SDK: a API é um POST de JSON, e uma dependência a mais só para montar
@@ -455,14 +578,15 @@ def validar_proposta(dados, niveis: set, nomes: set) -> tuple[dict | None, list]
 
 
 def propor_estrutura(pedido: str, ctx: dict, niveis: set, nomes: set,
-                     idioma: str = "pt-BR", modelo: str = "") -> dict:
+                     idioma: str = "pt-BR", modelo: str = "",
+                     quem: str = "anonimo") -> dict:
     """Capacidade 5 (PLANEJAR): devolve a proposta. Nada é criado aqui."""
     if not configurada():
         return {"ok": False, "motivo": "sem_chave",
                 "mensagem": "Configure ANTHROPIC_API_KEY para habilitar a MarIA."}
     sistema = SISTEMA_AGENTE.replace("{niveis}", ", ".join(sorted(niveis)))
-    r = perguntar(pedido, ctx, idioma=idioma, capacidade=PLANEJAR,
-                  modelo=modelo, max_tokens=2000)
+    r = perguntar(pedido[:PERGUNTA_MAX], ctx, idioma=idioma, capacidade=PLANEJAR,
+                  modelo=modelo, max_tokens=2000, quem=quem)
     if not r.get("ok"):
         return r
     proposta, problemas = validar_proposta(extrair_json(r["texto"]), niveis, nomes)

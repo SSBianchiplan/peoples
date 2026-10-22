@@ -89,7 +89,7 @@
    {# Clicar no fundo do modal (fora do cartão) fecha — esvaziar o alvo basta,
       porque `.ficha-painel:empty` some. O × e o Esc fazem o mesmo. #}
    <div id="cgvFicha" class="ficha-painel"
-        onclick="if(event.target===this)this.innerHTML=''"></div>
+        data-on-click="fecharFundo(event, this)"></div>
   </div>
 
   {# ------------------------------------------------------------------ #}

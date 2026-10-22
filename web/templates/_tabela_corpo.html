@@ -63,7 +63,7 @@
           aria-pressed="false"
           {% if motivo_edicao %}disabled title="{{ motivo_edicao }}"
           {% else %}title="{{ t('Liga a edição na grade: Enter edita a célula, Tab indenta, Shift+Tab promove, e o botão direito abre as ações da linha.') }}"
-          onclick="ORGA_GRADE.alternarEdicao()"{% endif %}>
+          data-on-click="ORGA_GRADE.alternarEdicao()"{% endif %}>
     {{ t('Editar') }}</button>
 
   <span class="sep"></span>
@@ -82,14 +82,14 @@
        não declara `text-transform` nem `margin` — então o rótulo saía em caixa
        alta e com margem própria, fora da linha dos vizinhos. Botão de verdade
        também dispensa `role` e `tabindex`: o teclado já funciona. #}
-    <button type="button" class="bt" onclick="this.form.arquivo.click()"
+    <button type="button" class="bt" data-on-click="clicarArquivo(this)"
             title="{{ t('Abre a carga assistida em Configurações, já com o arquivo analisado: você confere o que muda antes de aplicar.') }}">
       {{ t('Importar XLSX') }}</button>
     {# Submete no `change`: pedir arquivo e depois pedir um clique em "Enviar"
        é um passo que não decide nada — a análise ainda é reversível, e o que
        de fato altera dados é o passo 3. #}
     <input id="tbImportar" type="file" name="arquivo" accept=".xlsx" hidden
-           onchange="if(this.files.length)this.form.requestSubmit()">
+           data-on-change="enviarArquivo(this)">
   </form>
   {% endif %}
 </div>
@@ -162,7 +162,7 @@
         class="clicavel{% if l.achou %} achou{% endif %}{% if l.passagem %} passagem{% endif %}{% if l.u.id == selecionado %} sel{% endif %}"
         hx-get="/fragmentos/painel/{{ l.u.id }}?canvas=0&amp;vista=tabela" hx-target="#painel"
         hx-swap="innerHTML" title="{{ t('Abrir na gaveta') }}">
-      <td role="cell" onclick="event.stopPropagation()">
+      <td role="cell" data-on-click="pararEvento(event)">
         {% if l.n %}
         <button class="chev" title="{{ t('Expandir subárvore') if l.colapsado else t('Colapsar subárvore') }}"
                 hx-post="/unidades/{{ l.u.id }}/colapsar?vista=tabela"
@@ -202,7 +202,7 @@
          grade é onde alguém varre a equipe inteira procurando com quem falar. #}
       {% if 'email' in col %}
       <td role="cell" class="cod" data-rot="{{ t('E-mail') }}"
-          onclick="event.stopPropagation()">
+          data-on-click="pararEvento(event)">
         {% if l.u.email %}<a href="mailto:{{ l.u.email }}">{{ l.u.email }}</a>{% endif %}
       </td>{% endif %}
       {% if 'data_inicio' in col %}<td role="cell" class="cod" data-rot="{{ t('Admissão') }}">{{ l.u.data_inicio }}</td>{% endif %}

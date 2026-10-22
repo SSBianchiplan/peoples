@@ -126,8 +126,8 @@
      {% if n.n_filhos %}aria-expanded="{{ 'false' if n.ocultos else 'true' }}"{% endif %}
      aria-label="{{ n.nome }}{% if n.rotulo_tipo %}, {{ t(n.rotulo_tipo) }}{% endif %}, {{ t('nível {n}', n=n.nivel + 1) }}{% if n.n_filhos %}, {{ t('{n} subordinado(s) direto(s)', n=n.n_filhos) }}{% endif %}"
      {% if not exportando %}hx-get="/fragmentos/painel/{{ n.id }}" hx-target="#painel" hx-swap="innerHTML"
-     hx-trigger="click, keyup[key=='Enter']" oncontextmenu="menuNo(event,'{{ n.id }}')"
-     ondblclick="focarNo(event,'{{ n.id }}')"
+     hx-trigger="click, teclaEnter" data-on-contextmenu="menuNo(event,'{{ n.id }}')"
+     data-on-dblclick="focarNo(event,'{{ n.id }}')"
      data-nome="{{ n.dica.nome }}" data-codigo="{{ n.dica.codigo }}" data-cargo="{{ n.dica.cargo }}"
      data-area="{{ n.dica.area }}" data-cc="{{ n.dica.cc }}" data-mail="{{ n.dica.email }}"
      data-tipo="{{ n.dica.tipo }}" data-sub="{{ n.n_filhos or '' }}"
@@ -172,7 +172,7 @@
   {% for a in layout.alcas %}
   <g class="alca" role="button" tabindex="0" aria-label="{{ a.rotulo }}"
      hx-post="/unidades/{{ a.id }}/colapsar" hx-target="#canvas" hx-swap="outerHTML"
-     hx-trigger="click, keyup[key=='Enter']">
+     hx-trigger="click, teclaEnter">
     <rect x="{{ a.x }}" y="{{ a.y }}" width="52" height="18" rx="9"/>
     <text x="{{ a.tx }}" y="{{ a.ty }}" text-anchor="middle">{{ a.txt }}</text>
   </g>

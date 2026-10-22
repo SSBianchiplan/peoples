@@ -19,9 +19,9 @@
   <tbody>
     {% for g in grupos %}
     {% set exp = (campo is defined and campo) %}
-    <tr {% if exp %}class="tw-linha-exp" onclick="toggleGrupo(this)" tabindex="0"
+    <tr {% if exp %}class="tw-linha-exp" data-on-click="toggleGrupo(this)" tabindex="0"
         role="button" aria-expanded="false"
-        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleGrupo(this)}"{% endif %}
+        data-on-keydown="teclaAlterna(event, this)"{% endif %}
         title="{{ t('{rotulo}: {n} pessoa(s) · de {min} a {max} anos de casa',
                     rotulo=t(g.rotulo), n=g.n, min=anos(g.minimo), max=anos(g.maximo)) }}">
       <td>{% if exp %}<span class="tw-chevron" aria-hidden="true">▸</span> {% endif %}{{ t(g.rotulo) }}</td>

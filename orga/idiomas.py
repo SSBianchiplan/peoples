@@ -2600,6 +2600,14 @@ CATALOGO: dict[str, dict[str, str]] = {
         "en-US": "Action",
         "es": "Acción",
     },
+    "Ação negada: só o operador do sistema (superadmin) baixa o banco.": {
+        "en-US": "Action denied: only the system operator (superadmin) can download the database.",
+        "es": "Acción denegada: solo el operador del sistema (superadmin) descarga la base de datos.",
+    },
+    "exportação SQL (carga do banco)": {
+        "en-US": "SQL export (database load)",
+        "es": "exportación SQL (carga de la base de datos)",
+    },
     "Ação negada: fora do escopo de edição ({unidade}).": {
         "en-US": "Action denied: outside the editing scope ({unidade}).",
         "es": "Acción denegada: fuera del alcance de edición ({unidade}).",

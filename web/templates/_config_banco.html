@@ -68,7 +68,7 @@
     {% if banco.em_dia %}
     <p class="ok-linha">{{ t('O banco está no mesmo ponto da tela.') }}</p>
     {% else %}
-    <div class="aviso">{{ t('O banco está atrasado em relação à tela: {n} tabela(s) divergem ({quais}). Use <b>Escrever organograma</b> para igualar.', n=banco.divergentes|length, quais=banco.divergentes|join(', '))|safe }}</div>
+    <div class="aviso">{{ th('O banco está atrasado em relação à tela: {n} tabela(s) divergem ({quais}). Use <b>Escrever organograma</b> para igualar.', n=banco.divergentes|length, quais=banco.divergentes|join(', ')) }}</div>
     {% endif %}
 
     {# Contagem confere "quantos"; a fidelidade confere "iguais em quê". A carga
@@ -139,4 +139,4 @@
 </div>
 
 {# Alvo do explorador de tabela — modal tela cheia. `:empty` some. #}
-<div id="bancoModal" class="bx-alvo" onclick="if(event.target===this)this.innerHTML=''"></div>
+<div id="bancoModal" class="bx-alvo" data-on-click="fecharFundo(event, this)"></div>

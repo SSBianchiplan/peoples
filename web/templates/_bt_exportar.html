@@ -16,7 +16,7 @@
    o alvo trocava o botão por um invólucro e desmontava a barra. #}
 <div class="expo" id="expo" {% if oob %}hx-swap-oob="true"{% endif %}>
   <button class="bt{% if escala_pdf < piso_leitura %} apertado{% endif %}"
-          id="btExportar" onclick="menuExportar()" aria-haspopup="menu"
+          id="btExportar" data-on-click="menuExportar()" aria-haspopup="menu"
           aria-expanded="false" aria-label="{{ t('Exportar') }}"
           title="{{ t('Sai o que está na tela: filtro, colapso e foco valem para o arquivo.') }}">
     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -28,22 +28,22 @@
     <span class="rot">{{ t('Exportar') }}</span> <span class="expo-esc">· {{ escala_pdf }} %</span>
   </button>
   <div class="expo-menu" id="expoMenu" role="menu">
-    <a role="menuitem" href="/export.pdf" download onclick="menuExportar(true)">
+    <a role="menuitem" href="/export.pdf" download data-on-click="menuExportar(true)">
       <b>{{ t('PDF A3') }} · {{ escala_pdf }} %</b>
       <small>{% if escala_pdf < piso_leitura %}{{ t('A {pct} % o texto sai ilegível: filtre, colapse ou foque antes de imprimir.', pct=escala_pdf) }}{% else %}{{ t('Uma folha, vetorial e pesquisável.') }}{% endif %}</small>
     </a>
     {# O único formato que volta: por isso vem logo depois do PDF, e por isso o
        texto diz que ele volta — é a diferença que decide entre ele e o CSV. #}
-    <a role="menuitem" href="/export.xlsx" download onclick="menuExportar(true)">
+    <a role="menuitem" href="/export.xlsx" download data-on-click="menuExportar(true)">
       <b>{{ t('XLSX') }}</b><small>{{ t('Excel com a marca e as pessoas agrupadas por nível — e volta pela carga assistida.') }}</small>
     </a>
-    <a role="menuitem" href="/export.svg" download onclick="menuExportar(true)">
+    <a role="menuitem" href="/export.svg" download data-on-click="menuExportar(true)">
       <b>{{ t('SVG') }}</b><small>{{ t('Abre no Inkscape ou no Illustrator e continua editável.') }}</small>
     </a>
-    <a role="menuitem" href="/export.csv" download onclick="menuExportar(true)">
+    <a role="menuitem" href="/export.csv" download data-on-click="menuExportar(true)">
       <b>{{ t('CSV') }}</b><small>{{ t('Texto puro, uma linha por unidade, com accountabilities e competências.') }}</small>
     </a>
-    <a role="menuitem" href="/export.json" download onclick="menuExportar(true)">
+    <a role="menuitem" href="/export.json" download data-on-click="menuExportar(true)">
       <b>{{ t('JSON') }}</b><small>{{ t('A estrutura inteira, para outro sistema ler.') }}</small>
     </a>
   </div>

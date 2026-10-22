@@ -16,6 +16,7 @@ Execucao:  uvicorn main:app --reload --port 8080
 from __future__ import annotations
 
 import copy
+import html as htmlmod
 import csv
 import zipfile
 import hashlib
@@ -39,6 +40,7 @@ from fastapi.responses import (HTMLResponse, JSONResponse,
                                RedirectResponse, Response)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 
 # O `.env` entra ANTES de qualquer modulo que leia credencial: `acesso` decide
 # no import se exige segredo forte, e `maria`/`correio` consultam o ambiente a
@@ -920,7 +922,7 @@ def aplicar_acesso(node_id: str | None, email: str | None = None,
         cfg.modulos_visiveis = []
         cfg.ver_1a1_rh = True                    # o operador vê tudo, inclusive 1:1
         return
-    if not cfg.acessos:
+    if not cfg.acessos and acesso.acesso_aberto():
         cfg.perfil, cfg.escopo_tipo, cfg.escopo_valor = ADMIN, "tudo", ""
         cfg.modulos_visiveis = []
         cfg.ver_1a1_rh = True                    # sistema destrancado: todos Admin
@@ -1542,12 +1544,17 @@ async def resolver_sessao(req: Request):
     despachar para o threadpool — e para os async. É generator (set antes do yield,
     reset no finally) para nunca herdar a sessão de uma requisição na seguinte.
     Comprovado por teste de isolamento concorrente (test_sessao_por_requisicao)."""
-    carga = acesso.verificar(req.cookies.get(acesso.COOKIE))
+    carga = sessao_atual(req)
     sess = resolver_rbac(carga.get("uid"), carga.get("sub")) if carga else None
     _marcar_presenca(sess.usuario_id if sess else None)   # "ativo agora"
     req.state.sessao = sess
     tok = _SESSAO.set(sess)
     try:
+        modulo = modulo_da_rota(req.url.path)
+        if modulo and not modulo_visivel(modulo):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=403,
+                                detail=T("Módulo indisponível para o seu acesso."))
         yield
     finally:
         _SESSAO.reset(tok)
@@ -1699,6 +1706,8 @@ def passos_da_visita() -> list[dict]:
 
 def render(nome: str, **ctx) -> str:
     ctx.setdefault("cfg", acesso_vigente())
+    # O nonce da CSP desta requisição: só os <script> do base.html o recebem.
+    ctx.setdefault("csp_nonce", _NONCE.get())
     ctx.setdefault("usuario", usuario_atual())
     ctx.setdefault("login_exigido", acesso.exigir_login())
     # A lista de organogramas chega a todo template (o seletor mora no cabeçalho,
@@ -1718,6 +1727,11 @@ def render(nome: str, **ctx) -> str:
     ctx.setdefault("idiomas", idiomasmod.IDIOMAS)
     ctx.setdefault("t", lambda texto, **p: idiomasmod.traduzir(
         texto, ctx.get("idioma", ESTADO.config.idioma), **p))
+    # `th`: o texto do catálogo é marcação confiável (tem <b>, <code>), os
+    # PARÂMETROS não — saem escapados (Markup.format). Substitui `t(..., p=x)|safe`,
+    # que deixava passar como HTML o valor interpolado (rótulo, nome, tabela).
+    ctx.setdefault("th", lambda texto, **p: Markup(idiomasmod.traduzir(
+        texto, ctx.get("idioma", ESTADO.config.idioma))).format(**p))
     # Piso de leitura: um numero so para a tela e para o papel (pdf.PISO_LEITURA).
     ctx.setdefault("piso_leitura_frac", pdfmod.PISO_LEITURA)
     ctx.setdefault("piso_leitura", round(pdfmod.PISO_LEITURA * 100))
@@ -1785,7 +1799,11 @@ def alerta(texto: str) -> str:
     interpolação não casa com chave nenhuma e sai em português: essas o autor
     precisa passar como `T("… {n} …", n=…)` na chamada.
     """
-    return f'<div id="alerta" class="alerta" role="status">{T(texto)}</div>'
+    # Escapado SEMPRE: o aviso interpola nome, e-mail, erro de planilha e
+    # mensagem de driver — dado de usuário que não pode virar marcação (XSS
+    # armazenado). Nenhuma mensagem do servidor depende de HTML aqui dentro.
+    return ('<div id="alerta" class="alerta" role="status">'
+            f'{htmlmod.escape(T(texto), quote=False)}</div>')
 
 
 def recusar(req: Request, msg: str) -> HTMLResponse:
@@ -2008,6 +2026,14 @@ def _nome_arquivo_md(u) -> str:
 # escreve lá é o ETL, noutro serviço e com outro usuário. Um sistema do hub que
 # queira estes números chama esta API (ou conecta no lakehouse com o papel
 # `lake_leitor`) — nunca no banco de outro sistema.
+def _lake_autorizado(req: Request) -> bool:
+    """Token de serviço válido, ou sessão de Administrador."""
+    token = (req.headers.get("authorization") or "").removeprefix("Bearer ").strip()
+    if lakemod.token_valido(token):
+        return True
+    return negado(NIVEL_ADMIN) is None
+
+
 @app.get("/api/v1/lake")
 def lake_catalogo(req: Request):
     """O catálogo: que vistas existem, o que cada uma responde e quando foi a
@@ -2025,7 +2051,14 @@ def lake_vista(req: Request, vista: str, organograma: str = "", limite: int = 0)
     """Uma vista do lakehouse em JSON. `organograma` filtra; `limite` corta.
 
     Sem escrita, por três razões acumuladas: a credencial não tem permissão, a
-    sessão é aberta como somente-leitura, e não existe rota de POST aqui."""
+    sessão é aberta como somente-leitura, e não existe rota de POST aqui.
+
+    Quem lê: o token de serviço (máquina-a-máquina) ou, pelo navegador, só o
+    Administrador. As vistas trazem colaborador, 9-box e sucessão da empresa
+    inteira, sem o recorte de escopo das telas — com cookie de Visualizador ou
+    Editor elas vazavam tudo."""
+    if not _lake_autorizado(req):
+        return JSONResponse({"erro": "acesso negado"}, status_code=403)
     dados = lakemod.consultar(vista, organograma, limite or lakemod.LIMITE_PADRAO)
     return JSONResponse(dados, status_code=404 if dados.get("erro") == "vista desconhecida" else 200)
 
@@ -2762,7 +2795,7 @@ async def guarda_de_acesso(req: Request, chamar):
     if req.url.path.startswith(LIVRE_COM_TOKEN) and lakemod.token_valido(
             (req.headers.get("authorization") or "").removeprefix("Bearer ").strip()):
         return await chamar(req)
-    carga = acesso.verificar(req.cookies.get(acesso.COOKIE))
+    carga = sessao_atual(req)
     if carga:
         # Senha temporária (dada pelo administrador): a pessoa entra, mas só
         # para escolher a própria senha — até lá, toda rota leva a /senha.
@@ -2788,13 +2821,103 @@ async def guarda_de_acesso(req: Request, chamar):
     return RedirectResponse("/login", status_code=303)
 
 
+# --- cabeçalhos de segurança e CSRF -----------------------------------------
+# CSP do aplicativo: script só do próprio site (htmx, AG Grid, /estatico) ou com
+# o nonce desta resposta (os <script> do base.html). Nada de 'unsafe-inline' nem
+# 'unsafe-eval' em script: os manipuladores inline viraram `data-on-*`
+# (web/estatico/csp.js) e o htmx roda com `allowEval: false`. Estilo continua com
+# 'unsafe-inline' — o AG Grid injeta estilo e os templates usam `style=` — e
+# estilo não executa código. `frame-ancestors` é reescrito pelo Caddy (embed_os)
+# para incluir o GPlanSiS|OS.
+_NONCE: ContextVar = ContextVar("csp_nonce", default="")
+CSP_APP = ("default-src 'self'; script-src 'self' 'nonce-{nonce}'; "
+           "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+           "font-src 'self' data:; connect-src 'self'; object-src 'none'; "
+           "base-uri 'self'; form-action 'self'; frame-ancestors 'self'")
+# Páginas estáticas de apresentação (landing, manuais, histórias): arquivos do
+# próprio repositório, sem dado de usuário, com script/estilo inline e fontes do
+# Google. Ficam com CSP própria, ainda sem eval e sem objeto.
+CSP_ESTATICA = ("default-src 'self'; script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+                "font-src 'self' data: https://fonts.gstatic.com; "
+                "img-src 'self' data: blob: https:; connect-src 'self'; "
+                "object-src 'none'; base-uri 'self'; form-action 'self'; "
+                "frame-ancestors 'self'")
+METODOS_INSEGUROS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def pagina_estatica(texto: str) -> HTMLResponse:
+    return HTMLResponse(texto, headers={"Content-Security-Policy": CSP_ESTATICA})
+
+
+def _origem_confiavel(req: Request) -> bool:
+    """POST/PUT/PATCH/DELETE só da própria origem. O navegador manda `Origin` em
+    toda requisição que muda estado; sem ela, vale o `Referer`; sem nenhum dos
+    dois (cliente de linha de comando, testes), passa — o SameSite=Lax do cookie
+    segue valendo. Origem de outro site = CSRF, recusado."""
+    origem = req.headers.get("origin")
+    if not origem or origem == "null":
+        ref = req.headers.get("referer")
+        if not ref:
+            return origem != "null"
+        from urllib.parse import urlsplit
+        partes = urlsplit(ref)
+        origem = f"{partes.scheme}://{partes.netloc}"
+    origem = origem.rstrip("/").lower()
+    host = (req.headers.get("host") or "").lower()
+    from urllib.parse import urlsplit as _us
+    if _us(origem).netloc == host and host:
+        return True
+    return origem in acesso.origens_extras()
+
+
+@app.middleware("http")
+async def cabecalhos_de_seguranca(req: Request, chamar):
+    """CSRF por origem e CSP com nonce. Middleware por fora de tudo: vale para
+    toda rota, inclusive as que ainda vão nascer."""
+    if req.method in METODOS_INSEGUROS and not _origem_confiavel(req):
+        return JSONResponse({"erro": "origem não permitida"}, status_code=403)
+    nonce = secrets.token_urlsafe(16)
+    tok = _NONCE.set(nonce)
+    try:
+        resp = await chamar(req)
+    finally:
+        _NONCE.reset(tok)
+    if "content-security-policy" not in resp.headers:
+        resp.headers["Content-Security-Policy"] = CSP_APP.format(nonce=nonce)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    return resp
+
+
+# --- módulos ocultos também nas rotas de dado ---------------------------------
+# A aba some do cabeçalho e `html_vista` recusa a vista, mas fichas, CSV e PDF
+# de cada módulo têm rota própria. A mesma régua (`modulo_visivel`) vale para elas.
+ROTAS_DE_MODULO = (("/painel-rh", "painel_rh"), ("/dcr", "dcr"),
+                   ("/skills/", "dcr"), ("/cgv", "cgv"),
+                   ("/talentos", "talentos"), ("/gptw.csv", "gptw"),
+                   ("/gptw/programar", "gptw"), ("/onebyone", "onebyone"))
+
+
+def modulo_da_rota(caminho: str) -> str | None:
+    return next((m for prefixo, m in ROTAS_DE_MODULO
+                 if caminho.startswith(prefixo)), None)
+
+
 def sessao_atual(req: Request) -> dict | None:
-    return acesso.verificar(req.cookies.get(acesso.COOKIE))
+    """A carga do cookie, se assinada, no prazo e NÃO revogada. Com o login
+    exigido, a conta tem de existir, estar ativa e a versão de sessão bater
+    (trocar ou remover a senha encerra as sessões abertas)."""
+    carga = acesso.verificar(req.cookies.get(acesso.COOKIE))
+    if carga and acesso.exigir_login() and not usuariosmod.sessao_valida(carga):
+        return None
+    return carga
 
 
 def abrir_sessao(email: str, uid: str | None) -> RedirectResponse:
     r = RedirectResponse("/", status_code=303)
-    r.set_cookie(acesso.COOKIE, acesso.assinar({"sub": email, "uid": uid or ""}),
+    v = usuariosmod.versao_sessao(email) or 0
+    r.set_cookie(acesso.COOKIE, acesso.assinar({"sub": email, "uid": uid or "",
+                                                "v": v}),
                  httponly=True, samesite="lax", max_age=acesso.TTL_PADRAO,
                  secure=req_seguro())
     return r
@@ -2816,7 +2939,8 @@ def tela_login(req: Request, erro: str = "", aviso: str = ""):
     # inicial — uma vez só; com um usuário que seja, o formulário some.
     return HTMLResponse(render("login.html", request=req, exemplo=exemplo,
                                erro=erro, aviso=aviso,
-                               primeiro=usuariosmod.total() == 0,
+                               primeiro=(usuariosmod.total() == 0
+                                         and acesso.primeiro_acesso_permitido()),
                                minimo=usuariosmod.SENHA_MINIMA))
 
 
@@ -2879,7 +3003,7 @@ def entrar_primeiro(req: Request, email: str = Form(""), senha: str = Form(""),
     """Cria o administrador inicial — só enquanto não existe usuário NENHUM. A
     partir do primeiro, esta rota recusa: novas contas nascem em Configurações
     › Permissões, pela mão de quem administra."""
-    if usuariosmod.total():
+    if usuariosmod.total() or not acesso.primeiro_acesso_permitido():
         return tela_login(req, erro=T("Já existe um usuário: peça a senha a quem administra."))
     email = usuariosmod.normalizar(email)
     if not acesso.dominio_valido(email):
@@ -2888,7 +3012,8 @@ def entrar_primeiro(req: Request, email: str = Form(""), senha: str = Form(""),
     if senha != repetir:
         return tela_login(req, erro=T("As senhas não conferem."))
     try:
-        usuariosmod.definir_senha(email, senha, por="primeiro acesso")
+        usuariosmod.definir_senha(email, senha, por="primeiro acesso",
+                                  operador=True)
     except ValueError as erro:
         return tela_login(req, erro=_recusa_de_senha(erro))
     return _abrir_para(req, email)
@@ -2923,7 +3048,18 @@ def trocar_senha(req: Request, atual: str = Form(""), nova: str = Form(""),
     except ValueError as erro:
         return tela_senha(req, erro=_recusa_de_senha(erro))
     registrar_acesso("senha", usuario_id=carga.get("uid") or None, email=email)
-    return tela_senha(req, ok=T("Senha alterada."))
+    # A senha nova sobe a versão de sessão (as outras sessões caem); esta, que
+    # acabou de provar a senha, recebe um cookie novo para continuar.
+    r = HTMLResponse(render("senha.html", request=req, email=email, erro="",
+                            ok=T("Senha alterada."),
+                            obrigatoria=usuariosmod.precisa_trocar(email),
+                            minimo=usuariosmod.SENHA_MINIMA))
+    r.set_cookie(acesso.COOKIE, acesso.assinar({
+        "sub": email, "uid": carga.get("uid") or "",
+        "v": usuariosmod.versao_sessao(email) or 0}),
+        httponly=True, samesite="lax", max_age=acesso.TTL_PADRAO,
+        secure=req_seguro())
+    return r
 
 
 @app.post("/sair")
@@ -2972,7 +3108,7 @@ def inicio(req: Request, vista: str = "canvas", aba: str = "geral",
     if acesso.exigir_login() and not sessao_atual(req):
         if not LANDING.exists():                   # instalacao sem a landing
             return RedirectResponse("/login", status_code=303)
-        return HTMLResponse(LANDING.read_text(encoding="utf-8"))
+        return pagina_estatica(LANDING.read_text(encoding="utf-8"))
     # Se o módulo pedido não é visível para este acesso (Fase D), abre no
     # primeiro que for — senão a home abriria num aviso de indisponível.
     if vista in MODULOS_CHAVES and not modulo_visivel(vista):
@@ -3027,7 +3163,10 @@ def fragmento_menu(req: Request, uid: str):
 
 @app.post("/config/helper")
 def config_helper(req: Request, ligado: int = Form(0)):
-    """Liga e desliga a visita. Devolve 204: quem pediu já sabe o que pediu."""
+    """Liga e desliga a visita. Devolve 204: quem pediu já sabe o que pediu.
+    É configuração GLOBAL: exige Administrador, como o resto de Configurações."""
+    if negado(NIVEL_ADMIN):
+        return Response(status_code=403)
     ESTADO.config.helper = bool(ligado)
     gravar()
     return Response(status_code=204)
@@ -4172,20 +4311,32 @@ def contexto_maria(ultima: dict | None = None, agente: dict | None = None,
     }
 
 
+def quem_chama(req: Request) -> str:
+    """A chave do freio de custo da MarIA: o e-mail da sessão (ou o nó)."""
+    carga = sessao_atual(req) or {}
+    return (carga.get("sub") or acesso_vigente().usuario_id or "anonimo").lower()
+
+
 @app.post("/maria/perguntar", response_class=HTMLResponse)
 async def maria_perguntar(req: Request):
     """Uma pergunta à MarIA. Toda resposta vira registro no histórico."""
     form = await req.form()
     capacidade = str(form.get("capacidade", mariamod.DESCREVER))
-    pergunta = str(form.get("pergunta", ""))
-    modelo = str(form.get("modelo", "")) or ESTADO.config.maria_modelo
+    pergunta = str(form.get("pergunta", ""))[:mariamod.PERGUNTA_MAX]
+    # O modelo do formulário só vale para Admin e só se for um dos conhecidos:
+    # escolher o modelo mais caro é escolher a fatura.
+    modelo = str(form.get("modelo", ""))
+    if negado(NIVEL_ADMIN) or modelo not in mariamod.modelos():
+        modelo = ""
+    modelo = modelo or ESTADO.config.maria_modelo
     recorte = str(form.get("recorte", ""))
     ids, rotulo = escopo_visivel(recorte)
 
     r = mariamod.perguntar(
         pergunta,
         mariamod.contexto(ESTADO.unidades, mapa_cc(), ESTADO.config, ids),
-        idioma=ESTADO.config.idioma, capacidade=capacidade, modelo=modelo)
+        idioma=ESTADO.config.idioma, capacidade=capacidade, modelo=modelo,
+        quem=quem_chama(req))
 
     registro = mariamod.assistencia(pergunta, r, usuario_atual(), capacidade,
                                     ESTADO.config.idioma, rotulo)
@@ -4429,7 +4580,7 @@ async def chat_perguntar(req: Request):
     não lembra do que foi dito não é conversa.
     """
     form = await req.form()
-    pergunta = str(form.get("pergunta", "")).strip()
+    pergunta = str(form.get("pergunta", "")).strip()[:mariamod.PERGUNTA_MAX]
     recorte = str(form.get("recorte", ""))
     # A capacidade vem da gaveta e passa pelo filtro: ela muda o prompt, e um
     # valor forjado no formulário não pode virar autoridade que a tela não deu.
@@ -4451,7 +4602,7 @@ async def chat_perguntar(req: Request):
     r = mariamod.perguntar(
         entrada, mariamod.contexto(ESTADO.unidades, mapa_cc(), ESTADO.config, ids),
         idioma=ESTADO.config.idioma, capacidade=capacidade,
-        modelo=ESTADO.config.maria_modelo)
+        modelo=ESTADO.config.maria_modelo, quem=quem_chama(req))
 
     registro = mariamod.assistencia(pergunta, r, usuario_atual(),
                                     capacidade, ESTADO.config.idioma,
@@ -4497,7 +4648,8 @@ async def maria_agente(req: Request):
         pedido, mariamod.contexto(ESTADO.unidades, mapa_cc(), ESTADO.config, ids),
         niveis={n["codigo"] for n in ESTADO.config.niveis if n.get("ativo", True)},
         nomes={u.nome for u in us},
-        idioma=ESTADO.config.idioma, modelo=ESTADO.config.maria_modelo)
+        idioma=ESTADO.config.idioma, modelo=ESTADO.config.maria_modelo,
+        quem=quem_chama(req))
 
     ESTADO.assistencias.append(mariamod.assistencia(
         pedido, r, usuario_atual(), mariamod.PLANEJAR, ESTADO.config.idioma,
@@ -4783,8 +4935,22 @@ def prov_concluir(req: Request, pid: str):
 
 
 # --- banco de dados ---------------------------------------------------------
+def negado_superadmin(req: Request) -> str | None:
+    """Recusa, ou None. Dump do banco é do OPERADOR do sistema: com o login
+    exigido, só o superadmin; sem login (modo de mesa), Admin."""
+    if (m := negado(NIVEL_ADMIN)):
+        return m
+    if acesso.exigir_login():
+        carga = sessao_atual(req)
+        if not (carga and acesso.e_superadmin(carga.get("sub", ""))):
+            return T("Ação negada: só o operador do sistema (superadmin) baixa o banco.")
+    return None
+
+
 @app.get("/banco/schema.sql")
 def baixar_schema(req: Request):
+    if (m := negado_superadmin(req)):
+        return JSONResponse({"erro": m}, status_code=403)
     return Response(bancomod.ddl(), media_type="application/sql",
                     headers={"Content-Disposition":
                              'attachment; filename="schema.sql"'})
@@ -4793,7 +4959,13 @@ def baixar_schema(req: Request):
 @app.get("/banco/carga.sql")
 def baixar_carga(req: Request):
     """O SQL sai do estado vigente, não de um script fixo: script fixo estaria
-    errado na primeira edição depois de escrito."""
+    errado na primeira edição depois de escrito.
+
+    A carga é a base de RH inteira (nome, e-mail, matrícula, admissão, gênero,
+    nascimento): só o superadmin baixa, e a saída fica no ledger."""
+    if (m := negado_superadmin(req)):
+        return JSONResponse({"erro": m}, status_code=403)
+    registrar("alterar", "-", "exportação SQL (carga do banco)", {"formato": "sql"})
     sql = bancomod.sql_carga(ESTADO.unidades, ESTADO.config)
     return Response(sql, media_type="application/sql",
                     headers={"Content-Disposition":
@@ -5397,7 +5569,7 @@ def panorama():
         return HTMLResponse("<h1>Manual não encontrado</h1>"
                             "<p>Esperado em <code>docs/panorama.html</code>.</p>",
                             status_code=404)
-    return HTMLResponse(arquivo.read_text(encoding="utf-8"))
+    return pagina_estatica(arquivo.read_text(encoding="utf-8"))
 
 
 @app.get("/boas-vindas", response_class=HTMLResponse)
@@ -5417,7 +5589,7 @@ def boas_vindas():
         return HTMLResponse("<h1>Apresentação não encontrada</h1>"
                             "<p>Esperada em <code>docs/boas-vindas.html</code>.</p>",
                             status_code=404)
-    return HTMLResponse(arquivo.read_text(encoding="utf-8"))
+    return pagina_estatica(arquivo.read_text(encoding="utf-8"))
 
 
 @app.get("/maria/historia", response_class=HTMLResponse)
@@ -5430,7 +5602,7 @@ def maria_historia():
         return HTMLResponse("<h1>História da MarIA não encontrada</h1>"
                             "<p>Esperada em <code>docs/MarIA_Historia.html</code>.</p>",
                             status_code=404)
-    return HTMLResponse(arquivo.read_text(encoding="utf-8"))
+    return pagina_estatica(arquivo.read_text(encoding="utf-8"))
 
 
 @app.get("/greyos", response_class=HTMLResponse)
@@ -5443,7 +5615,7 @@ def greyos():
         return HTMLResponse("<h1>GPlanSiS|OS não encontrado</h1>"
                             "<p>Esperado em <code>docs/greyos.html</code>.</p>",
                             status_code=404)
-    return HTMLResponse(arquivo.read_text(encoding="utf-8"))
+    return pagina_estatica(arquivo.read_text(encoding="utf-8"))
 
 
 @app.get("/agentes", response_class=HTMLResponse)
@@ -5459,7 +5631,7 @@ def agentes():
                             "<p>Esperado em "
                             "<code>Agentes/GPlanSiS_ORG_Agentes.html</code>.</p>",
                             status_code=404)
-    return HTMLResponse(arquivo.read_text(encoding="utf-8"))
+    return pagina_estatica(arquivo.read_text(encoding="utf-8"))
 
 
 # --- exportacao -----------------------------------------------------------
@@ -5677,10 +5849,18 @@ def api_verificar():
 def api_config():
     # Da sessao DESTA requisicao (nao do global): senao a API vazaria o perfil de
     # quem logou por ultimo. `acesso_vigente()` ja carrega os campos de config.
+    # Só a CONFIGURAÇÃO: os registros de RH que moram no Config (Conversa de
+    # Valor, Avaliação/9-box, respostas da Avaliação Mestre, 1:1) e a tabela de
+    # acessos ficam de fora — cada um tem a sua tela, com escopo e sigilo.
     v = acesso_vigente()
-    c = v.para_dict()
+    c = {k: x for k, x in v.para_dict().items() if k not in CONFIG_SENSIVEL}
     c["perfil_rotulo"] = PERFIS[v.perfil]["rotulo"]
     return JSONResponse(c)
+
+
+CONFIG_SENSIVEL = frozenset({"acessos", "cgv_registros", "mapa_talentos",
+                             "gptw_respostas", "gptw_programacao", "onebyone",
+                             "dcr_cargos", "software_por_area"})
 
 
 # ---------------------------------------------------------------------------
@@ -6054,7 +6234,7 @@ def cgv_trio():
     caminho = RAIZ / "docs" / "CGV" / "Valores_GPlanSiS.html"
     if not caminho.exists():
         return HTMLResponse("<h1>Valores GPlanSiS n\u00e3o encontrados</h1>", status_code=404)
-    return HTMLResponse(caminho.read_text(encoding="utf-8"))
+    return pagina_estatica(caminho.read_text(encoding="utf-8"))
 
 
 @app.get("/cgv/manual")
@@ -6079,7 +6259,7 @@ def cgv_interativo():
         return HTMLResponse("<h1>Passo a passo n\u00e3o encontrado</h1>"
                             "<p>Esperado em <code>docs/cgv-manual.html</code>.</p>",
                             status_code=404)
-    return HTMLResponse(arquivo.read_text(encoding="utf-8"))
+    return pagina_estatica(arquivo.read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------

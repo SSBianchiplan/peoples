@@ -6,7 +6,7 @@
   <div class="dcr-cabeca">
     <div><h2 style="margin:0;font-size:15px">{{ t('1:1 indisponível') }}</h2></div>
     <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
-            onclick="document.getElementById('onebyoneFicha').innerHTML=''">×</button>
+            data-on-click="esvaziar('onebyoneFicha')">×</button>
   </div>
   <p class="rh-vazio">🔒
     {{ t('Este 1:1 é privado dos participantes. Você não faz parte dele.') }}</p>
@@ -19,7 +19,7 @@
       <div class="trilha" style="margin-top:2px">{{ f.cargo }}{% if f.setor %} · {{ f.setor }}{% endif %}</div>
     </div>
     <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
-            onclick="document.getElementById('onebyoneFicha').innerHTML=''">×</button>
+            data-on-click="esvaziar('onebyoneFicha')">×</button>
   </div>
 
   <div class="ob-status">

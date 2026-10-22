@@ -20,7 +20,7 @@
     </div>
     <div class="dcr-cabeca-acoes">
       <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
-              onclick="document.getElementById('unidadeFicha').innerHTML=''">×</button>
+              data-on-click="esvaziar('unidadeFicha')">×</button>
     </div>
   </div>
 
@@ -45,7 +45,7 @@
     {% else %}
     <button type="button" class="bt bt-min" hx-get="/vistas/{{ chave }}"
             hx-target="#area" hx-swap="innerHTML"
-            onclick="document.getElementById('unidadeFicha').innerHTML=''; if(window.aba)aba(null)">
+            data-on-click="esvaziar('unidadeFicha'); abaSeHouver()">
       {{ t(rotulo) }}</button>
     {% endif %}
     {% endif %}
@@ -85,7 +85,7 @@
   {% endif %}
 
   <form hx-post="/unidades/{{ u.id }}/salvar" hx-target="{{ alvo }}" hx-swap="{{ troca }}"
-        hx-on::after-request="if(event.detail.successful){document.getElementById('unidadeFicha').innerHTML=''}">
+        data-on-htmx-after-request="esvaziarSeSucesso(event, 'unidadeFicha')">
     <input type="hidden" name="vista" value="{{ vista_origem }}">
     <input type="hidden" name="contexto" value="{{ contexto_origem }}">
     <fieldset style="border:0;padding:0;margin:0" {% if not pode_editar %}disabled{% endif %}>
@@ -291,7 +291,7 @@
       <div class="acoes" style="margin-top:16px">
         <button type="submit" class="bt forte" style="flex:0 0 160px">{{ t('Salvar') }}</button>
         <button type="button" class="bt"
-                onclick="document.getElementById('unidadeFicha').innerHTML=''">{{ t('Cancelar') }}</button>
+                data-on-click="esvaziar('unidadeFicha')">{{ t('Cancelar') }}</button>
       </div>
     </fieldset>
   </form>
@@ -300,7 +300,7 @@
      não brigar com o de salvar. #}
   {% if u.parent_id %}
   <form id="ff-mover" hx-post="/unidades/{{ u.id }}/mover" hx-target="{{ alvo }}" hx-swap="{{ troca }}"
-        hx-on::after-request="if(event.detail.successful){document.getElementById('unidadeFicha').innerHTML=''}"
+        data-on-htmx-after-request="esvaziarSeSucesso(event, 'unidadeFicha')"
         style="margin-top:-6px">
     <input type="hidden" name="vista" value="{{ vista_origem }}">
     <input type="hidden" name="contexto" value="{{ contexto_origem }}">

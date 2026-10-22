@@ -17,10 +17,10 @@
        tabela de cinco colunas em 430 px rola para o lado dentro de uma gaveta
        que já rola para baixo. O módulo continua a um clique, no menu da MarIA
        lá em cima; aqui o gesto útil é ler o que ela acabou de responder. #}
-    <button class="mc-x mc-largura" onclick="alternarLarguraChat()"
+    <button class="mc-x mc-largura" data-on-click="alternarLarguraChat()"
             aria-label="{{ t('Alargar ou recolher a gaveta') }}"
             title="{{ t('Alargar ou recolher a gaveta') }}">⤢</button>
-    <button class="mc-x" title="{{ t('Fechar') }}" onclick="fecharChat()">×</button>
+    <button class="mc-x" title="{{ t('Fechar') }}" data-on-click="fecharChat()">×</button>
   </div>
 </div>
 
@@ -31,7 +31,7 @@
     {% for s in chat.sugestoes %}
     {# Já chega traduzida e com os números do recorte: traduzir de novo aqui
        procuraria o texto em inglês no catálogo e devolveria ele mesmo. #}
-    <button class="mc-sug" onclick="perguntarChat(this.textContent)">{{ s }}</button>
+    <button class="mc-sug" data-on-click="perguntarChat(this.textContent)">{{ s }}</button>
     {% endfor %}
   </div>
   {% else %}
@@ -49,7 +49,7 @@
     <span class="mc-custo">{{ m.modelo }} · {{ m.entrada }}→{{ m.saida }} tok ·
       US$ {{ '%.4f'|format(m.custo_usd) }}
       {% if m.aid %}· <a href="/maria/assistencia/{{ m.aid }}/pdf"
-        onclick="pdfMaria(event, this.href)">PDF</a>{% endif %}</span>
+        data-on-click="pdfMaria(event, this.href)">PDF</a>{% endif %}</span>
     {% endif %}
   </div>
   {% endfor %}
@@ -59,8 +59,8 @@
 <form class="mc-envio" id="mcForm"
       hx-post="/maria/chat" hx-target="#mariaChat" hx-swap="innerHTML"
       hx-indicator="#mcPensando"
-      hx-on::before-request="mcEnviando(true)"
-      hx-on::after-request="mcEnviando(false)">
+      data-on-htmx-before-request="mcEnviando(true)"
+      data-on-htmx-after-request="mcEnviando(false)">
   {# As capacidades como chips: elas são a carta da MarIA, e escolher qual está
      em jogo muda o prompt — `analisar` compara declarado × cadastrado,
      `planejar` marca a resposta como rascunho. Antes a gaveta mandava sempre
@@ -105,7 +105,7 @@
     </button>
     {# Parar aborta a requisição no navegador. A chamada já feita à API não se
        desfaz — e dizer o contrário seria mentir sobre o custo. #}
-    <button class="mc-parar" id="mcParar" type="button" onclick="pararChat()"
+    <button class="mc-parar" id="mcParar" type="button" data-on-click="pararChat()"
             title="{{ t('Parar') }}">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <rect x="6" y="6" width="12" height="12" rx="2"/></svg>

@@ -65,7 +65,7 @@
   <form hx-post="/config/cargos" hx-target="#area" hx-swap="innerHTML">
     <div class="filtro-tabela">
       <input type="search" id="buscaCargo" placeholder="{{ t('filtrar cargo ou nível…') }}"
-             oninput="filtrarTabela(this, '#tabelaCargos')" autocomplete="off"
+             data-on-input="filtrarTabela(this, '#tabelaCargos')" autocomplete="off"
              aria-label="{{ t('Filtrar cargos') }}">
       <span class="pista" id="contaCargo"></span>
     </div>
@@ -101,7 +101,7 @@
       {# Fora do form do catálogo o botão seria um submit; `type=button` é o que
          impede que abrir o modal salve a tabela inteira sem querer. #}
       <button type="button" class="bt" style="flex:0 0 150px"
-              onclick="abrirModal('dlgCargo')">{{ t('+ Novo cargo') }}</button>
+              data-on-click="abrirModal('dlgCargo')">{{ t('+ Novo cargo') }}</button>
       <button type="button" class="bt" style="flex:0 0 200px"
               hx-post="/config/cargos/descobrir" hx-target="#area" hx-swap="innerHTML">
         {{ t('Descobrir da estrutura') }}</button>
@@ -118,7 +118,7 @@
    navegador descartaria o interno. #}
 <dialog id="dlgCargo" class="modal" aria-labelledby="dlgCargoTit">
   <form hx-post="/config/cargos/novo" hx-target="#area" hx-swap="innerHTML"
-        onsubmit="fecharModal('dlgCargo')">
+        data-on-submit="fecharModal('dlgCargo')">
     <h2 id="dlgCargoTit">{{ t('Novo cargo') }}</h2>
     <p class="sub">{{ t('Entra no catálogo com o nível que você escolher. Criar não reclassifica ninguém — quem reescreve o nível das unidades é <b>Aplicar às unidades</b>.')|safe }}</p>
 
@@ -146,7 +146,7 @@
     <div class="acoes">
       <button class="bt forte" style="flex:0 0 130px">{{ t('Criar') }}</button>
       <button type="button" class="bt" style="flex:0 0 110px"
-              onclick="fecharModal('dlgCargo')">{{ t('Cancelar') }}</button>
+              data-on-click="fecharModal('dlgCargo')">{{ t('Cancelar') }}</button>
     </div>
   </form>
 </dialog>
@@ -196,8 +196,8 @@
         </tbody>
       </table>
     </div>
-    <p class="pista">{{ t('Sem regra que case, o cargo cai no piso <b>{nivel}</b>.',
-                            nivel=t(rotulos_nivel.get("celula", "Célula")))|safe }}</p>
+    <p class="pista">{{ th('Sem regra que case, o cargo cai no piso <b>{nivel}</b>.',
+                             nivel=t(rotulos_nivel.get("celula", "Célula"))) }}</p>
     <div class="acoes"><button class="bt forte" style="flex:0 0 160px">{{ t('Salvar regras') }}</button></div>
   </form>
 </div>

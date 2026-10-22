@@ -143,7 +143,7 @@
           <li><button class="pessoa"
                       hx-get="/fragmentos/painel/{{ p.id }}?canvas=0&amp;vista=estrutura&amp;contexto={{ consulta|urlencode }}"
                       hx-target="#painel" hx-swap="innerHTML"
-                      onclick="alternarGaveta(true)">
+                      data-on-click="alternarGaveta(true)">
             <span class="p-nome">{{ p.nome }}</span>
             <span class="p-cargo">{{ p.cargo or '—' }}</span>
           </button></li>

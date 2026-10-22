@@ -11,7 +11,7 @@
     </div>
     <div class="dcr-cabeca-acoes">
       <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
-              onclick="document.getElementById('acessoModal').innerHTML=''">×</button>
+              data-on-click="esvaziar('acessoModal')">×</button>
     </div>
   </div>
 
@@ -61,7 +61,7 @@
     <label style="margin-top:14px">{{ t('Módulos visíveis') }}</label>
     <div class="modulos-topo">
       <label class="check">
-        <input type="checkbox" id="mod-todos" onchange="marcarTodosModulos(this)">
+        <input type="checkbox" id="mod-todos" data-on-change="marcarTodosModulos(this)">
         <span>{{ t('Selecionar todos os módulos') }}</span>
       </label>
       <span>{{ t('Nenhum marcado = vê todos. O Administrador vê todos de qualquer forma.') }}</span>
@@ -69,28 +69,14 @@
     <div class="modulos-grade" id="mod-grade">
       {% for chave, rot in modulos %}
       <label class="check">
-        <input type="checkbox" name="modulos" value="{{ chave }}" onchange="sincronizarTodosModulos()"
+        <input type="checkbox" name="modulos" value="{{ chave }}" data-on-change="sincronizarTodosModulos()"
                {% if chave in a.modulos %}checked{% endif %}>
         <span>{{ t(rot) }}</span>
       </label>
       {% endfor %}
     </div>
-    <script>
-      function marcarTodosModulos(master){
-        document.querySelectorAll('#mod-grade input[name="modulos"]').forEach(function(c){
-          c.checked = master.checked;
-        });
-      }
-      function sincronizarTodosModulos(){
-        var cs = Array.prototype.slice.call(
-          document.querySelectorAll('#mod-grade input[name="modulos"]'));
-        var m = document.getElementById('mod-todos');
-        var n = cs.filter(function(c){ return c.checked; }).length;
-        m.checked = n === cs.length;
-        m.indeterminate = n > 0 && n < cs.length;
-      }
-      sincronizarTodosModulos();
-    </script>
+    {# marcarTodosModulos/sincronizarTodosModulos moram em /estatico/csp.js, que
+       sincroniza o "todos" assim que esta grade entra na tela. #}
 
     <div class="acoes" style="margin-top:16px;gap:8px">
       <button class="bt forte" type="submit" style="flex:0 0 160px">{{ t('Salvar acesso') }}</button>
@@ -100,7 +86,7 @@
         {{ t('Remover acesso') }}</button>
       {% endif %}
       <button class="bt" type="button"
-              onclick="document.getElementById('acessoModal').innerHTML=''">{{ t('Cancelar') }}</button>
+              data-on-click="esvaziar('acessoModal')">{{ t('Cancelar') }}</button>
     </div>
   </form>
 

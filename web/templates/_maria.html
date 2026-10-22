@@ -94,7 +94,7 @@
       <div class="md">{{ maria.ultima.resposta|md|safe }}</div>
       <div class="acoes" style="margin:10px 0 0">
         <a class="bt bt-min" href="/maria/assistencia/{{ maria.ultima.id }}/pdf"
-           onclick="pdfMaria(event, this.href)">{{ t('Baixar PDF') }}</a>
+           data-on-click="pdfMaria(event, this.href)">{{ t('Baixar PDF') }}</a>
       </div>
       {% else %}
       <pre>{{ maria.ultima.resposta }}</pre>
@@ -253,9 +253,9 @@
         <div class="maria-log-acoes">
           <button class="bt bt-min" hx-get="/maria/assistencia/{{ a.id }}"
                   hx-target="#detMaria" hx-swap="innerHTML"
-                  onclick="rolarParaDetalhe()">{{ t('Ver resposta') }}</button>
+                  data-on-click="rolarParaDetalhe()">{{ t('Ver resposta') }}</button>
           <a class="bt bt-min" href="/maria/assistencia/{{ a.id }}/pdf"
-             onclick="pdfMaria(event, this.href)">PDF</a>
+             data-on-click="pdfMaria(event, this.href)">PDF</a>
         </div>
         {% endif %}
       </div>

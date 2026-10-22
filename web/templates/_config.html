@@ -5,8 +5,8 @@
 <div class="folha">
   <h1>{{ t('Configurações do sistema') }}</h1>
   <p class="sub">
-    {{ t('{n} unidades · perfil vigente <b>{perfil}</b> · ledger',
-         n=total, perfil=t(perfis[cfg.perfil].rotulo))|safe }}
+    {{ th('{n} unidades · perfil vigente <b>{perfil}</b> · ledger',
+          n=total, perfil=t(perfis[cfg.perfil].rotulo)) }}
     {% if cadeia.integro %}{{ t('íntegro com {n} evento(s)', n=cadeia.total) }}
     {% else %}<b style="color:var(--laranja-txt)">{{ t('rompido no evento #{seq}', seq=cadeia.seq_falha) }}</b>{% endif %}
   </p>
@@ -64,7 +64,8 @@
                           title="{{ t('Passar a mostrar este organograma') }}">
                     {{ t('Ativar') }}</button>
                   {% endif %}
-                  <button class="bt" onclick="renomearOrg('{{ o.slug }}', this)"
+                  <button class="bt" data-on-click="renomearOrg('{{ o.slug }}', this)"
+                          data-prompt="{{ t('Novo nome do organograma:') }}"
                           title="{{ t('Renomear') }}">{{ t('Renomear') }}</button>
                   {% if not o.ativo and organogramas.lista|length > 1 %}
                   <button class="bt perigo" hx-post="/organogramas/excluir"
@@ -92,17 +93,8 @@
       <p class="pista">{{ t('O organograma novo nasce só com a raiz — do topo você monta o resto com “+ Unidade” e “Criar colaborador”.') }}</p>
     </div>
 
-    <script>
-      function renomearOrg(slug, botao) {
-        var atual = botao.closest('tr').querySelector('b').textContent.trim();
-        var nome = window.prompt({{ t('Novo nome do organograma:')|tojson }}, atual);
-        if (nome === null || !nome.trim()) return;
-        htmx.ajax('POST', '/organogramas/renomear', {
-          target: '#area', swap: 'innerHTML',
-          values: {slug: slug, nome: nome.trim()}
-        });
-      }
-    </script>
+    {# renomearOrg mora em /estatico/csp.js (CSP sem script inline); o texto do
+       prompt viaja no data-prompt do botão. #}
 
     {# ------------------------------------------------------------------ #}
     {% elif aba == "geral" %}
@@ -132,7 +124,7 @@
         <div>
           <label for="c-tema">{{ t('Aparência') }}</label>
           <select id="c-tema" name="tema"
-                  onchange="document.documentElement.dataset.tema = this.value">
+                  data-on-change="previaTema(this)">
             {% for chave, rotulo in temas.items() %}
             <option value="{{ chave }}" {% if cfg.tema == chave %}selected{% endif %}>{{ t(rotulo) }}</option>
             {% endfor %}
@@ -168,9 +160,8 @@
       <div class="grade">
         <div>
           <label for="c-helper">{{ t('Visita de boas-vindas') }}</label>
-          <select id="c-helper" name="helper"
-                  hx-post="/config/helper" hx-swap="none"
-                  hx-vals='js:{ligado: this.value}' hx-trigger="change">
+          <select id="c-helper" name="ligado"
+                  hx-post="/config/helper" hx-swap="none" hx-trigger="change">
             <option value="1" {% if cfg.helper %}selected{% endif %}>{{ t('Ligada') }}</option>
             <option value="0" {% if not cfg.helper %}selected{% endif %}>{{ t('Desligada') }}</option>
           </select>
@@ -180,7 +171,7 @@
           <label>{{ t('Rever agora') }}</label>
           {# Só aparece com a visita ligada: desligada, ela não está no DOM e o
              botão não teria o que abrir. #}
-          <button type="button" class="bt" onclick="tourDoCanvas()"
+          <button type="button" class="bt" data-on-click="tourDoCanvas()"
                   {% if not cfg.helper %}disabled{% endif %}>
             {{ t('Começar a visita') }}
           </button>
@@ -287,7 +278,7 @@
       <p class="sub">{{ t('Todos os colaboradores do sistema. Com login, o papel, o escopo e os módulos visíveis de cada um vêm daqui — não do seletor acima. Clique em Editar para definir. Sem nenhuma atribuição, todo login entra como Administrador — é o que deixa o primeiro admin montar isto.') }}</p>
 
       <div class="dupla" style="align-items:flex-end;gap:12px;margin-bottom:10px">
-        <input type="search" id="busca-acesso" onkeyup="filtrarAcessos(this)"
+        <input type="search" id="busca-acesso" data-on-keyup="filtrarAcessos(this)"
                autocomplete="off" placeholder="{{ t('buscar colaborador…') }}"
                aria-label="{{ t('buscar colaborador…') }}" style="flex:1;max-width:360px">
         {# Preenche o acesso de todos que ainda não têm, pela hierarquia já
@@ -374,16 +365,9 @@
     {# O editor de acesso abre em MODAL (fixo, centrado): clicar em Editar preenche
        este alvo; clicar no fundo, no × do topo ou no Esc o esvazia (`:empty` some). #}
     <div id="acessoModal" class="ficha-painel"
-         onclick="if(event.target===this)this.innerHTML=''"></div>
+         data-on-click="fecharFundo(event, this)"></div>
 
-    <script>
-      function filtrarAcessos(inp){
-        var t = (inp.value || '').toLowerCase().trim();
-        document.querySelectorAll('#tab-acessos tbody tr').forEach(function(tr){
-          tr.style.display = (!t || (tr.dataset.busca||'').indexOf(t) >= 0) ? '' : 'none';
-        });
-      }
-    </script>
+    {# filtrarAcessos mora em /estatico/csp.js #}
     {% endif %}
 
     {# ------------------------------------------------------------------ #}

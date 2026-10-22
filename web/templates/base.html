@@ -11,7 +11,11 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#2D3336">
 <meta name="apple-mobile-web-app-title" content="Peoples">
+{# CSP: htmx sem eval (gatilhos e hx-on viraram data-on-*, ver csp.js) e sem
+   executar script que chegue num fragmento — script só do site ou com nonce. #}
+<meta name="htmx-config" content='{"allowEval": false, "allowScriptTags": false}'>
 <script src="/vendor/htmx.min.js"></script>
+<script src="/estatico/csp.js"></script>
 {#
   AG Grid Community (MIT), vendorizada como o htmx: nada é buscado de CDN em
   tempo de execução, e não há passo de build. `defer` porque a grade só monta
@@ -25,7 +29,7 @@
 {# O que o cliente precisa saber e não deve inventar: a cor de cada nível sai
    do cadastro, e os rótulos do menu saem do catálogo de idiomas — texto
    escrito dentro do JS sairia em português no meio da tela em inglês. #}
-<script>
+<script nonce="{{ csp_nonce }}">
 window.ORGA_CORES_NIVEL = {{ cfg.cores_nivel|tojson }};
 window.ORGA_T = {
   "gaveta": {{ t('Abrir na gaveta')|tojson }},
@@ -2468,7 +2472,7 @@ th.num,td.num{text-align:right}
   {# Seletor de organograma: qual estrutura está à vista. O ativo é GLOBAL —
      trocar aqui troca para todos. Aparece sempre; as ações são de Admin. #}
   <div class="org-topo" id="orgTopo">
-    <button class="org-btn" id="btOrg" onclick="alternarOrg(event)"
+    <button class="org-btn" id="btOrg" data-on-click="alternarOrg(event)"
             aria-haspopup="menu" aria-expanded="false"
             title="{{ t('Organograma ativo') }}">
       <b>{{ organogramas.lista | selectattr('ativo') | map(attribute='nome')
@@ -2495,7 +2499,7 @@ th.num,td.num{text-align:right}
       <div class="org-sep"></div>
       <button class="org-item" role="menuitem"
               hx-get="/vistas/configuracoes?aba=organogramas" hx-target="#area"
-              hx-swap="innerHTML" onclick="fecharOrg(); aba(null)">
+              hx-swap="innerHTML" data-on-click="fecharOrg(); aba(null)">
         <span><b>{{ t('Gerenciar organogramas') }}</b><small>{{ t('Criar, renomear, excluir') }}</small></span>
       </button>
       {% endif %}
@@ -2504,7 +2508,7 @@ th.num,td.num{text-align:right}
   {# Tela estreita: os módulos do cabeçalho cabem todos num menu só. MarIA e o
      avatar ficam **de fora** — são as duas coisas que se abre no meio de uma
      leitura, e enterrá-las custaria dois toques onde hoje se gasta um. #}
-  <button class="hamburguer" id="btMenuTopo" onclick="alternarMenuTopo(event)"
+  <button class="hamburguer" id="btMenuTopo" data-on-click="alternarMenuTopo(event)"
           aria-haspopup="menu" aria-expanded="false" aria-controls="modulos"
           aria-label="{{ t('Módulos do sistema') }}"
           title="{{ t('Módulos do sistema') }}">
@@ -2533,7 +2537,7 @@ th.num,td.num{text-align:right}
       {% if modulo_visivel(chave) %}
       <button class="aba{% if vista == chave %} on{% endif %}" role="tab"
               aria-selected="{{ 'true' if vista == chave else 'false' }}"
-              hx-get="/vistas/{{ chave }}" hx-target="#area" onclick="aba(this)">{{ rotulo }}</button>
+              hx-get="/vistas/{{ chave }}" hx-target="#area" data-on-click="aba(this)">{{ rotulo }}</button>
       {% endif %}
       {% endfor %}
     </nav>
@@ -2543,7 +2547,7 @@ th.num,td.num{text-align:right}
   {# MarIA fica ao lado das preferências, não numa aba: ela não é uma vista do
      organograma — é uma ferramenta que se abre sobre qualquer uma delas. #}
   <div class="maria-topo" id="mariaTopo">
-    <button class="bt-maria" onclick="alternarMaria(event)" id="btMaria"
+    <button class="bt-maria" data-on-click="alternarMaria(event)" id="btMaria"
             aria-haspopup="menu" aria-expanded="false" title="{{ t('MarIA · assistente de estrutura') }}">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path d="M12 2l1.9 4.7L18.6 8l-4.7 1.9L12 14.6l-1.9-4.7L5.4 8l4.7-1.3L12 2z"/>
@@ -2554,7 +2558,7 @@ th.num,td.num{text-align:right}
     <div class="maria-menu" role="menu" aria-labelledby="btMaria">
       <button class="maria-item" role="menuitem"
               hx-get="/maria/chat" hx-target="#mariaChat" hx-swap="innerHTML"
-              onclick="fecharMaria(); abrirChat()">
+              data-on-click="fecharMaria(); abrirChat()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -2562,7 +2566,7 @@ th.num,td.num{text-align:right}
       </button>
       <button class="maria-item" role="menuitem"
               hx-get="/vistas/maria" hx-target="#area" hx-swap="innerHTML"
-              onclick="fecharMaria(); aba(null)">
+              data-on-click="fecharMaria(); aba(null)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
@@ -2589,7 +2593,7 @@ th.num,td.num{text-align:right}
      botão solto e o perfil um selo sem ação — dois controles que ninguém
      associava à pessoa que está logada. #}
   <div class="conta" id="conta">
-    <button class="avatar" id="btAvatar" onclick="alternarConta(event)"
+    <button class="avatar" id="btAvatar" data-on-click="alternarConta(event)"
             aria-haspopup="menu" aria-expanded="false"
             aria-label="{{ t('Conta e preferências') }}"
             title="{{ usuario.nome if usuario else t('Conta e preferências') }}">
@@ -2624,7 +2628,7 @@ th.num,td.num{text-align:right}
       <div class="conta-sep"></div>
       <button class="conta-item" role="menuitem"
               hx-get="/vistas/maria" hx-target="#area" hx-swap="innerHTML"
-              onclick="fecharConta(); aba(null)">
+              data-on-click="fecharConta(); aba(null)">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M12 2l1.9 4.7L18.6 8l-4.7 1.9L12 14.6l-1.9-4.7L5.4 8l4.7-1.3L12 2z"/></svg>
         <span>{{ t('Módulo MarIA') }}</span>
@@ -2640,7 +2644,7 @@ th.num,td.num{text-align:right}
          missões do One-on-One (orga/greyos.py) não foi tocada. #}
       <div class="conta-sep"></div>
       <a class="conta-item" href="/panorama" target="_blank" rel="noopener"
-         role="menuitem" onclick="fecharConta()"
+         role="menuitem" data-on-click="fecharConta()"
          title="{{ t('Manual de uso e panorama do sistema') }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2649,7 +2653,7 @@ th.num,td.num{text-align:right}
         <span>{{ t('Manual') }}</span>
       </a>
       <a class="conta-item" href="/boas-vindas" target="_blank" rel="noopener"
-         role="menuitem" onclick="fecharConta()"
+         role="menuitem" data-on-click="fecharConta()"
          title="{{ t('Apresentação de boas-vindas ao organograma') }}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2673,7 +2677,7 @@ th.num,td.num{text-align:right}
 
       <div class="conta-sep"></div>
       {# O tema continua sendo trocado no cliente: aqui é só onde se clica. #}
-      <button class="conta-item" role="menuitem" onclick="alternarTema()">
+      <button class="conta-item" role="menuitem" data-on-click="alternarTema()">
         <svg class="sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
         <svg class="lua" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -2714,7 +2718,7 @@ th.num,td.num{text-align:right}
   <aside id="mariaChat" class="mc" aria-label="MarIA"></aside>
 
   <div id="gaveta" class="gaveta">
-    <button class="alca-gaveta" onclick="alternarGavetaManual()" id="alcaGaveta"
+    <button class="alca-gaveta" data-on-click="alternarGavetaManual()" id="alcaGaveta"
             aria-controls="painel" aria-expanded="true"
             title="{{ t('Recolher ou expandir o painel') }}">›</button>
     <aside id="painel" class="painel" aria-label="{{ t('Detalhes da unidade') }}">
@@ -2730,7 +2734,7 @@ th.num,td.num{text-align:right}
    aqui; clicar no fundo, no × ou no Esc esvazia (`:empty` some). Global, para
    funcionar em qualquer vista. #}
 <div id="unidadeFicha" class="ficha-painel"
-     onclick="if(event.target===this)this.innerHTML=''"></div>
+     data-on-click="fecharFundo(event, this)"></div>
 
 {# A visita entra na página só quando está ligada em Configurações. Desligada,
    ela não existe no DOM — e não há caminho para ligá-la sem passar pela tela
@@ -2740,7 +2744,7 @@ th.num,td.num{text-align:right}
   <input type="hidden" name="tema" id="temaValor" value="{{ cfg.tema }}">
 </form>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 /* Cliente cuida so do efemero: tema, selecao, menu, gaveta, tooltip, pan e
    zoom (ADR-010 / INT-05). Nada aqui e fonte de verdade do dominio. */
 

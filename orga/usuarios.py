@@ -230,9 +230,13 @@ def total() -> int:
 
 
 def definir_senha(email: str, senha: str, precisa_trocar: bool = False,
-                  por: str = "") -> None:
+                  por: str = "", operador: bool | None = None) -> None:
     """Cria ou redefine. `precisa_trocar` marca senha temporária dada pelo
-    administrador: no primeiro login a pessoa é levada a escolher a sua."""
+    administrador: no primeiro login a pessoa é levada a escolher a sua.
+
+    Toda troca de senha sobe a VERSÃO de sessão (`sessao_v`): os cookies emitidos
+    antes deixam de valer — senha nova, sessões antigas encerradas. `operador`
+    marca a conta do operador do sistema (primeiro acesso / ambiente)."""
     email = normalizar(email)
     if "@" not in email or email.startswith("@") or email.endswith("@"):
         raise ValueError("E-mail inválido.")
@@ -243,7 +247,10 @@ def definir_senha(email: str, senha: str, precisa_trocar: bool = False,
     atual = dict(d["usuarios"].get(email) or {"criado_em": _agora()})
     atual.update({"hash": hash_senha(senha), "atualizado_em": _agora(),
                   "precisa_trocar": bool(precisa_trocar), "ativo": True,
-                  "definida_por": por or atual.get("definida_por", "")})
+                  "definida_por": por or atual.get("definida_por", ""),
+                  "sessao_v": int(atual.get("sessao_v", 0) or 0) + 1})
+    if operador is not None:
+        atual["operador"] = bool(operador)
     d = {"usuarios": {**d["usuarios"], email: atual}}
     salvar(d)
     _TENTATIVAS.pop(email, None)
@@ -256,6 +263,39 @@ def remover(email: str) -> bool:
         return False
     d = {"usuarios": {k: v for k, v in d["usuarios"].items() if k != email}}
     salvar(d)
+    return True
+
+
+def versao_sessao(email: str) -> int | None:
+    """A versão de sessão vigente da conta, ou None se a conta não existe ou
+    está inativa — caso em que nenhuma sessão dela vale."""
+    r = registro(email)
+    if not r or not r.get("ativo", True):
+        return None
+    return int(r.get("sessao_v", 0) or 0)
+
+
+def sessao_valida(carga: dict | None) -> bool:
+    """O cookie (já com assinatura e prazo conferidos) ainda vale? Vale enquanto
+    a conta existir, estiver ativa e a versão gravada no token for a vigente.
+    É o que faz remover a senha (desligamento) ou trocá-la encerrar as sessões
+    abertas — antes, o JWT valia as 8 h inteiras."""
+    if not carga:
+        return False
+    v = versao_sessao(carga.get("sub", ""))
+    return v is not None and int(carga.get("v", 0) or 0) == v
+
+
+def revogar_sessoes(email: str) -> bool:
+    """Encerra todas as sessões da conta sem trocar a senha."""
+    d = ler()
+    e = normalizar(email)
+    r = d["usuarios"].get(e)
+    if not r:
+        return False
+    novo = {**r, "sessao_v": int(r.get("sessao_v", 0) or 0) + 1,
+            "atualizado_em": _agora()}
+    salvar({"usuarios": {**d["usuarios"], e: novo}})
     return True
 
 
@@ -326,7 +366,8 @@ def bootstrap_do_ambiente() -> str | None:
     if not email or not senha or total():
         return None
     try:
-        definir_senha(email, senha, precisa_trocar=False, por="ambiente")
+        definir_senha(email, senha, precisa_trocar=False, por="ambiente",
+                      operador=True)
     except ValueError:
         return None
     return email

@@ -10,7 +10,7 @@
   quem está digitando, e trocá-la a cada tecla roubaria o foco.
 #}
 {% macro borracha(campo, rotulo) %}
-<button type="button" class="borracha" onclick="limparCampo('{{ campo }}', event)"
+<button type="button" class="borracha" data-on-click="limparCampo('{{ campo }}', event)"
         title="{{ t('Limpar {campo}', campo=t(rotulo)) }}"
         aria-label="{{ t('Limpar filtro {campo}', campo=t(rotulo)) }}">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -26,7 +26,7 @@
    popover vazio já foi defeito relatado aqui uma vez — a diferença é que agora
    o vazio tem causa, e a causa cabe numa frase. #}
 <div class="chip{% if not itens %} vazio{% endif %}" data-campo="{{ campo }}">
-  <button type="button" class="bt" onclick="abrirPop(this)"
+  <button type="button" class="bt" data-on-click="abrirPop(this)"
           aria-haspopup="true" aria-expanded="false"
           {% if not itens %}disabled aria-disabled="true"
           title="{{ t('Nenhum {campo} sobrou no recorte atual', campo=t(rotulo)|lower) }}"
@@ -43,7 +43,7 @@
          um POST /filtros com gravacao em disco. #}
       <input type="text" class="pop-busca"
              placeholder="{{ t('filtrar {campo}…', campo=t(rotulo)|lower) }}"
-             oninput="filtrarPop(this)" onkeyup="event.stopPropagation()"
+             data-on-input="filtrarPop(this)" data-on-keyup="pararEvento(event)"
              autocomplete="off"
              aria-label="{{ t('Filtrar opções de {campo}', campo=t(rotulo)) }}">
     </div>

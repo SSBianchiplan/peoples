@@ -44,8 +44,14 @@ def fechado(monkeypatch):
 
 
 def _com_sessao(cli):
-    cli.cookies.set(acesso.COOKIE, acesso.assinar({"sub": "tic@gplansis.com",
-                                                   "uid": ""}))
+    # A sessão só vale para conta que existe (revogação por versão de sessão):
+    # cria a credencial antes de assinar o cookie, como o login faria.
+    from orga import usuarios
+    if not usuarios.existe("tic@gplansis.com"):
+        usuarios.definir_senha("tic@gplansis.com", "senha-de-teste-123")
+    cli.cookies.set(acesso.COOKIE, acesso.assinar({
+        "sub": "tic@gplansis.com", "uid": "",
+        "v": usuarios.versao_sessao("tic@gplansis.com")}))
     return cli
 
 

@@ -52,14 +52,39 @@ def superadmins() -> frozenset[str]:
     """E-mails que entram SEMPRE como Administrador total, mesmo estando fora do
     organograma ATIVO — o operador do sistema. Sem isto, trocar o organograma
     ativo para um que não contém o operador o trancava para fora do próprio
-    sistema. `ORG_SUPERADMINS` (lista por vírgula) acrescenta; o padrão garante o
-    dono à prova de variável esquecida."""
-    bruto = _env("ORG_SUPERADMINS", "contato@gplansis.com")
+    sistema. `ORG_SUPERADMINS` (lista por vírgula) define quem é; sem a variável,
+    vale o administrador do primeiro arranque (`ORG_ADMIN_EMAIL`). Nenhum e-mail
+    fica fixo no código: o operador é configuração do servidor, não do fonte."""
+    bruto = os.environ.get("ORG_SUPERADMINS")
+    if bruto is None:
+        bruto = _env("ORG_ADMIN_EMAIL")
     return frozenset(e.strip().lower() for e in bruto.split(",") if e.strip())
 
 
 def e_superadmin(email: str) -> bool:
-    return bool(email) and email.strip().lower() in superadmins()
+    """Superadmin pelo ambiente, ou a conta marcada como OPERADOR no arquivo de
+    credenciais (criada pelo primeiro acesso ou pelo `ORG_ADMIN_EMAIL`)."""
+    if not email:
+        return False
+    if email.strip().lower() in superadmins():
+        return True
+    from . import usuarios                       # import tardio: evita ciclo
+    r = usuarios.registro(email)
+    return bool(r and r.get("operador") and r.get("ativo", True))
+
+
+def acesso_aberto() -> bool:
+    """Válvula de compatibilidade: `ORG_ACESSO_ABERTO=1` devolve o comportamento
+    antigo (sem nenhum acesso configurado, todo mundo entra como Admin). Com o
+    login exigido, o padrão agora é fechado: sem atribuição = Visualizador."""
+    return _env("ORG_ACESSO_ABERTO") == "1" or not exigir_login()
+
+
+def primeiro_acesso_permitido() -> bool:
+    """A tela de "criar o primeiro administrador" vale para quem chegar primeiro;
+    com o login exigido (produção) ela só abre com `ORG_PRIMEIRO_ACESSO=1`. O
+    caminho normal é o instalador criar o admin por `ORG_ADMIN_EMAIL`/`_SENHA`."""
+    return not exigir_login() or _env("ORG_PRIMEIRO_ACESSO") == "1"
 
 
 # ---------------------------------------------------------------------------
@@ -137,6 +162,13 @@ def verificar(token: str | None) -> dict | None:
 # ---------------------------------------------------------------------------
 # Identidade: o e-mail e o organograma
 # ---------------------------------------------------------------------------
+def origens_extras() -> frozenset[str]:
+    """Origens (esquema://host) aceitas além do próprio host em POST/PUT/DELETE.
+    `ORG_ORIGENS` (lista por vírgula), para um proxy que reescreva o Host."""
+    bruto = _env("ORG_ORIGENS", "")
+    return frozenset(o.strip().rstrip("/").lower() for o in bruto.split(",") if o.strip())
+
+
 def dominio_valido(email: str) -> bool:
     email = (email or "").strip().lower()
     if "@" not in email or email.startswith("@") or email.endswith("@"):

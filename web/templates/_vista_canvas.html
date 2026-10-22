@@ -87,12 +87,12 @@
         </button>
       </div>
       <div class="zoom" role="group" aria-label="{{ t('Zoom do canvas') }}">
-        <button onclick="ajustar()" title="{{ t('Ajustar à tela (tecla 0)') }}" aria-label="{{ t('Ajustar à tela') }}">⊙</button>
-        <button onclick="zoom(1/1.15)" title="{{ t('Afastar') }}" aria-label="{{ t('Afastar') }}">−</button>
-        <button id="zoomPct" onclick="menuZoom()" aria-haspopup="true"
+        <button data-on-click="ajustar()" title="{{ t('Ajustar à tela (tecla 0)') }}" aria-label="{{ t('Ajustar à tela') }}">⊙</button>
+        <button data-on-click="zoom(0.8695652173913044)" title="{{ t('Afastar') }}" aria-label="{{ t('Afastar') }}">−</button>
+        <button id="zoomPct" data-on-click="menuZoom()" aria-haspopup="true"
                 title="{{ t('Escolher percentual') }}">100 %</button>
-        <button onclick="zoom(1.15)" title="{{ t('Aproximar') }}" aria-label="{{ t('Aproximar') }}">+</button>
-        <button onclick="ajustarLargura()" title="{{ t('Ajustar à largura') }}" aria-label="{{ t('Ajustar à largura') }}">↔</button>
+        <button data-on-click="zoom(1.15)" title="{{ t('Aproximar') }}" aria-label="{{ t('Aproximar') }}">+</button>
+        <button data-on-click="ajustarLargura()" title="{{ t('Ajustar à largura') }}" aria-label="{{ t('Ajustar à largura') }}">↔</button>
       </div>
     </div>
     {# Fora do `.canto`, e de propósito: o canto tem `z-index` próprio, e
@@ -101,7 +101,7 @@
        passava por cima. Aqui ele é filho do palco, que não abre contexto. #}
     <div id="zoomMenu" class="zoom-menu" role="menu">
       {% for p in [50, 60, 70, 80, 90, 100, 125, 150, 200] %}
-      <button role="menuitem" onclick="zoomPara({{ p / 100 }})">{{ p }} %</button>
+      <button role="menuitem" data-on-click="zoomPara({{ p / 100 }})">{{ p }} %</button>
       {% endfor %}
     </div>
     {# Presença: quem está online agora, no canto INFERIOR esquerdo. Fora do
@@ -109,7 +109,7 @@
        corpo se auto-atualiza (htmx a cada 25s), e esse mesmo pedido é o batimento
        que mantém quem está com o canvas aberto marcado como ativo. #}
     <div id="presenca" class="presenca">
-      <button type="button" class="presenca-bt" onclick="alternarPresenca(event)"
+      <button type="button" class="presenca-bt" data-on-click="alternarPresenca(event)"
               aria-haspopup="true" aria-expanded="false"
               title="{{ t('Quem está ativo agora') }}"
               aria-label="{{ t('Quem está ativo agora') }}">
