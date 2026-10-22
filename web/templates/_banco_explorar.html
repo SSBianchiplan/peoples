@@ -1,0 +1,88 @@
+{#
+  Explorador de tabela — modal tela cheia. Dados (amostra) e Estrutura, só
+  leitura, para conferir o que o banco guarda de verdade. Abas por CSS (radios
+  ocultos), sem JavaScript; trocar o limite recarrega o modal pelo htmx.
+#}
+<div class="bx" role="dialog" aria-modal="true"
+     aria-label="{{ t('Explorar {tabela}', tabela=tabela) }}">
+  <input type="radio" name="bx-aba" id="bx-dados" class="bx-radio" checked hidden>
+  <input type="radio" name="bx-aba" id="bx-estrutura" class="bx-radio" hidden>
+
+  <div class="bx-topo">
+    <div class="bx-ident">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--ambar)" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+      <div class="bx-ident-txt">
+        <b>{{ tabela }}</b>
+        <span>{{ t('{c} colunas · {n} linhas · {o}', c=amostra.colunas|length,
+                  n=amostra.total, o=origem) }}</span>
+      </div>
+    </div>
+    <div class="bx-acoes">
+      <a class="bt bt-min" hx-get="/config/banco/tabela/{{ tabela|urlencode }}?limite={{ amostra.limite }}"
+         hx-target="#bancoModal" hx-swap="innerHTML">↻ {{ t('Recarregar') }}</a>
+      <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
+              hx-get="/config/banco/fechar" hx-target="#bancoModal" hx-swap="innerHTML">×</button>
+    </div>
+  </div>
+
+  <div class="bx-abas">
+    <label for="bx-dados" class="bx-aba">{{ t('Dados') }}</label>
+    <label for="bx-estrutura" class="bx-aba">{{ t('Estrutura') }} <small>{{ estrutura|length }}</small></label>
+  </div>
+
+  {% if amostra.erro %}
+  <p class="bx-erro">{{ t('Não foi possível ler a tabela.') }} <code>{{ amostra.erro }}</code></p>
+  {% endif %}
+
+  {# ---------------- Dados ---------------- #}
+  <div class="bx-painel bx-painel-dados">
+    {% if not amostra.linhas %}
+    <p class="bx-vazio">{{ t('Sem linhas para mostrar.') }}</p>
+    {% else %}
+    <div class="bx-grade">
+      <table>
+        <thead><tr><th class="bx-hash">#</th>
+          {% for c in amostra.colunas %}<th>{{ c }}</th>{% endfor %}
+        </tr></thead>
+        <tbody>
+          {% for linha in amostra.linhas %}
+          <tr><td class="bx-hash">{{ loop.index }}</td>
+            {% for v in linha %}<td title="{{ v }}">{{ v }}</td>{% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ---------------- Estrutura ---------------- #}
+  <div class="bx-painel bx-painel-estrutura">
+    <div class="bx-grade">
+      <table>
+        <thead><tr><th>{{ t('Coluna') }}</th><th>{{ t('Tipo') }}</th>
+          <th>{{ t('Aceita nulo') }}</th><th>{{ t('Padrão') }}</th></tr></thead>
+        <tbody>
+          {% for c in estrutura %}
+          <tr><td class="cod"><b>{{ c.coluna }}</b></td><td class="cod">{{ c.tipo }}</td>
+            <td>{{ '✓' if c.nulo else '—' }}</td><td class="cod">{{ c.padrao or '—' }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="bx-rodape">
+    <span>{{ t('{n} de {t} linhas', n=amostra.linhas|length, t=amostra.total) }}</span>
+    <div class="bx-limites">
+      <span class="pista">{{ t('ver') }}:</span>
+      {% for lim in limites %}
+      <a class="bx-lim{% if amostra.limite == lim %} on{% endif %}"
+         hx-get="/config/banco/tabela/{{ tabela|urlencode }}?limite={{ lim }}"
+         hx-target="#bancoModal" hx-swap="innerHTML">{{ lim }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</div>

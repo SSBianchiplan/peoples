@@ -1,0 +1,32 @@
+{#
+  O que está filtrando agora, um por um.
+
+  A contagem no chip diz "3 centros de custo", mas não diz **quais** — e para
+  saber era preciso abrir o popover e procurar as marcas no meio de setenta e
+  oito linhas. Tirar um só era pior ainda: a borracha do chip apaga o critério
+  inteiro, então quem queria descartar um CC de três descartava os três e
+  remarcava dois.
+
+  Cada pílula é o par (critério, valor) e some no clique. O rótulo é o mesmo
+  que o popover mostra — `82.43 · Software Team 3`, e não `82.43` — porque a
+  pílula é onde a pessoa lê o recorte sem abrir nada.
+
+  Volta fora de banda junto com os chips: os dois descrevem o mesmo estado.
+#}
+<div class="ativos{% if not ativos %} sem{% endif %}" id="filtrosAtivos"
+     {% if oob %}hx-swap-oob="true"{% endif %}
+     role="group" aria-label="{{ t('Filtros ativos') }}">
+  {% if ativos %}
+  <span class="ativos-rot">{{ t('filtrando por') }}</span>
+  {% for a in ativos %}
+  {# `data-*` em vez de argumento no `onclick`: valor de cliente tem apóstrofo
+     (`Gestão de TIC's`) e aspas, e montar chamada JS em atributo é o caminho
+     mais curto para quebrar a tela num nome de departamento. #}
+  <button type="button" class="pilula" data-campo="{{ a.campo }}" data-valor="{{ a.valor }}"
+          aria-label="{{ t('Remover {campo}: {valor}', campo=t(a.rotulo_campo), valor=a.rotulo) }}"
+          title="{{ t('Remover {campo}: {valor}', campo=t(a.rotulo_campo), valor=a.rotulo) }}">
+    <b>{{ t(a.rotulo_campo) }}</b><span>{{ a.rotulo }}</span><i aria-hidden="true">×</i>
+  </button>
+  {% endfor %}
+  {% endif %}
+</div>

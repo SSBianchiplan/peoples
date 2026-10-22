@@ -1,0 +1,46 @@
+{#
+  A matriz 9-box: Risco de perda (linhas) × Impacto da perda (colunas).
+
+  O canto crítico — Alto risco × Alto impacto — é o de retenção urgente: gente
+  que provavelmente sai e cuja saída dói. Fica no alto à esquerda, destacado. Os
+  nomes de cada célula abrem a ficha ao lado, como na lista.
+#}
+<div class="tal-9box" role="table" aria-label="{{ t('Matriz 9-box: Risco × Impacto de perda') }}">
+  <div class="tal-9box-eixoY">{{ t('Risco de perda') }} →</div>
+  <div class="tal-9box-grade">
+    {# cabeçalho: as três colunas de impacto #}
+    <div class="tal-9box-cabeca" role="row">
+      <span class="tal-9box-canto">{{ t('Impacto da perda') }} →</span>
+      {% for c in matriz.grade[0].celulas %}
+      <span class="tal-9box-th" role="columnheader">{{ t(c.impacto_rotulo) }}</span>
+      {% endfor %}
+    </div>
+    {% for linha in matriz.grade %}
+    <div class="tal-9box-linha" role="row">
+      <span class="tal-9box-rh" role="rowheader">{{ t(linha.risco_rotulo) }}</span>
+      {% for c in linha.celulas %}
+      <div class="tal-9box-cel {% if c.critica %}critica{% endif %} r-{{ linha.risco }} i-{{ c.impacto }}"
+           role="cell">
+        <b class="tal-9box-n">{{ c.n }}</b>
+        {% if c.pessoas %}
+        <ul class="tal-9box-gente">
+          {% for p in c.pessoas %}
+          <li><button type="button" class="tal-nome"
+                  hx-get="/talentos/ficha/{{ p.ref|urlencode }}"
+                  hx-target="#talentosFicha" hx-swap="innerHTML"
+                  title="{{ t('Abrir o Mapa de {nome}', nome=p.nome) }}">{{ p.nome }}</button></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<p class="sub tal-9box-pe">
+  {{ t('{m} de {t} pessoas classificadas.', m=matriz.mapeados, t=matriz.total) }}
+  {% if matriz.sem_classificar %}
+  {{ t('{n} ainda sem leitura de risco/impacto — abra a ficha para posicioná-las.', n=matriz.sem_classificar) }}
+  {% endif %}
+</p>

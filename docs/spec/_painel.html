@@ -1,0 +1,42 @@
+{% set oob = true %}{% include "_canvas.html" %}
+
+<h2>{{ u.codigo }}</h2>
+<div class="miolo">
+  <form hx-post="/unidades/{{ u.id }}/salvar" hx-target="#canvas" hx-swap="outerHTML">
+
+    <label for="f-nome">Nome da unidade</label>
+    <input id="f-nome" name="nome" value="{{ u.nome }}" maxlength="80" required>
+
+    <label for="f-tipo">Tipo</label>
+    <select id="f-tipo" name="tipo">
+      {% for k, rotulo in tipos.items() %}
+      <option value="{{ k }}" {% if u.tipo == k %}selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="f-resp">Responsável</label>
+    <input id="f-resp" name="responsavel" value="{{ u.responsavel }}" maxlength="60"
+           placeholder="nome de exibição">
+
+    <label for="f-cargo">Cargo</label>
+    <input id="f-cargo" name="cargo" value="{{ u.cargo }}" maxlength="80" placeholder="opcional">
+
+    <label for="f-itens">Responsabilidades</label>
+    <textarea id="f-itens" name="responsabilidades" spellcheck="false">{{ texto }}</textarea>
+    <p class="pista">Uma por linha. Prefixe com <code>&gt;</code> para marcar
+      responsabilidade <strong>delegada</strong> a uma unidade subordinada.</p>
+
+    <div class="acoes">
+      <button type="submit" class="bt forte">Salvar alterações</button>
+      <button type="button" class="bt"
+              hx-get="/fragmentos/painel/{{ u.id }}" hx-target="#painel" hx-swap="innerHTML">Descartar</button>
+    </div>
+  </form>
+
+  <div class="fatos">
+    <div><span>nível</span><b>N{{ u_nivel }}</b></div>
+    <div><span>responde a</span><b>{{ pai.nome if pai else "— (raiz)" }}</b></div>
+    <div><span>subordinados</span><b>{{ n_filhos }}</b></div>
+    <div><span>identificador</span><b>{{ u.id }}</b></div>
+  </div>
+</div>

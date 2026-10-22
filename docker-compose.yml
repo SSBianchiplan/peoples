@@ -1,0 +1,55 @@
+name: gplansis-peoples
+
+# Compose de DESENVOLVIMENTO e de quem quer rodar o Peoples fora do hub com um
+# Postgres próprio. A produção do hub (peoples.gplansis.com) NÃO usa este
+# arquivo: lá o serviço roda em venv + systemd atrás do Caddy e usa o
+# PostgreSQL do host por socket — ver deploy/vps/ e deploy/README.md.
+services:
+  app:
+    image: gplansis-peoples:local
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Sobrepõe qualquer ORG_DATABASE_URL do .env: neste compose o banco é
+      # sempre o Postgres do próprio compose.
+      ORG_DATABASE_URL: postgresql://${POSTGRES_USER:-peoples}:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@postgres:5432/${POSTGRES_DB:-peoples}
+      ORG_ESPELHO: "1"
+      ORG_PORT: ${ORG_PORT:-8400}
+    ports:
+      - "127.0.0.1:${ORG_PORT:-8400}:${ORG_PORT:-8400}"
+    volumes:
+      # Volume nomeado, não bind mount: o container roda como usuário sem
+      # privilégios e um diretório do host nasceria de root, sem permissão de
+      # escrita. O volume herda o dono certo da imagem.
+      - dados:/app/dados
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    # SEM porta publicada, de propósito: o banco só é alcançável de dentro da
+    # rede do compose. Para reabrir numa máquina de desenvolvimento, use um
+    # docker-compose.override.yml (não versionado) com
+    #   services: { postgres: { ports: ["127.0.0.1:5434:5432"] } }
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-peoples}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-peoples}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      # Só roda na inicialização do volume vazio: schema.sql já traz as
+      # tabelas de todas as migrações (inclusive a 009).
+      - ./orga/schema.sql:/docker-entrypoint-initdb.d/001_org_baseline.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-peoples} -d ${POSTGRES_DB:-peoples}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata:
+  dados:

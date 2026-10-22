@@ -1,0 +1,69 @@
+{#
+  Barra de filtros compartilhada pelo canvas e pela tabela. Os domínios saem
+  do dado (dominio.valores_de_filtro), nunca de lista fixa: CC que não existe
+  não aparece, e CC novo aparece sozinho.
+
+  Cada critério é um chip com popover de seleção múltipla — 78 centros de custo
+  não cabem numa caixa de rolagem na barra, e o chip mostra a contagem sem
+  ocupar espaço. A borracha ao lado apaga aquele critério sem abrir o popover.
+
+  O alvo muda com a vista, e cada vista precisa declarar o seu: #canvas no
+  canvas, o corpo da tabela na tabela, o corpo do relatório no tempo de casa —
+  nunca a barra em si, para não roubar o foco de quem está digitando.
+
+  Alvo que não existe na tela é filtro que não acontece: o htmx resolve
+  `hx-target` antes de despachar, então apontar para `#canvas` a partir do
+  tempo de empresa não dava erro nenhum — gravava o recorte no servidor e não
+  trocava nada na tela. Por isso o mapa está aqui, explícito, e não num
+  ternário que trata "o que não é tabela" como se fosse canvas.
+#}
+{% set alvo_da_vista = {'tabela': '#tabelaCorpo', 'tempo': '#tempoCorpo',
+                        'dcr': '#dcrCorpo', 'cgv': '#cgvCorpo',
+                        'talentos': '#talentosCorpo', 'onebyone': '#onebyoneCorpo'} %}
+<form id="filtros" class="filtros"
+      hx-post="/filtros?vista={{ vista }}"
+      hx-target="{{ alvo_da_vista.get(vista, '#canvas') }}"
+      hx-swap="{{ 'outerHTML' if vista not in alvo_da_vista else 'innerHTML' }}"
+      hx-trigger="change, keyup changed delay:350ms, submit"
+      onsubmit="return false">
+
+  {# Tela estreita: os oito critérios e a busca viravam uma tira que rolava para
+     o lado, e o que rola para o lado numa tela de 400 px é o que ninguém acha.
+     Aqui eles entram num painel suspenso só — um toque abre o grupo inteiro, e
+     a barra devolve a altura ao desenho. Na tela larga este botão não existe e
+     `.filtros-corpo` some do layout: a barra de sempre continua igual. #}
+  <button type="button" class="bt-filtros" id="btFiltros"
+          onclick="alternarFiltros(event)" aria-haspopup="true"
+          aria-expanded="false" aria-controls="filtrosCorpo"
+          title="{{ t('Filtros') }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 4h18l-7 8v6l-4 2v-8z"/>
+    </svg>
+    {{ t('Filtros') }}
+    <span class="conta-filtros" id="contaFiltros">0</span>
+  </button>
+
+  <div class="filtros-corpo" id="filtrosCorpo">
+  <input type="search" name="texto" value="{{ filtros.texto }}" autocomplete="off"
+         aria-label="{{ t('Busca livre') }}" placeholder="{{ t('buscar pessoa, cargo, e-mail, CC…') }}">
+
+  {% include "_filtros_chips.html" %}
+
+  <div class="limpar-tudo">
+    <span class="selo-filtro">{{ t('filtro ativo') }}</span>
+    <button type="button" class="bt" hx-post="/filtros/limpar?vista={{ vista }}"
+            hx-target="#area" hx-swap="innerHTML" title="{{ t('Limpar todos os filtros') }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M8.5 20H21"/><path d="m15 5 4 4L9.5 18.5H5.5L3 16z"/><path d="m11 9 4 4"/>
+      </svg>
+      {{ t('Limpar tudo') }}
+    </button>
+  </div>
+  </div>
+</form>
+
+{# Fora do formulário de propósito: é uma tira própria, que só existe quando há
+   o que mostrar. Dentro, ela disputaria a linha com os oito chips. #}
+{% include "_filtros_ativos.html" %}

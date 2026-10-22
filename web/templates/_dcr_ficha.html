@@ -1,0 +1,145 @@
+{#
+  A ficha: o formulário GEP-FOR-003 de uma função, com a camada editável ao lado.
+
+  Cada seção declara de onde veio o que está nela — escrito pelo RH, deduzido da
+  estrutura, ou vazio. Sem essa marca o documento seria lido como se tudo
+  tivesse sido revisado por alguém, e uma responsabilidade deduzida de seis
+  cadastros é ponto de partida para escrever, não texto aprovado.
+#}
+{% if not f %}
+<div class="dcr-ficha">
+  <p class="vazio">
+    <strong>{{ t('Cargo fora do recorte') }}</strong>
+    {{ t('Essa função não existe na estrutura vigente ou está fora do filtro atual. Cargo some da base a cada carga da planilha — um link guardado para uma ficha antiga cai aqui.') }}
+  </p>
+</div>
+{% else %}
+<div class="dcr-ficha">
+  {# A caixa que alterna leitura/edição: precede os blocos irmãos para o seletor
+     `~` alcançá-los sem `:has()`. Uma ficha por vez em `#dcrFicha`, então o id
+     fixo não colide. Só para quem pode editar. #}
+  {% if not motivo_edicao %}<input type="checkbox" id="dcr-edt" class="toggle-edicao" hidden>{% endif %}
+
+  <div class="dcr-cabeca">
+    <div>
+      <h2>{{ t('Descrição de Cargo e Responsabilidades') }}</h2>
+      <span class="cod">{{ formulario.codigo }} – {{ t('Rev') }} {{ formulario.revisao }}</span>
+    </div>
+    <div class="dcr-cabeca-acoes">
+      <a class="bt bt-min" href="/dcr/ficha/{{ chave|urlencode }}/pdf">{{ t('Baixar PDF') }}</a>
+      {% if not motivo_edicao %}
+      <label for="dcr-edt" class="bt bt-min bt-editar"
+             title="{{ t('Alternar edição') }}">{{ t('Editar') }}</label>
+      {% endif %}
+      <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
+              hx-get="/dcr/vazio" hx-target="closest .ficha-painel" hx-swap="innerHTML">×</button>
+    </div>
+  </div>
+
+  {# ---------------- o documento ---------------- #}
+  <table class="dcr-form">
+    <tbody>
+      <tr class="dcr-secao"><td colspan="2">{{ t('Descrição de Cargo') }}</td></tr>
+      <tr><td colspan="2"><b>{{ t('Cargo') }}:</b> {{ f.cargo }}</td></tr>
+      <tr><td colspan="2"><b>{{ t('Área') }}:</b> {{ f.area or '—' }}</td></tr>
+
+      {% for s in secoes %}
+      {% if s.chave == 'missao' %}
+      <tr><td colspan="2">
+        <b>{{ t('Missão do Cargo') }}:</b>
+        {% if s.conteudo %}{{ s.conteudo[0] }}
+        {% else %}<i class="dcr-vazio">{{ t('não preenchida — escreva abaixo') }}</i>{% endif %}
+      </td></tr>
+      {% else %}
+      <tr class="dcr-secao"><td colspan="2">
+        {{ t(rotulos[s.chave]) }}
+        {% if s.origem == 'derivado' %}
+        <span class="dcr-origem" title="{{ t('Extraído do que está gravado na estrutura. É ponto de partida para o RH escrever, não texto aprovado.') }}">{{ t('deduzido da estrutura') }}</span>
+        {% elif s.origem == 'escrito' %}
+        <span class="dcr-origem escrito">{{ t('escrito pelo RH') }}</span>
+        {% endif %}
+      </td></tr>
+      <tr><td colspan="2">
+        {% if s.conteudo %}
+        <ul class="dcr-itens">
+          {% for item in s.conteudo %}<li>{{ item }}</li>{% endfor %}
+        </ul>
+        {% else %}<i class="dcr-vazio">{{ t('não preenchida — escreva abaixo') }}</i>{% endif %}
+      </td></tr>
+      {% endif %}
+      {% endfor %}
+
+      <tr class="dcr-secao"><td colspan="2">{{ t('Valores') }}</td></tr>
+      <tr><td colspan="2">
+        <ul class="dcr-itens">
+          {% for _codigo, rotulo, frase in valores %}
+          <li><b>{{ rotulo }}</b>: {{ t(frase) }}</li>
+          {% endfor %}
+        </ul>
+      </td></tr>
+    </tbody>
+  </table>
+
+  {# ---------------- o que a estrutura diz ---------------- #}
+  <div class="grupo">
+    <h3>{{ t('O que a estrutura diz sobre este cargo') }}</h3>
+    <div class="fatos">
+      <div><span>{{ t('Ocupações') }}</span><b>{{ f.n }}</b></div>
+      <div><span>{{ t('Papel') }}</span><b>{{ t(f.papel) }}</b></div>
+      <div><span>{{ t('Subordinados diretos') }}</span><b>{{ f.diretos }}</b></div>
+      {% if f.reporta_a %}
+      <div><span>{{ t('Responde a') }}</span>
+        <b>{{ f.reporta_a|map(attribute='rotulo')|join(', ') }}</b></div>
+      {% endif %}
+      {% if f.setores %}
+      <div><span>{{ t('Setores') }}</span>
+        <b>{{ f.setores|map(attribute='rotulo')|join(', ') }}</b></div>
+      {% endif %}
+      {% if f.bus %}
+      <div><span>{{ t('Business Units') }}</span>
+        <b>{{ f.bus|map(attribute='rotulo')|join(', ') }}</b></div>
+      {% endif %}
+    </div>
+    {% if f.ocupantes %}
+    <p class="pista">{{ t('Ocupam hoje') }}:
+      {{ f.ocupantes|map(attribute='nome')|join(' · ') }}</p>
+    {% endif %}
+  </div>
+
+  {# ---------------- a camada editável ---------------- #}
+  {# Só aparece com o botão «Editar» ligado — trava contra reescrever a
+     descrição de um cargo por engano ao só querer consultá-la. #}
+  <form class="grupo ficha-edicao" hx-post="/dcr/ficha/{{ chave|urlencode }}"
+        hx-target="#dcrFicha" hx-swap="innerHTML">
+    <h3>{{ t('Escrever a ficha') }}</h3>
+    <p class="pista">{{ t('Uma linha por item nas três listas. O que for escrito aqui substitui o texto deduzido no documento e no PDF — o deduzido continua visível acima, como sugestão.') }}</p>
+
+    <label for="dcr-missao">{{ t('Missão do Cargo') }}</label>
+    <textarea id="dcr-missao" name="missao" rows="4"
+              {% if motivo_edicao %}disabled title="{{ motivo_edicao }}"{% endif %}
+              placeholder="{{ t('A missão do {cargo} é contribuir para…', cargo=f.cargo) }}">{{ f.escrito.missao }}</textarea>
+
+    <label for="dcr-resp">{{ t('Principais Responsabilidades') }}</label>
+    <textarea id="dcr-resp" name="responsabilidades" rows="8"
+              {% if motivo_edicao %}disabled title="{{ motivo_edicao }}"{% endif %}
+              placeholder="{{ t('Uma responsabilidade por linha.') }}">{{ f.escrito.responsabilidades }}</textarea>
+
+    <label for="dcr-req">{{ t('Requisitos Desejáveis') }}</label>
+    <textarea id="dcr-req" name="requisitos" rows="4"
+              {% if motivo_edicao %}disabled title="{{ motivo_edicao }}"{% endif %}
+              placeholder="{{ t('Formação, experiência e disponibilidade — um por linha. Nada disto se deduz do organograma.') }}">{{ f.escrito.requisitos }}</textarea>
+
+    <label for="dcr-comp">{{ t('Competências Desejáveis') }}</label>
+    <textarea id="dcr-comp" name="competencias" rows="5"
+              {% if motivo_edicao %}disabled title="{{ motivo_edicao }}"{% endif %}
+              placeholder="{{ t('Uma competência por linha.') }}">{{ f.escrito.competencias }}</textarea>
+
+    <div class="acoes">
+      <button class="bt forte" type="submit"
+              {% if motivo_edicao %}disabled title="{{ motivo_edicao }}"{% endif %}>
+        {{ t('Gravar a ficha') }}</button>
+    </div>
+    {% if motivo_edicao %}<p class="pista">{{ motivo_edicao }}</p>{% endif %}
+  </form>
+</div>
+{% endif %}

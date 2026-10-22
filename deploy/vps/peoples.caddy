@@ -1,0 +1,40 @@
+# =============================================================================
+#  GPlanSiS|Peoples — __DOMINIO__
+#  Incluído pelo /etc/caddy/Caddyfile. Bloco próprio por nome: não toca nos
+#  outros sites do mesmo Caddy. Modelo: instalar.sh troca __DOMINIO__ e __PORTA__
+#  e, com ALTERNATIVO=<nome>, acrescenta um segundo site que importa o snippet.
+#
+#  O TLS sai sozinho (Let's Encrypt, HTTP-01 na porta 80) assim que o registro
+#  A de __DOMINIO__ apontar para este VPS. Enquanto não aponta, o Caddy
+#  reinsiste com recuo exponencial — não há nada a rodar de novo depois.
+# =============================================================================
+
+(peoples_app) {
+	# Tudo para o uvicorn no loopback. O app monta HTML no servidor (htmx), serve
+	# os próprios estáticos (/vendor, /estatico, /marca) e gera PDF/XLSX — não há
+	# SPA nem segundo servidor para dividir o roteamento.
+	reverse_proxy 127.0.0.1:__PORTA__ {
+		header_up X-Forwarded-Proto https
+		# A MarIA e os relatórios podem demorar; o padrão de 100 s cortaria
+		# respostas longas no meio.
+		transport http {
+			response_header_timeout 300s
+		}
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	encode gzip zstd
+
+	log {
+		output file /var/log/caddy/peoples.log
+	}
+}
+
+__DOMINIO__ {
+	import peoples_app
+}

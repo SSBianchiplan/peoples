@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPlanSiS|Peoples — organograma invertido</title>
+<script src="/vendor/htmx.min.js"></script>
+<style>
+:root{
+  --tinta:#14202b; --aco:#5a6b78; --nevoa:#8b99a4;
+  --board:#e5eaee; --papel:#fff; --linha:#c3ced6;
+  --ambar:#b25f07; --ambar-fraco:#fdf1e2;
+  --ciano:#0b6e75; --rubro:#9c2b21;
+  --fonte:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:var(--fonte);color:var(--tinta);background:var(--board);
+     font-size:14px;line-height:1.45;display:flex;flex-direction:column}
+
+/* ---------- barra superior ---------- */
+.barra{display:flex;align-items:center;gap:28px;padding:0 18px;height:52px;
+       background:var(--tinta);color:#e9eef2;flex:0 0 auto}
+.marca{font-weight:600;letter-spacing:.14em;font-size:12px}
+.marca span{color:var(--ambar)}
+.barra nav{display:flex;gap:2px;margin-right:auto}
+.aba{background:none;border:0;color:#9fb0bc;font:inherit;font-size:12.5px;
+     padding:7px 14px;cursor:pointer;border-radius:3px}
+.aba:hover{color:#fff;background:rgba(255,255,255,.07)}
+.aba.on{color:var(--tinta);background:var(--ambar);font-weight:500}
+.selo{font-family:var(--mono);font-size:11px;color:#7d8f9c;letter-spacing:.04em}
+
+/* ---------- corpo ---------- */
+main{flex:1;min-height:0;display:flex}
+.vista{flex:1;min-width:0;display:flex}
+.coluna{flex:1;min-width:0;display:flex;flex-direction:column}
+
+.ferramentas{display:flex;align-items:center;gap:6px;padding:8px 12px;
+  background:#eff3f6;border-bottom:1px solid var(--linha);flex:0 0 auto;flex-wrap:wrap}
+.bt{background:var(--papel);border:1px solid var(--linha);color:var(--tinta);
+    font:inherit;font-size:12.5px;padding:5px 11px;border-radius:3px;cursor:pointer}
+.bt:hover{border-color:var(--aco);background:#fafcfd}
+.bt.forte{background:var(--tinta);color:#fff;border-color:var(--tinta)}
+.bt.forte:hover{background:#22323f}
+.bt:focus-visible,.aba:focus-visible{outline:2px solid var(--ambar);outline-offset:1px}
+.sep{width:1px;height:20px;background:var(--linha);margin:0 4px}
+.dica{margin-left:auto;font-size:11.5px;color:var(--aco);font-family:var(--mono)}
+
+.palco{flex:1;min-height:0;overflow:hidden;position:relative;cursor:grab;
+  background:
+    linear-gradient(rgba(20,32,43,.05) 1px,transparent 1px) 0 0/26px 26px,
+    linear-gradient(90deg,rgba(20,32,43,.05) 1px,transparent 1px) 0 0/26px 26px,
+    var(--board)}
+.palco.puxando{cursor:grabbing}
+#lente{transform-origin:0 0;will-change:transform;padding:10px}
+
+/* ---------- painel lateral ---------- */
+.painel{width:322px;flex:0 0 322px;background:var(--papel);
+  border-left:1px solid var(--linha);overflow-y:auto}
+.painel h2{margin:0;padding:14px 16px 12px;font-size:12px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--aco);border-bottom:1px solid var(--linha);font-weight:500}
+.painel .miolo{padding:16px}
+.vazio{padding:40px 22px;color:var(--nevoa);font-size:13px;text-align:center}
+.vazio strong{display:block;color:var(--aco);font-weight:500;margin-bottom:6px}
+label{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--aco);margin:14px 0 5px}
+label:first-of-type{margin-top:0}
+input,select,textarea{width:100%;font:inherit;font-size:13px;color:var(--tinta);
+  background:#fbfcfd;border:1px solid var(--linha);border-radius:3px;padding:7px 9px}
+textarea{font-family:var(--mono);font-size:12px;line-height:1.6;resize:vertical;min-height:132px}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--ambar);background:#fff}
+.pista{font-size:11.5px;color:var(--nevoa);margin-top:5px;line-height:1.5}
+.acoes{display:flex;gap:8px;margin-top:18px}
+.acoes .bt{flex:1;padding:8px}
+.fatos{margin-top:18px;padding-top:14px;border-top:1px solid var(--linha);
+  font-family:var(--mono);font-size:11.5px;color:var(--aco)}
+.fatos div{display:flex;justify-content:space-between;padding:3px 0}
+.fatos b{font-weight:500;color:var(--tinta)}
+
+/* ---------- menu de contexto ---------- */
+.ctx{position:fixed;z-index:60;display:none;min-width:212px;padding:5px;
+  background:var(--papel);border:1px solid var(--aco);border-radius:4px;
+  box-shadow:0 8px 26px rgba(20,32,43,.22)}
+.ctx.on{display:block}
+.ctx-tit{font-family:var(--mono);font-size:10.5px;color:var(--nevoa);
+  padding:5px 9px 7px;border-bottom:1px solid var(--linha);margin-bottom:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctx button{display:flex;width:100%;align-items:center;gap:9px;background:none;border:0;
+  font:inherit;font-size:13px;color:var(--tinta);padding:6px 9px;border-radius:3px;
+  cursor:pointer;text-align:left}
+.ctx button:hover:not(:disabled){background:var(--ambar-fraco);color:var(--ambar)}
+.ctx button:disabled{color:#bcc6cd;cursor:default}
+.ctx button.perigo:hover{background:#fdecea;color:var(--rubro)}
+.ctx button i{font-family:var(--mono);font-size:11px;color:var(--nevoa);width:16px}
+.ctx button:hover:not(:disabled) i{color:inherit}
+.ctx hr{border:0;border-top:1px solid var(--linha);margin:4px 0}
+
+/* ---------- tabela e auditoria ---------- */
+.folha{flex:1;overflow:auto;padding:22px 26px}
+.folha h1{font-size:16px;font-weight:500;margin:0 0 4px}
+.folha p.sub{margin:0 0 18px;color:var(--aco);font-size:12.5px}
+table{width:100%;border-collapse:collapse;background:var(--papel);
+  border:1px solid var(--linha);font-size:13px}
+th{text-align:left;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--aco);font-weight:500;padding:9px 12px;border-bottom:1px solid var(--linha);
+  background:#f6f8fa}
+td{padding:8px 12px;border-bottom:1px solid #eaeff2;vertical-align:top}
+tr:last-child td{border-bottom:0}
+.cod{font-family:var(--mono);font-size:11.5px;color:var(--aco)}
+.tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:9px;
+  border:1px solid var(--linha);color:var(--aco)}
+.tag.apoio{border-color:var(--ciano);color:var(--ciano)}
+.hash{font-family:var(--mono);font-size:11px;color:var(--nevoa)}
+.selo-ok{display:inline-block;font-size:11.5px;padding:3px 10px;border-radius:3px;
+  background:#e6f2ee;color:#0b6045;border:1px solid #b9ddd0}
+.selo-falha{background:#fdecea;color:var(--rubro);border-color:#f0c4bf}
+.alerta{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:80;
+  background:var(--rubro);color:#fff;padding:9px 16px;border-radius:4px;font-size:13px}
+
+@media (max-width:900px){
+  .painel{position:fixed;inset:52px 0 0 auto;width:min(88vw,322px);z-index:40;
+    box-shadow:-10px 0 30px rgba(20,32,43,.18)}
+  .dica{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="barra">
+  <div class="marca">GPLANSIS<span>|ORG</span></div>
+  <nav role="tablist">
+    <button class="aba on" role="tab" hx-get="/vistas/canvas"     hx-target="#area" onclick="aba(this)">Canvas</button>
+    <button class="aba"    role="tab" hx-get="/vistas/tabela"     hx-target="#area" onclick="aba(this)">Tabela</button>
+    <button class="aba"    role="tab" hx-get="/vistas/auditoria"  hx-target="#area" onclick="aba(this)">Auditoria</button>
+  </nav>
+  <span class="selo">SPEC-GPLANSIS-ORG-001</span>
+</header>
+
+<main id="area">
+  {% include "_vista_canvas.html" %}
+</main>
+
+<div id="ctx" class="ctx" role="menu" aria-label="Ações da unidade"></div>
+
+<script>
+const palco = () => document.getElementById('palco');
+const lente = () => document.getElementById('lente');
+let esc = 1, tx = 0, ty = 0, puxando = null;
+
+function aplicar(){ const l = lente(); if(l) l.style.transform = `translate(${tx}px,${ty}px) scale(${esc})`; }
+function zoom(f){ esc = Math.min(2.4, Math.max(.3, esc*f)); aplicar(); }
+
+function ajustar(){
+  const p = palco(), svg = document.getElementById('canvas');
+  if(!p || !svg) return;
+  const lw = svg.viewBox.baseVal.width, lh = svg.viewBox.baseVal.height;
+  esc = Math.min((p.clientWidth-40)/lw, (p.clientHeight-40)/lh, 1.6);
+  tx = (p.clientWidth  - lw*esc)/2;
+  ty = (p.clientHeight - lh*esc)/2;
+  aplicar();
+}
+
+function aba(b){ document.querySelectorAll('.aba').forEach(x=>x.classList.remove('on')); b.classList.add('on'); }
+
+function menuNo(ev, id){
+  ev.preventDefault(); ev.stopPropagation();
+  const m = document.getElementById('ctx');
+  m.classList.add('on');
+  m.style.left = Math.min(ev.clientX, innerWidth  - 232) + 'px';
+  m.style.top  = Math.min(ev.clientY, innerHeight - 300) + 'px';
+  htmx.ajax('GET', '/fragmentos/menu/' + id, {target:'#ctx', swap:'innerHTML'});
+}
+function fecharMenu(){ document.getElementById('ctx').classList.remove('on'); }
+
+document.addEventListener('mousedown', e => {
+  if(!document.getElementById('ctx').contains(e.target)) fecharMenu();
+  const p = palco();
+  if(p && p.contains(e.target) && !e.target.closest('.no') && e.button === 0){
+    puxando = {x:e.clientX-tx, y:e.clientY-ty}; p.classList.add('puxando');
+  }
+});
+document.addEventListener('mousemove', e => {
+  if(!puxando) return;
+  tx = e.clientX - puxando.x; ty = e.clientY - puxando.y; aplicar();
+});
+document.addEventListener('mouseup', () => {
+  puxando = null; const p = palco(); if(p) p.classList.remove('puxando');
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') fecharMenu();
+  if(e.target.matches('input,textarea,select')) return;
+  if(e.key === '+' || e.key === '=') zoom(1.15);
+  if(e.key === '-') zoom(1/1.15);
+  if(e.key === '0') ajustar();
+});
+document.addEventListener('wheel', e => {
+  const p = palco();
+  if(p && p.contains(e.target) && (e.ctrlKey || e.metaKey)){ e.preventDefault(); zoom(e.deltaY < 0 ? 1.1 : 1/1.1); }
+}, {passive:false});
+
+document.body.addEventListener('htmx:afterSwap', e => {
+  if(e.detail.target.id !== 'ctx') fecharMenu();
+  if(e.detail.target.id === 'area') { esc=1; tx=0; ty=0; setTimeout(ajustar, 30); }
+});
+document.body.addEventListener('htmx:afterRequest', e => {
+  const a = document.getElementById('alerta');
+  if(a) setTimeout(()=>a.remove(), 3200);
+});
+addEventListener('load', () => setTimeout(ajustar, 40));
+</script>
+</body>
+</html>

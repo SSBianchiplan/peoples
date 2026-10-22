@@ -1,0 +1,103 @@
+{#
+  Devolutiva — os KPIs do programa (§7), o template de plano de ação (Anexo B) e
+  o mapa de integração (§8.4). Os indicadores têm de onde nascer: tempo médio e
+  faixas vêm do módulo Tempo; a cobertura de Conversa de Valor, da própria vista Conversa de Valor — sem
+  coleta nova. Meta sem fonte é meta que ninguém acompanha.
+#}
+<h2>{{ t('Indicadores do programa') }}</h2>
+<p class="sub">{{ t('Cada KPI aponta para onde já é medido no GPlanSiS|Peoples — a mesma fonte única do resto da gestão de pessoas.') }}</p>
+<div class="rolagem-x"><table>
+  <thead><tr>
+    <th scope="col">{{ t('Indicador') }}</th>
+    <th scope="col" class="num">{{ t('Atual') }}</th>
+    <th scope="col">{{ t('Meta') }}</th>
+    <th scope="col">{{ t('Fonte') }}</th>
+  </tr></thead>
+  <tbody>
+    <tr>
+      <td>{{ t('Taxa de participação') }}</td>
+      <td class="num"><b>{{ participacao.pct }} %</b></td>
+      <td>≥ {{ participacao.meta }} %</td>
+      <td>{{ t('Respostas ÷ elegíveis (organograma)') }}</td>
+    </tr>
+    <tr>
+      <td>{{ t('Peoples Trust Index geral') }}</td>
+      <td class="num"><b>{% if gti is not none %}{{ gti }} %{% else %}—{% endif %}</b></td>
+      <td>+5 pp/{{ t('ano') }}</td>
+      <td>{{ t('Esta pesquisa') }}</td>
+    </tr>
+    <tr>
+      <td>{{ t('PTI por pilar (menor)') }}</td>
+      <td class="num">{% set menor = por_pilar|selectattr('gti','ne',none)|map(attribute='gti')|list %}
+        <b>{% if menor %}{{ menor|min }} %{% else %}—{% endif %}</b></td>
+      <td>{{ t('nenhum < {m} %', m=meta_gti_pilar) }}</td>
+      <td>{{ t('Esta pesquisa') }}</td>
+    </tr>
+    <tr>
+      <td>{{ t('eNPS (proxy)') }}</td>
+      <td class="num"><b>{% if enps.enps is not none %}{{ enps.enps }}{% else %}—{% endif %}</b></td>
+      <td>≥ {{ enps.meta }}</td>
+      <td>{{ t('Afirmação 40') }}</td>
+    </tr>
+    <tr>
+      <td>{{ t('Tempo médio de permanência') }}</td>
+      <td class="num"><b>{% if tempo.media is not none %}{{ tempo.media|round(1) }}{% else %}—{% endif %}</b></td>
+      <td>{{ t('crescimento YoY') }}</td>
+      <td>{{ t('Módulo Tempo de empresa') }}</td>
+    </tr>
+    <tr>
+      <td>{{ t('Cobertura de Conversa de Valor do ciclo') }}</td>
+      <td class="num"><b>{{ cobertura_cgv.pct }} %</b></td>
+      <td>≥ 90 %</td>
+      <td>{{ t('Vista Conversa de Valor') }}</td>
+    </tr>
+    <tr>
+      <td>{{ t('Turnover voluntário') }}</td>
+      <td class="num">—</td>
+      <td>{{ t('−10 %/ano') }}</td>
+      <td>{{ t('Auditoria (cargas datadas)') }}</td>
+    </tr>
+  </tbody>
+</table></div>
+
+<h2 style="margin-top:calc(var(--u,16px))">{{ t('Plano de ação por área') }}</h2>
+<p class="sub">{{ t('Anexo B — preenchido por cada um dos 44 líderes para o recorte que já lidera na árvore, após a devolutiva. De 3 a 5 iniciativas, factíveis: o mesmo princípio do PDI da Conversa de Valor («priorizar 3»).') }}</p>
+<div class="rolagem-x"><table>
+  <thead><tr><th scope="col">{{ t('Campo') }}</th><th scope="col">{{ t('Conteúdo') }}</th></tr></thead>
+  <tbody>
+    {% for campo, conteudo in [
+      (t('Área / líder'), t('puxado do organograma — gestor direto e recorte')),
+      (t('Nº de respondentes / participação'), t('do relatório de devolutiva; oculto se < 5')),
+      (t('Pilar-foco'), t('pilar com menor PTI no recorte')),
+      (t('Achado (evidência)'), t('afirmação(ões) e comentários que sustentam a prioridade')),
+      (t('Iniciativa'), t('ação concreta (1 linha)')),
+      (t('Responsável'), t('pessoa (não «a área»)')),
+      (t('Prazo'), t('data')),
+      (t('Indicador de sucesso'), t('como saberemos que funcionou (preferir número)')),
+      (t('Vínculo com o ciclo'), t('reflete no próximo pulso / na próxima Conversa de Valor?'))] %}
+    <tr><td><b>{{ campo }}</b></td><td>{{ conteudo }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table></div>
+
+<h2 style="margin-top:calc(var(--u,16px))">{{ t('Integração com o GPlanSiS|Peoples') }}</h2>
+<p class="sub">{{ t('A Avaliação Mestre não é um sistema à parte (§8.4): apoia-se nos módulos que a casa já opera. De onde tira insumo, e para onde devolve resultado.') }}</p>
+<div class="rolagem-x"><table>
+  <thead><tr>
+    <th scope="col">{{ t('Módulo') }}</th>
+    <th scope="col">{{ t('A Avaliação Mestre consome') }}</th>
+    <th scope="col">{{ t('A Avaliação Mestre devolve') }}</th>
+  </tr></thead>
+  <tbody>
+    {% for mod, consome, devolve in [
+      (t('Organograma'), t('a árvore de gestor direto, os 6 níveis, as 60 áreas — a população e os estratos'), t('recortes de clima por área/nível na mesma estrutura')),
+      (t('Tempo de empresa'), t('faixas de casa e tempo médio — segmento nativo do PTI e do onboarding'), t('correlação clima × tempo de casa')),
+      (t('Skills'), t('o que cada cargo é — expectativa × percepção por função'), t('lacunas de clareza de papel viram revisão de Skills')),
+      (t('Conversa de Valor'), t('a agenda e a cobertura por líder — o canal qualitativo de escuta'), t('temas do PTI entram no roteiro da Conversa de Valor; a devolutiva fecha o loop')),
+      (t('Auditoria / Ledger'), t('cargas datadas da estrutura — turnover e movimentação'), t('o histórico do PTI encadeia-se como evento auditável')),
+      (t('MarIA'), t('leitura assistida dos resultados no idioma do usuário'), t('perguntas sobre clima sobre o recorte vigente'))] %}
+    <tr><td><b>{{ mod }}</b></td><td>{{ consome }}</td><td>{{ devolve }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table></div>
+<p class="pista">{{ t('Guarda de anonimato (inegociável): nenhum recorte com menos de {n} respondentes é impresso; comentários que identifiquem alguém são removidos antes da devolutiva.', n=piso) }}</p>

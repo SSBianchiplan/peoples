@@ -1,0 +1,648 @@
+{#
+  Módulo gerenciador. Cada aba é uma seção do estado de configuração; todas
+  gravam por POST e voltam a própria vista, então o alvo é sempre #area.
+#}
+<div class="folha">
+  <h1>{{ t('Configurações do sistema') }}</h1>
+  <p class="sub">
+    {{ t('{n} unidades · perfil vigente <b>{perfil}</b> · ledger',
+         n=total, perfil=t(perfis[cfg.perfil].rotulo))|safe }}
+    {% if cadeia.integro %}{{ t('íntegro com {n} evento(s)', n=cadeia.total) }}
+    {% else %}<b style="color:var(--laranja-txt)">{{ t('rompido no evento #{seq}', seq=cadeia.seq_falha) }}</b>{% endif %}
+  </p>
+
+  <div class="cfg">
+    <nav class="cfg-nav" aria-label="{{ t('Seções de configuração') }}">
+      {% for chave, rotulo in [("organogramas", t("Organogramas")),
+                               ("geral", t("Identidade e vista")),
+                               ("card", t("Card do canvas")),
+                               ("cargos", t("Cargos e níveis")),
+                               ("cc", t("Centros de custo")),
+                               ("permissoes", t("Permissões")),
+                               ("dados", t("Carga de dados")),
+                               ("banco", t("Banco de dados")),
+                               ("prov", t("Provisionamento de TI")),
+                               ("auditoria", t("Auditoria/Log")),
+                               ("acessos", t("Acessos"))] %}
+      <button class="{% if aba == chave %}on{% endif %}"
+              hx-get="/vistas/configuracoes?aba={{ chave }}"
+              hx-target="#area" hx-swap="innerHTML">{{ rotulo }}</button>
+      {% endfor %}
+    </nav>
+
+    <div class="cfg-corpo">
+
+    {# ------------------------------------------------------------------ #}
+    {% if aba == "organogramas" %}
+    <div class="cartao">
+      <h2>{{ t('Organogramas') }}</h2>
+      <p class="sub">{{ t('Cada organograma tem sua própria estrutura, seu histórico e seu espelho no banco. Um fica ativo por vez — é o que todos veem. Troque pelo seletor do cabeçalho ou aqui.') }}</p>
+
+      <div class="rolagem-x">
+        <table>
+          <thead><tr>
+            <th>{{ t('Organograma') }}</th>
+            <th class="num" style="width:90px">{{ t('Nós') }}</th>
+            <th class="cod" style="width:150px">{{ t('Criado em') }}</th>
+            <th style="width:230px">{{ t('Ações') }}</th>
+          </tr></thead>
+          <tbody>
+            {% for o in organogramas.lista %}
+            <tr{% if o.ativo %} class="org-ativo"{% endif %}>
+              <td>
+                <b>{{ o.nome }}</b>
+                {% if o.ativo %}<span class="etq">{{ t('ativo') }}</span>{% endif %}
+                <div class="cod" style="opacity:.6">{{ o.slug }}</div>
+              </td>
+              <td class="cod num">{{ o.nos if o.nos is not none else '—' }}</td>
+              <td class="cod">{{ o.criado_em or '—' }}</td>
+              <td>
+                <div class="acoes" style="gap:6px;flex-wrap:wrap">
+                  {% if not o.ativo %}
+                  <button class="bt" hx-post="/organogramas/trocar"
+                          hx-vals='{"slug": "{{ o.slug }}"}' hx-swap="none"
+                          title="{{ t('Passar a mostrar este organograma') }}">
+                    {{ t('Ativar') }}</button>
+                  {% endif %}
+                  <button class="bt" onclick="renomearOrg('{{ o.slug }}', this)"
+                          title="{{ t('Renomear') }}">{{ t('Renomear') }}</button>
+                  {% if not o.ativo and organogramas.lista|length > 1 %}
+                  <button class="bt perigo" hx-post="/organogramas/excluir"
+                          hx-vals='{"slug": "{{ o.slug }}"}' hx-swap="none"
+                          hx-confirm="{{ t('Excluir “{nome}”? A estrutura e o histórico dele saem do sistema.', nome=o.nome) }}">
+                    {{ t('Excluir') }}</button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <form class="dupla" hx-post="/organogramas/criar" hx-swap="none"
+            style="margin-top:14px;align-items:flex-end;gap:10px">
+        <div style="flex:1">
+          <label for="novo-org">{{ t('Novo organograma') }}</label>
+          <input id="novo-org" name="nome" maxlength="80" required
+                 placeholder="{{ t('Nome da nova organização') }}">
+        </div>
+        <button class="bt forte" type="submit">{{ t('Criar e abrir') }}</button>
+      </form>
+      <p class="pista">{{ t('O organograma novo nasce só com a raiz — do topo você monta o resto com “+ Unidade” e “Criar colaborador”.') }}</p>
+    </div>
+
+    <script>
+      function renomearOrg(slug, botao) {
+        var atual = botao.closest('tr').querySelector('b').textContent.trim();
+        var nome = window.prompt({{ t('Novo nome do organograma:')|tojson }}, atual);
+        if (nome === null || !nome.trim()) return;
+        htmx.ajax('POST', '/organogramas/renomear', {
+          target: '#area', swap: 'innerHTML',
+          values: {slug: slug, nome: nome.trim()}
+        });
+      }
+    </script>
+
+    {# ------------------------------------------------------------------ #}
+    {% elif aba == "geral" %}
+    <form class="cartao" hx-post="/config/geral" hx-target="#area" hx-swap="innerHTML">
+      <h2>{{ t('Identidade') }}</h2>
+      <p class="sub">{{ t('Aparece no cabeçalho do desenho, no SVG exportado e no PDF.') }}</p>
+      <div class="grade">
+        <div>
+          <label for="c-titulo">{{ t('Título do organograma') }}</label>
+          <input id="c-titulo" name="titulo" value="{{ cfg.titulo }}" maxlength="60">
+        </div>
+        <div>
+          <label for="c-tenant">{{ t('Organização (selo de tenant)') }}</label>
+          <input id="c-tenant" name="tenant" value="{{ cfg.tenant }}" maxlength="40">
+        </div>
+        <div>
+          <label for="c-orient">{{ t('Orientação padrão') }}</label>
+          <select id="c-orient" name="orientacao_padrao">
+            <option value="invertida" {% if cfg.orientacao_padrao == 'invertida' %}selected{% endif %}>
+              {{ t('Invertida — liderança na base') }}</option>
+            <option value="vertical" {% if cfg.orientacao_padrao == 'vertical' %}selected{% endif %}>
+              {{ t('Convencional — liderança no topo') }}</option>
+            <option value="lateral" {% if cfg.orientacao_padrao == 'lateral' %}selected{% endif %}>
+              {{ t('Lateral — árvore indentada para a direita') }}</option>
+          </select>
+        </div>
+        <div>
+          <label for="c-tema">{{ t('Aparência') }}</label>
+          <select id="c-tema" name="tema"
+                  onchange="document.documentElement.dataset.tema = this.value">
+            {% for chave, rotulo in temas.items() %}
+            <option value="{{ chave }}" {% if cfg.tema == chave %}selected{% endif %}>{{ t(rotulo) }}</option>
+            {% endfor %}
+          </select>
+          <div class="amostra" aria-hidden="true">
+            <i style="background:var(--k-card);border-color:var(--k-borda)"></i>
+            <i style="background:var(--k-card_raiz);border-color:var(--k-borda_raiz)"></i>
+            {% for t in ("diretoria","gerencia","coordenacao","celula","apoio") %}
+            <i style="background:var(--k-fita_{{ t }});border-color:var(--k-fita_{{ t }})"
+               title="{{ tipos_unidade[t] }}"></i>
+            {% endfor %}
+          </div>
+          <p class="pista">{{ t('O tema alcança o SVG do canvas por variável CSS — a troca é instantânea, sem recarregar. O arquivo exportado sai sempre claro: papel não tem tema.') }}</p>
+        </div>
+        <div>
+          <label for="c-prof">{{ t('Níveis abertos ao carregar') }}</label>
+          <input id="c-prof" name="profundidade_aberta" type="number"
+                 min="{{ limites.profundidade_aberta[0] }}" max="{{ limites.profundidade_aberta[1] }}"
+                 value="{{ cfg.profundidade_aberta }}">
+          <p class="pista">{{ t('Com a árvore inteira aberta o desenho passa de 59 000 px de largura. Abrir 1 nível põe o topo da estrutura na tela em escala legível.') }}</p>
+        </div>
+      </div>
+      <div class="acoes"><button class="bt forte" style="flex:0 0 160px">{{ t('Salvar') }}</button></div>
+    </form>
+
+    {# ------------------------------------------------------------------ #}
+    {# Cartão próprio, e fora do formulário de identidade: o interruptor vale no
+       clique e não espera um Salvar. Quem desliga a visita quer que ela pare
+       agora, não depois de lembrar de gravar. #}
+    <div class="cartao">
+      <h2>{{ t('Helper — a visita guiada') }}</h2>
+      <p class="sub">{{ t('A MarIA entra pela direita e apresenta cada controle da tela, um de cada vez.') }}</p>
+      <div class="grade">
+        <div>
+          <label for="c-helper">{{ t('Visita de boas-vindas') }}</label>
+          <select id="c-helper" name="helper"
+                  hx-post="/config/helper" hx-swap="none"
+                  hx-vals='js:{ligado: this.value}' hx-trigger="change">
+            <option value="1" {% if cfg.helper %}selected{% endif %}>{{ t('Ligada') }}</option>
+            <option value="0" {% if not cfg.helper %}selected{% endif %}>{{ t('Desligada') }}</option>
+          </select>
+          <p class="pista">{{ t('Ligada, ela abre uma vez a cada sessão — ou seja, a cada login. Desligada, não entra no HTML da página.') }}</p>
+        </div>
+        <div>
+          <label>{{ t('Rever agora') }}</label>
+          {# Só aparece com a visita ligada: desligada, ela não está no DOM e o
+             botão não teria o que abrir. #}
+          <button type="button" class="bt" onclick="tourDoCanvas()"
+                  {% if not cfg.helper %}disabled{% endif %}>
+            {{ t('Começar a visita') }}
+          </button>
+          <p class="pista">{{ t('Passa por cada botão da tela vigente. Passo cujo controle não está visível é pulado — em tela estreita, alguns moram dentro de menus.') }}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ------------------------------------------------------------------ #}
+    {% if aba == "card" %}
+    <form class="cartao" hx-post="/config/campos" hx-target="#area" hx-swap="innerHTML">
+      <h2>{{ t('O que aparece no card') }}</h2>
+      <p class="sub">{{ t('Vale para o canvas, o SVG e o PDF — os três saem do mesmo motor. O card encolhe junto: menos campo, mais nó por tela.') }}</p>
+      <div class="grade">
+        {% for chave, (rotulo, _) in campos_card.items() %}
+        <label class="check {% if chave in campos_fixos %}fixo{% endif %}">
+          <input type="checkbox" name="campo_{{ chave }}" value="1"
+                 {% if chave in cfg.campos %}checked{% endif %}
+                 {% if chave in campos_fixos %}disabled checked{% endif %}>
+          <span>{{ t(rotulo) }}
+            {% if chave in campos_fixos %}<small>{{ t('sempre visível') }}</small>{% endif %}</span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <h2 style="margin-top:22px">{{ t('Geometria') }}</h2>
+      <p class="sub">{{ t('Tokens de layout da SPEC §9.6. Fora das faixas o motor recusa e volta ao limite.') }}</p>
+      <div class="grade">
+        {% for nome, rotulo in [("card_w", t("Largura do card (px)")),
+                                ("gap_h", t("Espaço entre irmãos")),
+                                ("gap_v", t("Folga entre níveis")),
+                                ("max_itens", t("Accountabilities no card"))] %}
+        <div>
+          <label for="c-{{ nome }}">{{ rotulo }}</label>
+          <input id="c-{{ nome }}" name="{{ nome }}" type="number"
+                 min="{{ limites[nome][0] }}" max="{{ limites[nome][1] }}"
+                 value="{{ cfg[nome] }}">
+          <p class="pista">{{ limites[nome][0] }} a {{ limites[nome][1] }}</p>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="acoes"><button class="bt forte" style="flex:0 0 160px">{{ t('Salvar') }}</button></div>
+    </form>
+    {% endif %}
+
+    {# ------------------------------------------------------------------ #}
+    {% if aba == "cargos" %}{% include "_config_cargos.html" %}{% endif %}
+
+    {# ------------------------------------------------------------------ #}
+    {% if aba == "permissoes" %}
+    <form class="cartao" hx-post="/config/permissoes" hx-target="#area" hx-swap="innerHTML">
+      <h2>{{ t('Perfil e escopo') }}</h2>
+      <p class="sub">{{ t('RBAC da SPEC §12.1. Enquanto a autenticação OIDC é débito declarado (DT-02), o perfil vigente é escolhido aqui — mas a guarda que ele alimenta é real: toda rota de mutação passa por ela.') }}</p>
+
+      <div class="grade">
+        {% for chave, p in perfis.items() %}
+        <label class="check">
+          <input type="radio" name="perfil" value="{{ chave }}"
+                 {% if cfg.perfil == chave %}checked{% endif %}>
+          <span><b>{{ t(p.rotulo) }}</b> <small>{{ t(p.descricao) }}</small></span>
+        </label>
+        {% endfor %}
+      </div>
+
+      <label for="c-escopo" style="margin-top:16px">{{ t('Unidade de escopo do editor (SEC-03)') }}</label>
+      <select id="c-escopo" name="escopo_id">
+        <option value="">{{ t('— sem restrição de subárvore —') }}</option>
+        {% for u in unidades_ordenadas %}
+        <option value="{{ u.id }}" {% if cfg.escopo_id == u.id %}selected{% endif %}>
+          {{ u.codigo }} · {{ u.nome }}{% if u.cargo %} — {{ u.cargo }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <p class="pista">{{ t('O editor só altera a unidade de escopo e os descendentes dela. Fora disso, a mutação é recusada com aviso — o canvas não muda.') }}</p>
+
+      {# A pessoa logada é uma unidade da estrutura, não um cadastro paralelo:
+         assim o avatar mostra exatamente o que o card mostra, e não há como os
+         dois discordarem. Com o login (onda 2) isto passa a vir do e-mail. #}
+      <label for="c-usuario" style="margin-top:16px">{{ t('Quem é você na estrutura') }}</label>
+      <select id="c-usuario" name="usuario_id">
+        <option value="">{{ t('— não vinculado —') }}</option>
+        {% for u in unidades_ordenadas %}
+        <option value="{{ u.id }}" {% if cfg.usuario_id == u.id %}selected{% endif %}>
+          {{ u.codigo }} · {{ u.nome }}{% if u.cargo %} — {{ u.cargo }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <p class="pista">{{ t('Alimenta o avatar da barra. Não concede permissão: quem decide isso é o perfil acima.') }}</p>
+
+      <div class="aviso" style="margin-top:14px">{{ t('Rebaixar o próprio perfil é permitido; voltar a subir exige Administrador. Como não há login, quem se rebaixa perde a chave até editar <code>dados/estado.json</code>.')|safe }}</div>
+
+      <div class="acoes"><button class="bt forte" style="flex:0 0 200px">{{ t('Aplicar perfil') }}</button></div>
+    </form>
+
+    {# RBAC por pessoa (Fase D): papéis atribuíveis + escopo. Com login, é DAQUI
+       que sai o papel e o escopo de cada um — o seletor acima vira simulação de
+       dev. #}
+    {% set rot_tipo = {"tudo": t("Tudo (sem recorte)"), "proprio": t("Só o próprio nó"),
+                       "subarvore": t("Subárvore (gestor)"), "vertical": t("Por vertical"),
+                       "departamento": t("Por departamento")} %}
+    <div class="cartao">
+      <h2>{{ t('Acessos por pessoa') }}</h2>
+      <p class="sub">{{ t('Todos os colaboradores do sistema. Com login, o papel, o escopo e os módulos visíveis de cada um vêm daqui — não do seletor acima. Clique em Editar para definir. Sem nenhuma atribuição, todo login entra como Administrador — é o que deixa o primeiro admin montar isto.') }}</p>
+
+      <div class="dupla" style="align-items:flex-end;gap:12px;margin-bottom:10px">
+        <input type="search" id="busca-acesso" onkeyup="filtrarAcessos(this)"
+               autocomplete="off" placeholder="{{ t('buscar colaborador…') }}"
+               aria-label="{{ t('buscar colaborador…') }}" style="flex:1;max-width:360px">
+        {# Preenche o acesso de todos que ainda não têm, pela hierarquia já
+           definida (gestor → Editor da subárvore; folha → Visualizador). Cada um
+           segue editável. Não sobrescreve quem já foi definido à mão. #}
+        <button type="button" class="bt" hx-post="/config/acessos/hierarquia"
+                hx-target="#area" hx-swap="innerHTML"
+                hx-confirm="{{ t('Definir o acesso de todos os colaboradores sem atribuição pela hierarquia?') }}">
+          {{ t('Definir pela hierarquia') }}</button>
+      </div>
+
+      <div class="rolagem-x">
+        <table id="tab-acessos">
+          <thead><tr>
+            <th>{{ t('Colaborador') }}</th>
+            <th style="width:120px">{{ t('Papel') }}</th>
+            <th style="width:210px">{{ t('Escopo') }}</th>
+            <th style="width:110px">{{ t('Módulos') }}</th>
+            <th style="width:70px">{{ t('Login') }}</th>
+            <th style="width:90px">{{ t('Ações') }}</th>
+          </tr></thead>
+          <tbody>
+            {% for a in acessos.lista %}
+            <tr data-busca="{{ (a.nome ~ ' ' ~ a.codigo ~ ' ' ~ (a.cargo or ''))|lower }}">
+              <td><b>{{ a.nome }}</b>
+                {% if a.ref == acessos.eu %}<span class="etq">{{ t('você') }}</span>{% endif %}
+                <div class="cod" style="opacity:.6">{{ a.codigo }}{% if a.cargo %} · {{ a.cargo }}{% endif %}</div></td>
+              <td>{% if a.atribuido %}{{ t(perfis[a.papel].rotulo) }}
+                  {% else %}<span class="cod" style="opacity:.55"
+                     title="{{ t('sugerido pela hierarquia — clique em Editar') }}">{{ t(perfis[a.sug_papel].rotulo) }} <em>({{ t('sugerido') }})</em></span>{% endif %}</td>
+              <td class="cod">{% if a.atribuido %}{{ rot_tipo.get(a.tipo, a.tipo) }}{% if a.valor %}: {{ a.valor }}{% endif %}
+                  {% else %}<span style="opacity:.55">{{ rot_tipo.get(a.sug_tipo, a.sug_tipo) }}</span>{% endif %}</td>
+              <td class="cod">{% if a.modulos %}{{ a.modulos|length }}/{{ acessos.modulos_total }}{% else %}{{ t('todos') }}{% endif %}</td>
+              <td class="cod">{% if a.login %}✓ {{ t('sim') }}{% else %}<span style="opacity:.55">{{ t('não') }}</span>{% endif %}</td>
+              <td><button type="button" class="bt" hx-get="/config/acessos/editar?ref={{ a.ref|urlencode }}"
+                          hx-target="#acessoModal" hx-swap="innerHTML">{{ t('Editar') }}</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="pista">{{ t('{n} colaborador(es) · {k} com acesso definido. Quem não tem definição herda o padrão (Administrador enquanto ninguém foi definido; Visualizador depois).', n=acessos.lista|length, k=acessos.atribuidos) }}</p>
+    </div>
+
+    {# As CREDENCIAIS, separadas do RBAC: quem consegue entrar. Colaboradores
+       recebem senha pelo Editar da lista; contas fora do organograma (o
+       operador) nascem aqui. #}
+    <div class="cartao">
+      <h2>{{ t('Contas de acesso') }}</h2>
+      <p class="sub">{{ t('Quem consegue entrar no sistema: e-mail + senha do próprio Peoples. Colaboradores recebem a senha pelo botão Editar da lista acima; contas fora do organograma (o operador, por exemplo) entram por aqui.') }}</p>
+      <div class="rolagem-x">
+        <table>
+          <thead><tr><th>{{ t('E-mail') }}</th><th style="width:170px">{{ t('Atualizada em') }}</th>
+                     <th style="width:150px">{{ t('Situação') }}</th><th style="width:110px">{{ t('Ações') }}</th></tr></thead>
+          <tbody>
+            {% for c in acessos.contas %}
+            <tr>
+              <td><b>{{ c.email }}</b>{% if c.email not in acessos.emails_nos %} <span class="etq">{{ t('fora do organograma') }}</span>{% endif %}</td>
+              <td class="cod">{{ (c.atualizado_em or '')[:16] }}</td>
+              <td class="cod">{% if c.precisa_trocar %}{{ t('Troca pendente') }}{% else %}{{ t('ativa') }}{% endif %}</td>
+              <td><button type="button" class="bt perigo" hx-post="/config/acessos/senha/remover"
+                          hx-target="#area" hx-swap="innerHTML" hx-vals='{"email": "{{ c.email }}"}'
+                          hx-confirm="{{ t('Remover a senha de {email}? A pessoa deixa de conseguir entrar.', email=c.email) }}">{{ t('Remover') }}</button></td>
+            </tr>
+            {% endfor %}
+            {% if not acessos.contas %}
+            <tr><td colspan="4" style="opacity:.6">{{ t('Nenhuma conta ainda. O primeiro acesso cria o administrador inicial na tela de login.') }}</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+      <form hx-post="/config/acessos/senha" hx-target="#area" hx-swap="innerHTML" autocomplete="off"
+            class="dupla" style="align-items:flex-end;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:220px;max-width:320px"><label>{{ t('Nova conta') }}</label>
+          <input name="email" type="email" required placeholder="nome.sobrenome@gplansis.com" autocomplete="off"></div>
+        <div style="flex:1;min-width:180px;max-width:240px"><label>{{ t('Senha') }}</label>
+          <input name="senha" type="password" required minlength="8" autocomplete="new-password"></div>
+        <label class="check" style="margin:0 0 6px"><input type="checkbox" name="temporaria" value="1" checked>
+          <span>{{ t('Exigir troca no primeiro acesso') }}</span></label>
+        <button class="bt forte" type="submit">{{ t('Criar conta') }}</button>
+      </form>
+    </div>
+
+    {# O editor de acesso abre em MODAL (fixo, centrado): clicar em Editar preenche
+       este alvo; clicar no fundo, no × do topo ou no Esc o esvazia (`:empty` some). #}
+    <div id="acessoModal" class="ficha-painel"
+         onclick="if(event.target===this)this.innerHTML=''"></div>
+
+    <script>
+      function filtrarAcessos(inp){
+        var t = (inp.value || '').toLowerCase().trim();
+        document.querySelectorAll('#tab-acessos tbody tr').forEach(function(tr){
+          tr.style.display = (!t || (tr.dataset.busca||'').indexOf(t) >= 0) ? '' : 'none';
+        });
+      }
+    </script>
+    {% endif %}
+
+    {# ------------------------------------------------------------------ #}
+    {% if aba == "banco" %}{% include "_config_banco.html" %}{% endif %}
+
+    {# ------------------------------------------------------------------ #}
+    {% if aba == "prov" %}{% include "_config_prov.html" %}{% endif %}
+
+    {# ------------------------------------------------------------------ #}
+    {% if aba == "auditoria" %}{% include "_auditoria.html" %}{% endif %}
+
+    {% if aba == "acessos" %}{% include "_acessos_log.html" %}{% endif %}
+
+    {# ------------------------------------------------------------------ #}
+    {% if aba == "cc" %}
+    <div class="cartao">
+      <h2>{{ t('Centros de custo') }}</h2>
+      <p class="sub">{{ t('A chave é o par <b>N3 + Departamento</b>: “Managers Team” existe em 80.20, 81.20, 82.20 e 89.20, e “Hardware Design Team” em quatro verticais — nem o código nem o nome identificam sozinhos. O N4 que vem na planilha de pessoas é derivável (N3 é o N4 com o último dígito zerado), e é por essa relação que uma pessoa alcança a sua vertical de negócio.')|safe }}</p>
+
+      <div class="painel-numeros">
+        <div><span>{{ t('linhas') }}</span><b class="numero">{{ centros|length }}</b></div>
+        <div><span>{{ t('verticais') }}</span><b class="numero">{{ verticais|length }}</b></div>
+        <div><span>{{ t('unidades resolvidas') }}</span><b class="numero">{{ conciliacao.cobertura }}</b></div>
+        <div><span>{{ t('sem correspondência') }}</span>
+          <b class="numero" {% if conciliacao.orfas %}style="color:var(--laranja-txt)"{% endif %}>
+            {{ conciliacao.orfas|length }}</b></div>
+        <div><span>{{ t('linhas sem uso') }}</span><b class="numero">{{ conciliacao.ociosos|length }}</b></div>
+        <div><span>{{ t('a preencher') }}</span>
+          <b class="numero" {% if conciliacao.incompletas %}style="color:var(--laranja-txt)"{% endif %}>
+            {{ conciliacao.incompletas|length }}</b></div>
+      </div>
+
+      {% if conciliacao.por_casamento %}
+      <p class="pista" style="margin-bottom:12px">{{ t('Como cada unidade encontrou o seu centro de custo:') }}
+        {% for como, n in conciliacao.por_casamento.items() %}<b>{{ n }}</b>
+        {{ t('por {criterio}', criterio=t(como)) }}{% if not loop.last %} · {% endif %}{% endfor %}.
+        {{ t('Casamento por departamento ou por N3 significa que a planilha de pessoas e o cadastro divergem no nome — os dois são mantidos por gente diferente.')|safe }}</p>
+      {% endif %}
+
+      {% if conciliacao.orfas %}
+      <div class="aviso">
+        <b>{{ t('{n} combinação(ões) sem linha no cadastro:', n=conciliacao.orfas|length) }}</b>
+        {% for cc, area in conciliacao.orfas %}<code>{{ cc or "—" }} · {{ area }}</code>{% if not loop.last %} · {% endif %}{% endfor %}.
+        {{ t('Use <i>Descobrir da estrutura</i> para criá-las já preenchidas com o que o dado sabe.')|safe }}
+      </div>
+      {% endif %}
+
+      {% if conciliacao.incompletas %}
+      <div class="aviso">
+        <b>{{ conciliacao.incompletas|length }} linha(s) em uso sem N5, vertical
+        ou natureza:</b>
+        {% for c in conciliacao.incompletas %}<code>{{ c.n3 }} · {{ c.departamento }}</code>{% if not loop.last %} · {% endif %}{% endfor %}.
+        {{ t('Vieram da estrutura, não da tabela de referência — a vertical foi herdada do tronco N2 quando havia maioria clara; o N5 é mnemônico da equipe e não há de onde tirar.')|safe }}
+      </div>
+      {% endif %}
+
+      <form hx-post="/config/cc" hx-target="#area" hx-swap="innerHTML">
+        <div class="rolagem" style="max-height:420px">
+          <table>
+            <thead><tr>
+              {% for _, rotulo, larg in colunas_cc %}
+              <th {% if larg %}style="width:{{ larg }}px"{% endif %}>{{ t(rotulo) }}</th>
+              {% endfor %}
+              <th style="width:70px">{{ t('Pessoas') }}</th><th style="width:56px">{{ t('Ativo') }}</th>
+            </tr></thead>
+            <tbody>
+              {% for c, pessoas in centros %}
+              {% set i = loop.index0 %}
+              <tr {% if not c.ativo %}class="passagem"{% endif %}>
+                <input type="hidden" name="linha" value="{{ i }}">
+                {% for campo, _, _ in colunas_cc %}
+                <td>
+                  {% if campo == "tipo" %}
+                  <select name="tipo_{{ i }}">
+                    <option value=""></option>
+                    {% for t in tipos_cc %}
+                    <option value="{{ t }}" {% if c.tipo == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                  </select>
+                  {% else %}
+                  <input name="{{ campo }}_{{ i }}" value="{{ c[campo] }}"
+                         maxlength="80" {% if campo in ("logico","n2","n3","n5","vertical") %}class="cod"{% endif %}>
+                  {% endif %}
+                </td>
+                {% endfor %}
+                <td class="cod">{{ pessoas }}</td>
+                <td><input type="checkbox" name="ativo_{{ i }}" value="1"
+                           {% if c.ativo %}checked{% endif %} style="width:auto"></td>
+              </tr>
+              {% endfor %}
+              <tr>
+                {% for campo, _, _ in colunas_cc %}
+                <td><input name="novo_{{ campo }}" placeholder="{{ campo }}" maxlength="80"></td>
+                {% endfor %}
+                <td class="cod">—</td><td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="acoes">
+          <button class="bt forte" style="flex:0 0 170px">{{ t('Salvar cadastro') }}</button>
+          <button type="button" class="bt" style="flex:0 0 210px"
+                  hx-post="/config/cc/redescobrir" hx-target="#area" hx-swap="innerHTML">
+            {{ t('Descobrir da estrutura') }}</button>
+          <button type="button" class="bt" style="flex:0 0 210px"
+                  hx-post="/config/cc/referencia" hx-target="#area" hx-swap="innerHTML"
+                  hx-confirm="{{ t('Restaurar a tabela de referência? As edições de nome, N5, vertical e tipo serão perdidas.') }}">
+            {{ t('Restaurar referência') }}</button>
+          <a class="bt" style="flex:0 0 120px;text-align:center" href="/centros.csv" download>{{ t('CSV') }}</a>
+        </div>
+      </form>
+    </div>
+
+    {% if verticais %}
+    <div class="cartao">
+      <h2>{{ t('Verticais de negócio') }}</h2>
+      <p class="sub">{{ t('Derivadas do cadastro. Alimentam o filtro do canvas e da tabela — é por elas que se lê “toda a engenharia”, e não por 80.0.') }}</p>
+      <div class="legenda">
+        {% for codigo, rotulo in verticais %}
+        <span><b class="cod">{{ codigo }}</b> &nbsp;{{ rotulo.split(" · ")[1] }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if conciliacao.ociosos %}
+    <div class="cartao">
+      <h2>{{ t('Linhas sem uso') }}</h2>
+      <p class="sub">{{ t('Estão no cadastro e nenhuma pessoa da estrutura caiu nelas. Pode ser equipe desativada — ou divergência de grafia com a planilha.') }}</p>
+      <div class="rolagem" style="max-height:190px">
+        <table>
+          <thead><tr><th>N3</th><th>{{ t('Departamento') }}</th><th>N5</th><th>{{ t('Vertical') }}</th></tr></thead>
+          <tbody>
+            {% for c in conciliacao.ociosos %}
+            <tr><td class="cod">{{ c.n3 }}</td><td>{{ c.departamento }}</td>
+                <td class="cod">{{ c.n5 }}</td><td class="cod">{{ c.vertical }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {# ------------------------------------------------------------------ #}
+    {% if aba == "dados" %}
+    <div class="cartao">
+      <h2>{{ t('Carga de dados') }}</h2>
+      <p class="sub">{{ t('Atualização incremental a partir da planilha, em três passos. Nada é escrito antes do passo 3.') }}</p>
+
+      <div class="passos">
+        <div class="passo {% if not importacao %}on{% else %}feito{% endif %}">
+          <b>{{ t('Passo 1') }}</b> {{ t('Enviar planilha') }}</div>
+        <div class="passo {% if importacao %}on{% endif %}">
+          <b>{{ t('Passo 2') }}</b> {{ t('Conferir o que muda') }}</div>
+        <div class="passo"><b>{{ t('Passo 3') }}</b> {{ t('Aplicar e registrar') }}</div>
+      </div>
+
+      {% if not importacao %}
+      <form hx-post="/config/importar/analisar" hx-target="#area" hx-swap="innerHTML"
+            hx-encoding="multipart/form-data">
+        <label for="c-arquivo">{{ t('Planilha (.xlsx)') }}</label>
+        <input id="c-arquivo" type="file" name="arquivo" accept=".xlsx" required>
+        <p class="pista">{{ t('Colunas esperadas:') }}
+          {% for c in colunas_planilha %}<code>{{ c.titulo }}</code>{% if c.obrigatoria %}*{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}
+          {{ t('— as marcadas com * são obrigatórias.') }}</p>
+        <div class="acoes">
+          <button class="bt forte" style="flex:0 0 190px">{{ t('Analisar') }}</button>
+          <a class="bt" style="flex:0 0 210px;text-align:center" href="/modelo.xlsx" download>
+            {{ t('Baixar planilha-modelo') }}</a>
+        </div>
+      </form>
+
+      {% else %}
+      <p class="sub"><b>{{ importacao.arquivo }}</b> · {{ importacao.total }} linha(s) lida(s)</p>
+
+      {% for aviso in importacao.avisos %}<div class="aviso">{{ aviso }}</div>{% endfor %}
+
+      <div class="painel-numeros">
+        <div><span>{{ t('novos') }}</span><b class="numero">{{ importacao.novos|length }}</b></div>
+        <div><span>{{ t('alterados') }}</span><b class="numero">{{ importacao.alterados|length }}</b></div>
+        <div><span>{{ t('ausentes na planilha') }}</span><b class="numero">{{ importacao.removidos|length }}</b></div>
+        <div><span>{{ t('sem mudança') }}</span><b class="numero">{{ importacao.sem_mudanca }}</b></div>
+      </div>
+
+      <form hx-post="/config/importar/aplicar" hx-target="#area" hx-swap="innerHTML">
+        <div class="grade">
+          <label class="check"><input type="checkbox" name="criar" value="1" checked>
+            <span>Criar as {{ importacao.novos|length }} unidade(s) nova(s)</span></label>
+          <label class="check"><input type="checkbox" name="atualizar" value="1" checked>
+            <span>Aplicar as {{ importacao.alterados|length }} alteração(ões)
+              <small>{{ t('todos os campos do contrato — coluna que não veio no arquivo não é tocada') }}</small></span></label>
+          <label class="check"><input type="checkbox" name="remover" value="1">
+            <span>Remover as {{ importacao.removidos|length }} unidade(s) ausentes
+              <small>{{ t('os subordinados sobem um nível') }}</small></span></label>
+        </div>
+
+        {% if importacao.novos %}
+        <h2 style="margin-top:20px">{{ t('Novos') }}</h2>
+        <div class="rolagem"><table>
+          <thead><tr><th>{{ t('Nome') }}</th><th>{{ t('Cargo') }}</th><th>{{ t('Time') }}</th><th>{{ t('Gestor') }}</th></tr></thead>
+          <tbody>{% for l in importacao.novos %}
+            <tr><td>{{ l.nome }}</td><td>{{ l.cargo }}</td><td>{{ l.area }}</td>
+                <td>{{ l.gestor }}</td></tr>
+          {% endfor %}</tbody></table></div>
+        {% endif %}
+
+        {% if importacao.alterados %}
+        <h2 style="margin-top:20px">{{ t('Alterados') }}</h2>
+        <div class="rolagem"><table>
+          <thead><tr><th>{{ t('Código') }}</th><th>{{ t('Unidade') }}</th><th>{{ t('Mudanças') }}</th></tr></thead>
+          <tbody>{% for a in importacao.alterados %}
+            <tr><td class="cod">{{ a.codigo }}</td><td>{{ a.nome }}</td>
+              {# O rótulo da coluna, não o nome do atributo: quem confere a
+                 carga está olhando a planilha que enviou, e é o cabeçalho
+                 dela que a pessoa reconhece. #}
+              <td>{% for campo, de, para in a.mudancas %}
+                <div><span class="cod">{{ titulo_do_campo.get(campo, campo) }}</span>
+                  {{ mostrar(de) or "—" }} → <b>{{ mostrar(para) or "—" }}</b></div>
+              {% endfor %}</td></tr>
+          {% endfor %}</tbody></table></div>
+        {% endif %}
+
+        {% if importacao.removidos %}
+        <h2 style="margin-top:20px">{{ t('Ausentes na planilha') }}</h2>
+        <div class="rolagem"><table>
+          <thead><tr><th>{{ t('Código') }}</th><th>{{ t('Unidade') }}</th><th>{{ t('Cargo') }}</th><th>{{ t('Time') }}</th></tr></thead>
+          <tbody>{% for r in importacao.removidos %}
+            <tr><td class="cod">{{ r.codigo }}</td><td>{{ r.nome }}</td>
+                <td>{{ r.cargo }}</td><td>{{ r.area }}</td></tr>
+          {% endfor %}</tbody></table></div>
+        {% endif %}
+
+        <div class="acoes">
+          <button class="bt forte" style="flex:0 0 210px"
+                  hx-confirm="{{ t('Aplicar a carga? A operação entra no ledger e pode ser desfeita uma vez.') }}">
+            {{ t('Aplicar') }}</button>
+          <button type="button" class="bt" style="flex:0 0 140px"
+                  hx-post="/config/importar/cancelar" hx-target="#area" hx-swap="innerHTML">
+            {{ t('Cancelar') }}</button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+
+    {% include "_config_m365.html" %}
+
+    <div class="cartao">
+      <h2>{{ t('Recarga total') }}</h2>
+      <p class="sub">{{ t('Descarta a estrutura atual e refaz a carga da planilha de referência. Diferente da carga incremental: aqui as edições feitas no canvas se perdem.') }}</p>
+      <div class="acoes">
+        <button class="bt" style="flex:0 0 250px" hx-post="/restaurar?vista=configuracoes"
+                hx-target="#area" hx-swap="innerHTML"
+                hx-confirm="{{ t('Recarregar do zero? Toda edição feita no canvas será perdida.') }}">
+          {{ t('Recarregar de Organograma.xlsx') }}</button>
+      </div>
+    </div>
+    {% endif %}
+
+    </div>
+  </div>
+</div>

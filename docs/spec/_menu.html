@@ -1,0 +1,39 @@
+<div class="ctx-tit">{{ u.codigo }} · {{ u.nome }}</div>
+
+<button hx-get="/fragmentos/painel/{{ u.id }}" hx-target="#painel" hx-swap="innerHTML">
+  <i>ed</i> Editar dados
+</button>
+<button hx-post="/unidades/{{ u.id }}/filho" hx-target="#canvas" hx-swap="outerHTML">
+  <i>+</i> Adicionar subordinado
+</button>
+<button hx-post="/unidades/{{ u.id }}/duplicar" hx-target="#canvas" hx-swap="outerHTML"
+        {% if raiz %}disabled{% endif %}>
+  <i>cp</i> Duplicar
+</button>
+
+<hr>
+
+<button hx-post="/unidades/{{ u.id }}/reordenar?direcao=esquerda" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_esquerda %}disabled{% endif %}>
+  <i>&larr;</i> Mover para a esquerda
+</button>
+<button hx-post="/unidades/{{ u.id }}/reordenar?direcao=direita" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_direita %}disabled{% endif %}>
+  <i>&rarr;</i> Mover para a direita
+</button>
+<button hx-post="/unidades/{{ u.id }}/promover" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_promover %}disabled{% endif %}>
+  <i>N&minus;</i> Promover um nível
+</button>
+<button hx-post="/unidades/{{ u.id }}/rebaixar" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_rebaixar %}disabled{% endif %}>
+  <i>N+</i> Rebaixar um nível
+</button>
+
+<hr>
+
+<button class="perigo" hx-delete="/unidades/{{ u.id }}" hx-target="#canvas" hx-swap="outerHTML"
+        hx-confirm="Excluir “{{ u.nome }}”? Os subordinados passam a responder ao nível acima."
+        {% if raiz %}disabled{% endif %}>
+  <i>&times;</i> Excluir unidade
+</button>

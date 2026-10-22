@@ -1,0 +1,142 @@
+{#
+  Banco de dados. O sistema roda em memória + JSON; o Postgres é o alvo de
+  produção da SPEC §7. Esta aba mostra o mapeamento, gera a carga a partir do
+  estado vigente e — havendo driver e DSN — aplica.
+#}
+<div class="cartao">
+  <h2>{{ t('Banco de dados') }}</h2>
+  <p class="sub">{{ t('O organograma roda em memória com persistência em JSON. O PostgreSQL é o alvo de produção: multiusuário, concorrência real e o ledger fora do disco local. Esta aba não muda o modelo — ela diz de onde cada coluna vem e gera a carga.') }}</p>
+
+  <div class="grade">
+    <div>
+      <label>{{ t('Conexão (ORG_DATABASE_URL)') }}</label>
+      <input value="{{ banco.dsn or '' }}" readonly
+             placeholder="{{ t('não configurada') }}"
+             aria-label="{{ t('Conexão (ORG_DATABASE_URL)') }}">
+    </div>
+    <div>
+      <label>{{ t('Driver psycopg') }}</label>
+      <input value="{{ t('instalado') if banco.tem_driver else t('ausente') }}"
+             readonly aria-label="{{ t('Driver psycopg') }}">
+    </div>
+  </div>
+  {# A senha nunca aparece: ela vaza em print, em suporte e em gravação de tela. #}
+  <p class="pista">{{ t('A senha é mascarada de propósito. A conexão vem do ambiente, não do estado gravado — credencial em arquivo de dados vai junto no backup.') }}</p>
+
+  {# Estado da ligação, dito em uma linha. Antes a aba não distinguia "sem DSN"
+     de "DSN configurada e banco fora do ar": os dois davam a mesma tela cinza,
+     e a diferença entre eles é justamente o que se quer saber. #}
+  {% if banco.real %}
+  <p class="ok-linha">{{ t('Ligado: o banco respondeu e tem {n} unidade(s) gravada(s).', n=banco.real.get('org.unidade', 0)) }}</p>
+  {% elif banco.pronto %}
+  <div class="aviso">{{ t('A conexão está configurada, mas o banco não respondeu. Use <b>Testar conexão</b> para ver a mensagem do driver.')|safe }}</div>
+  {% endif %}
+
+  {# Dual-write (espelho a cada mutação): ligado por ORG_ESPELHO=1, e a saúde da
+     última escrita. Só desce ao banco quando a estrutura ou o ledger mudou. #}
+  {% if banco.espelho.ligado %}
+    {% if banco.espelho.ok is none %}
+    <p class="pista">{{ t('Espelho automático ligado: cada mutação também desce ao banco (só quando muda de verdade).') }}</p>
+    {% elif banco.espelho.ok %}
+    <p class="ok-linha">{{ t('Espelho automático em dia: a última escrita no banco passou.') }}</p>
+    {% else %}
+    <div class="aviso">{{ t('O espelho automático falhou na última escrita (não-fatal — a edição está salva no estado): {msg}', msg=banco.espelho.msg) }}</div>
+    {% endif %}
+  {% else %}
+  <p class="pista">{{ t('Espelho automático desligado. Ligue com <code>ORG_ESPELHO=1</code> para o banco viver em dia a cada mutação.')|safe }}</p>
+  {% endif %}
+
+  <div class="acoes">
+    <button class="bt" hx-post="/config/banco/testar" hx-target="#area" hx-swap="innerHTML"
+            {% if not banco.pronto %}disabled title="{{ t('Exige driver instalado e ORG_DATABASE_URL definida.') }}"{% endif %}>
+      {{ t('Testar conexão') }}</button>
+    <a class="bt" href="/banco/schema.sql" download>{{ t('Baixar schema (DDL)') }}</a>
+    <a class="bt" href="/banco/carga.sql" download>{{ t('Baixar carga do estado atual') }}</a>
+  </div>
+</div>
+
+<div class="cartao">
+  <h2>{{ t('De onde vem cada tabela') }}</h2>
+  <p class="sub">{{ t('Mapeamento entre o modelo em memória e o schema.') }}
+    {% if banco.real %}{{ t('“Na tela” é o que a carga escreveria agora; “no banco” é o que está lá neste momento.') }}
+    {% else %}{{ t('A contagem é o que a carga escreveria agora.') }}{% endif %}</p>
+
+  {# O placar só existe havendo banco: sem ele, prometer comparação seria
+     prometer o que não se pode cumprir. Em dia ou atrasado, a frase diz o que
+     fazer — um número solto deixaria a conclusão por conta de quem lê. #}
+  {% if banco.real %}
+    {% if banco.em_dia %}
+    <p class="ok-linha">{{ t('O banco está no mesmo ponto da tela.') }}</p>
+    {% else %}
+    <div class="aviso">{{ t('O banco está atrasado em relação à tela: {n} tabela(s) divergem ({quais}). Use <b>Escrever organograma</b> para igualar.', n=banco.divergentes|length, quais=banco.divergentes|join(', '))|safe }}</div>
+    {% endif %}
+
+    {# Contagem confere "quantos"; a fidelidade confere "iguais em quê". A carga
+       passou a gravar o nó inteiro (área, CC, vértice, competências, id) — este
+       botão sobe a estrutura do banco e compara nó a nó. #}
+    <div class="acoes" style="margin-top:10px">
+      <button class="bt" hx-get="/config/banco/verificar"
+              hx-target="#bancoFidelidade" hx-swap="innerHTML">
+        {{ t('Conferir campo a campo') }}</button>
+    </div>
+    <div id="bancoFidelidade"></div>
+  {% endif %}
+
+  <div class="rolagem-x">
+    <table>
+      <thead><tr>
+        <th style="width:200px">{{ t('Tabela') }}</th>
+        <th style="width:190px">{{ t('Origem') }}</th>
+        <th>{{ t('O que guarda') }}</th>
+        <th class="num" style="width:90px">{{ t('Na tela') }}</th>
+        {% if banco.real %}<th class="num" style="width:90px">{{ t('No banco') }}</th>{% endif %}
+      </tr></thead>
+      <tbody>
+        {% for tabela, origem, descricao in banco.tabelas %}
+        <tr {% if banco.pronto %}class="clicavel" hx-get="/config/banco/tabela/{{ tabela|urlencode }}?limite=100"
+            hx-target="#bancoModal" hx-swap="innerHTML"
+            title="{{ t('Abrir {tabela} — dados e estrutura', tabela=tabela) }}"{% endif %}>
+          <td class="cod">{{ tabela }}</td>
+          <td class="cod">{{ origem }}</td>
+          <td>{{ t(descricao) }}</td>
+          <td class="cod num">{{ banco.contagem.get(tabela, '—') }}</td>
+          {% if banco.real %}
+          {# Divergência marcada no número, e não só na cor: a cor sozinha não
+             chega a quem não a distingue. #}
+          <td class="cod num{% if tabela in banco.divergentes %} diverge{% endif %}"
+              {% if tabela in banco.divergentes %}
+              title="{{ t('A tela tem {n}; o banco, {r}.', n=banco.contagem.get(tabela, 0), r=banco.real.get(tabela, 0)) }}"
+              {% endif %}>{{ banco.real.get(tabela, '—') }}{% if tabela in banco.divergentes %} ≠{% endif %}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="pista">{{ t('<b>closure</b> é derivada: a carga a calcula em SQL a partir da árvore que acabou de gravar, e é ela que faz consulta de subárvore custar um índice em vez de uma recursão. São mais linhas que unidades — um par por ancestral de cada nó, mais o par consigo mesmo.')|safe }}</p>
+  <p class="pista">{{ t('O ledger (<code>org.evento</code>) e o histórico da MarIA não entram na carga do organograma: são log, e recarregar a estrutura não pode levá-los junto.')|safe }}</p>
+</div>
+
+<div class="cartao">
+  <h2>{{ t('Aplicar no banco') }}</h2>
+  <p class="sub">{{ t('Roda o schema e a carga em uma transação: ou entra inteiro, ou não entra. Metade de um organograma no banco é pior do que nenhum.') }}</p>
+
+  {% if not banco.pronto %}
+  <div class="aviso">{{ t('Indisponível: defina <code>ORG_DATABASE_URL</code> e instale <code>psycopg</code>. Enquanto isso, os dois botões de download acima entregam o mesmo SQL para rodar em qualquer cliente.')|safe }}</div>
+  {% endif %}
+
+  <div class="acoes">
+    <button class="bt" hx-post="/config/banco/schema" hx-target="#area" hx-swap="innerHTML"
+            hx-confirm="{{ t('Aplicar o schema cria tipos, tabelas e índices. Rodar duas vezes falha nos tipos já existentes — é esperado.') }}"
+            {% if not banco.pronto %}disabled{% endif %}>
+      {{ t('Aplicar schema') }}</button>
+    <button class="bt forte" style="flex:0 0 220px"
+            hx-post="/config/banco/carga" hx-target="#area" hx-swap="innerHTML"
+            hx-confirm="{{ t('Escrever o organograma vigente no banco?') }}"
+            {% if not banco.pronto %}disabled{% endif %}>
+      {{ t('Escrever organograma') }}</button>
+  </div>
+</div>
+
+{# Alvo do explorador de tabela — modal tela cheia. `:empty` some. #}
+<div id="bancoModal" class="bx-alvo" onclick="if(event.target===this)this.innerHTML=''"></div>

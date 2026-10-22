@@ -1,0 +1,29 @@
+{# Monitoramento de acessos: entrada e saída de cada usuário. Trilha SEPARADA da
+   Auditoria/Log (o ledger de alterações), e sem selo de cadeia — não é
+   hash-encadeada. Mais recente primeiro (contexto_config inverte a lista). #}
+<div class="cartao trilha-auditoria">
+  <h2>{{ t('Monitoramento de acessos') }}</h2>
+  <p class="sub">
+    {{ t('Registro de entrada e saída de cada usuário — quem entrou, quem saiu e quando. Trilha separada da auditoria de alterações.') }}
+  </p>
+
+  <div class="rolagem-x" style="margin-top:16px"><table>
+    <thead>
+      <tr><th>{{ t('Quando (UTC)') }}</th><th>{{ t('Usuário') }}</th>
+          <th>{{ t('E-mail') }}</th><th>{{ t('Evento') }}</th></tr>
+    </thead>
+    <tbody>
+      {% for a in acessos_log %}
+      <tr>
+        <td class="cod">{{ a.quando }}</td>
+        <td>{{ a.nome or '—' }}</td>
+        <td>{{ a.email or '—' }}</td>
+        <td>{% if a.evento == 'entrar' %}{{ t('Entrada') }}{% elif a.evento == 'senha' %}{{ t('Troca de senha') }}{% else %}{{ t('Saída') }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+      {% if not acessos_log %}
+      <tr><td colspan="4" style="opacity:.6">{{ t('Nenhum acesso registrado ainda.') }}</td></tr>
+      {% endif %}
+    </tbody>
+  </table></div>
+</div>

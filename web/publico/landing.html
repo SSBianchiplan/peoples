@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPlanSiS|Peoples · a estrutura da empresa em uma tela</title>
+<meta name="description" content="Peoples é o sistema de pessoas do GPlanSiS: organograma navegável em três orientações, estrutura, tabela, skills, avaliação e one-on-one sobre a mesma base.">
+<link rel="icon" href="/marca/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/marca/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --carvao:#2b3134;--carvao-2:#3a4245;--carvao-3:#556065;
+  --laranja:#eb6a20;--laranja-esc:#c9550f;--ambar:#f6a709;
+  --tela:#f1f1f0;--branco:#fff;--traco:#1a1a1a;--linha:#dcdedd;
+  --texto:#22282b;--texto-60:#6e787d;--texto-40:#9aa3a7;
+
+  --ui:"Poppins",ui-sans-serif,system-ui,sans-serif;
+  --corpo:"Inter",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+
+  --t-mini:.75rem;--t-apoio:.9375rem;--t-corpo:1.0625rem;--t-conduz:1.3125rem;
+  --t-bloco:clamp(1.7rem,3.4vw,2.4rem);--t-titulo:clamp(2.3rem,5.6vw,4rem);
+
+  --rigidez:520;--amort:32;--massa:1;--dt-teto:.0333;--anim-max:3;
+  --r:6px;--faixa:1140px;
+  --grade:linear-gradient(rgba(0,0,0,.045) 1px,transparent 1px),
+          linear-gradient(90deg,rgba(0,0,0,.045) 1px,transparent 1px);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--branco);color:var(--texto);font-family:var(--corpo);
+  font-size:var(--t-corpo);line-height:1.6;overflow-x:hidden}
+h1,h2,h3,h4{font-family:var(--ui);margin:0;letter-spacing:-.02em;line-height:1.12;font-weight:600}
+p{margin:0 0 1em;max-width:62ch}
+a{color:var(--laranja-esc)}
+:focus-visible{outline:2px solid var(--laranja);outline-offset:2px}
+.faixa{max-width:var(--faixa);margin:0 auto;padding:0 22px}
+section{padding:66px 0}
+.olho{font-family:var(--mono);font-size:var(--t-mini);color:var(--texto-40);
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+h2{font-size:var(--t-bloco);max-width:20ch;font-weight:600}
+.sub-sec{font-size:var(--t-conduz);line-height:1.45;max-width:50ch;margin:14px 0 30px;
+  color:var(--texto-60)}
+
+/* ── topo, no formato da barra do produto ── */
+.topo{position:sticky;top:0;z-index:90;display:flex;align-items:center;gap:16px;
+  padding:10px 20px;background:var(--carvao);color:#fff}
+.logo{font-family:var(--ui);font-weight:700;font-size:1.05rem;white-space:nowrap}
+.logo i{color:var(--laranja);font-style:normal;margin:0 1px}
+.topo nav{display:flex;gap:18px;margin-left:auto;align-items:center;overflow:auto;scrollbar-width:none}
+.topo nav::-webkit-scrollbar{display:none}
+.topo nav a{font-family:var(--ui);font-size:var(--t-apoio);color:#dfe3e4;text-decoration:none;
+  white-space:nowrap}
+.topo nav a:hover{color:#fff}
+@media(max-width:880px){.topo nav a:not(.bt){display:none}}
+
+.bt{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;
+  font-family:var(--ui);font-size:var(--t-apoio);font-weight:500;border-radius:var(--r);
+  border:1px solid var(--traco);background:var(--branco);color:var(--texto);
+  text-decoration:none;cursor:pointer}
+.bt-acao{background:var(--laranja);border-color:var(--laranja);color:#fff}
+.bt-acao:hover{background:var(--laranja-esc);border-color:var(--laranja-esc)}
+.bt-escuro{background:var(--carvao);border-color:var(--carvao);color:#fff}
+.bt-p{height:34px;padding:0 14px;font-size:var(--t-mini)}
+.bt-claro{background:transparent;border-color:rgba(255,255,255,.45);color:#fff}
+
+/* ── herói ── */
+.heroi{padding:54px 0 8px}
+.heroi h1{font-size:var(--t-titulo);max-width:16ch;font-weight:700;letter-spacing:-.035em}
+.heroi .linha{font-size:var(--t-conduz);max-width:48ch;margin-top:18px;color:var(--texto-60)}
+.heroi .acoes{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px;align-items:center}
+.heroi .selo{font-family:var(--mono);font-size:var(--t-mini);color:var(--texto-40)}
+
+/* ── quadro do canvas (réplica do produto) ── */
+.quadro{margin-top:34px;border:1px solid var(--linha);border-radius:var(--r);overflow:hidden;
+  background:var(--branco);box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.barra{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--carvao);
+  color:#fff;flex-wrap:wrap}
+.barra .tit{font-family:var(--ui);font-size:var(--t-apoio);font-weight:500}
+.barra .abas{display:flex;gap:14px;margin-left:auto;font-family:var(--ui);font-size:var(--t-mini);
+  color:#b8c0c3}
+.barra .abas span.on{color:#fff;background:var(--laranja);padding:4px 10px;border-radius:4px}
+@media(max-width:700px){.barra .abas span:not(.on){display:none}}
+
+.ferramentas{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--linha);
+  flex-wrap:wrap;background:var(--branco)}
+.pill{font-family:var(--ui);font-size:var(--t-mini);padding:6px 12px;border:1px solid var(--linha);
+  border-radius:5px;background:var(--branco);color:var(--texto);cursor:pointer;white-space:nowrap}
+.pill:hover{border-color:var(--texto-40)}
+.pill[aria-pressed="true"]{border-color:var(--laranja);color:var(--laranja-esc);font-weight:500}
+.pill.escuro{background:var(--carvao);border-color:var(--carvao);color:#fff}
+.dica{font-family:var(--mono);font-size:var(--t-mini);color:var(--texto-40);margin-left:auto}
+@media(max-width:760px){.dica{display:none}}
+
+.niveis{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--linha)}
+.niveis .rot{font-family:var(--mono);font-size:var(--t-mini);color:var(--texto-40);
+  letter-spacing:.1em;margin-right:4px}
+.niv{font-family:var(--mono);font-size:var(--t-mini);padding:4px 8px;border:1px solid transparent;
+  background:none;color:var(--texto-60);cursor:pointer;border-radius:4px}
+.niv[aria-pressed="true"]{background:var(--carvao);color:#fff}
+.niveis .zoom{margin-left:auto;font-family:var(--mono);font-size:var(--t-mini);color:var(--texto-40)}
+
+.tela{position:relative;background:var(--tela);background-image:var(--grade);
+  background-size:26px 26px;height:520px;overflow:hidden}
+.mundo{position:absolute;top:0;left:0;width:1040px;height:520px;transform-origin:0 0}
+.cab-tela{position:absolute;left:26px;top:16px;right:26px}
+.cab-tela h4{font-family:var(--ui);font-size:1.15rem;font-weight:600}
+.cab-tela p{font-family:var(--corpo);font-size:var(--t-mini);color:var(--texto-60);margin:4px 0 0}
+.cab-tela .data{position:absolute;right:0;top:2px;font-family:var(--mono);font-size:var(--t-mini);
+  color:var(--texto-40)}
+.regua{position:absolute;left:26px;right:26px;top:88px;height:22px}
+.regua .tr{position:absolute;top:14px;left:0;right:0;height:1px;background:var(--texto-40);opacity:.5}
+.regua .mk{position:absolute;top:0;font-family:var(--mono);font-size:var(--t-mini);
+  color:var(--texto-60);transform:translateX(-50%)}
+.regua .mk.n0{color:var(--laranja)}
+.regua .mk i{display:block;width:7px;height:7px;background:currentColor;margin:3px auto 0}
+
+.card{position:absolute;top:0;left:0;width:214px;border:1px solid var(--traco);background:var(--branco);
+  padding:11px 13px;text-align:left;cursor:pointer;will-change:transform;border-radius:2px}
+.card .cod{font-family:var(--mono);font-size:.7rem;color:var(--texto-60);letter-spacing:.02em}
+.card .nome{font-family:var(--ui);font-weight:600;font-size:.9rem;margin-top:3px}
+.card .cargo{font-family:var(--corpo);font-size:.78rem;color:var(--texto-60);line-height:1.35}
+.card.unidade{background:var(--carvao);border-color:var(--carvao);color:#fff;width:236px}
+.card.unidade .cod{color:#9aa3a7}
+.card.unidade .cargo{color:#c3cacd}
+.card.unidade .marca{margin-top:14px;padding-top:11px;border-top:1px solid rgba(255,255,255,.18);
+  font-family:var(--ui);font-weight:700;font-size:.95rem}
+.card.unidade .marca i{color:var(--laranja);font-style:normal}
+.card .tag{display:inline-block;margin-top:8px;font-family:var(--mono);font-size:.68rem;
+  padding:2px 7px;border-radius:20px;border:1px solid var(--linha);color:var(--texto-60)}
+.card .mais{position:absolute;right:-16px;bottom:-13px;font-family:var(--mono);font-size:.7rem;
+  background:var(--branco);border:1px solid var(--traco);border-radius:20px;padding:3px 10px}
+.card[data-n="2"]{width:196px}
+.fio{position:absolute;background:var(--texto-40);opacity:.45}
+
+.quadro-pe{display:flex;align-items:center;gap:12px;padding:10px 12px;border-top:1px solid var(--linha);
+  flex-wrap:wrap;font-size:var(--t-apoio)}
+.quadro-pe .estado{font-family:var(--mono);font-size:var(--t-mini);color:var(--texto-40);margin-left:auto}
+
+/* ── números ── */
+.numeros{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--linha);
+  border:1px solid var(--linha);border-radius:var(--r);overflow:hidden}
+@media(max-width:760px){.numeros{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.num{background:var(--branco);padding:18px}
+.num b{display:block;font-family:var(--ui);font-weight:700;font-size:1.9rem;line-height:1;
+  font-variant-numeric:tabular-nums}
+.num span{display:block;font-size:var(--t-mini);color:var(--texto-60);margin-top:7px;line-height:1.4}
+
+/* ── antes / depois ── */
+.par{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){.par{grid-template-columns:1fr}}
+.lado{border:1px solid var(--linha);border-radius:var(--r);padding:20px;background:var(--branco)}
+.lado.hoje{background:var(--tela);border-color:var(--linha)}
+.lado .rot-l{font-family:var(--mono);font-size:var(--t-mini);color:var(--texto-40);margin-bottom:12px;
+  text-transform:uppercase;letter-spacing:.08em}
+.lado ul{margin:0;padding-left:18px}
+.lado li{margin-bottom:10px;font-size:var(--t-apoio);color:var(--texto)}
+.lado.hoje li{color:var(--texto-60)}
+
+/* ── módulos ── */
+.mods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media(max-width:900px){.mods{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.mods{grid-template-columns:1fr}}
+.mod{border:1px solid var(--linha);border-radius:var(--r);padding:20px;background:var(--branco);
+  border-top:3px solid var(--carvao)}
+.mod.destaque{border-top-color:var(--laranja)}
+.mod .n{font-family:var(--mono);font-size:var(--t-mini);color:var(--texto-40)}
+.mod h3{font-size:1.02rem;margin:8px 0 8px}
+.mod p{font-size:var(--t-apoio);color:var(--texto-60);margin:0}
+
+/* ── anatomia do card ── */
+.anatomia{display:grid;grid-template-columns:280px minmax(0,1fr);gap:34px;align-items:start}
+@media(max-width:820px){.anatomia{grid-template-columns:1fr}}
+.card-real{border:1px solid var(--traco);border-radius:2px;background:var(--branco);padding:14px 16px;
+  position:relative}
+.card-real .cod{font-family:var(--mono);font-size:.78rem;color:var(--texto-60)}
+.card-real h4{font-size:1.15rem;margin-top:5px}
+.card-real .cargo{font-family:var(--corpo);font-size:.9rem;color:var(--texto-60);line-height:1.4}
+.card-real ul{margin:12px 0 0;padding-left:17px}
+.card-real li{font-size:.82rem;color:var(--texto-60);margin-bottom:5px}
+.card-real .mais{position:absolute;right:-14px;bottom:-14px;font-family:var(--mono);font-size:.72rem;
+  background:var(--branco);border:1px solid var(--traco);border-radius:20px;padding:4px 12px}
+.legendas{display:grid;gap:14px}
+.leg{display:grid;grid-template-columns:130px 1fr;gap:14px;align-items:baseline;
+  border-bottom:1px solid var(--linha);padding-bottom:12px}
+@media(max-width:520px){.leg{grid-template-columns:1fr}}
+.leg b{font-family:var(--mono);font-size:var(--t-mini);color:var(--laranja-esc);font-weight:500}
+.leg span{font-size:var(--t-apoio);color:var(--texto-60)}
+
+/* ── filtros ── */
+.filtros{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.filtro{font-family:var(--ui);font-size:var(--t-apoio);padding:8px 14px;border:1px solid var(--linha);
+  border-radius:5px;color:var(--texto-60);background:var(--branco)}
+
+/* ── implantação ── */
+.passos{display:grid;gap:1px;background:var(--linha);border:1px solid var(--linha);
+  border-radius:var(--r);overflow:hidden}
+.passo{background:var(--branco);padding:18px 20px;display:grid;grid-template-columns:46px 1fr;gap:14px}
+.passo .i{font-family:var(--mono);font-size:var(--t-mini);color:var(--texto-40);padding-top:3px}
+.passo h3{font-size:var(--t-apoio)}
+.passo p{margin:6px 0 0;font-size:var(--t-apoio);color:var(--texto-60)}
+.passo .prazo{font-family:var(--mono);font-size:var(--t-mini);color:var(--laranja-esc)}
+
+/* ── banda escura ── */
+.escuro{background:var(--carvao);color:#fff}
+.escuro h2{color:#fff}.escuro .olho{color:var(--ambar)}
+.escuro p{color:#c3cacd}
+.conf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:24px}
+@media(max-width:820px){.conf{grid-template-columns:1fr}}
+.conf h3{font-size:var(--t-apoio);margin-bottom:8px;color:#fff}
+.conf p{font-size:var(--t-apoio);margin:0}
+
+/* ── perguntas ── */
+details{border-bottom:1px solid var(--linha);padding:15px 0}
+summary{font-family:var(--ui);font-weight:500;font-size:var(--t-apoio);cursor:pointer;
+  list-style:none;display:flex;gap:10px;align-items:baseline}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";font-family:var(--mono);color:var(--laranja)}
+details[open] summary::before{content:"–"}
+details p{margin:10px 0 0 20px;font-size:var(--t-apoio);color:var(--texto-60)}
+
+/* ── fechamento ── */
+.fecha{background:var(--laranja);color:#fff}
+.fecha h2{color:#fff;max-width:17ch}
+.fecha p{color:#ffe6d8}
+.fecha .acoes{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.fecha .bt-acao{background:#fff;color:var(--laranja-esc);border-color:#fff}
+.rodape{padding:26px 0 44px;font-family:var(--mono);font-size:var(--t-mini);color:var(--texto-40);
+  display:flex;gap:20px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <span class="logo">GPlanSiS<i>|</i>Peoples</span>
+  <nav>
+    <a href="#problema">O problema</a>
+    <a href="#modulos">Módulos</a>
+    <a href="#card">O card</a>
+    <a href="#implantacao">Implantação</a>
+    <a href="#confianca">Segurança</a>
+    <!-- `bt` e nao link simples: o @media(max-width:880px) acima esconde
+         `.topo nav a:not(.bt)`, e a entrada no sistema nao pode depender de
+         rolar a pagina num celular. -->
+    <a class="bt" href="/login">Entrar</a>
+    <a class="bt bt-acao bt-p" href="#falar">Agendar demonstração</a>
+  </nav>
+</header>
+
+<div class="faixa">
+
+<!-- HERÓI -->
+<section class="heroi">
+  <h1>A estrutura da sua empresa, navegável em uma tela.</h1>
+  <p class="linha">Organograma que abre por nível, gira de orientação e foca em
+    qualquer pessoa — sobre a mesma base que alimenta skills, avaliação e
+    one-on-one. Experimente: troque a orientação e a profundidade abaixo.</p>
+  <div class="acoes">
+    <a class="bt bt-acao" href="#falar">Agendar demonstração</a>
+    <a class="bt" href="/login">Entrar no sistema</a>
+    <a class="bt" href="#modulos">Ver os módulos</a>
+    <span class="selo">peoples.gplansis.com</span>
+  </div>
+
+  <div class="quadro">
+    <div class="barra">
+      <span class="tit">Organograma</span>
+      <span class="abas">
+        <span>Painel RH</span><span class="on">Canvas</span><span>Estrutura</span>
+        <span>Tabela</span><span>Skills</span><span>Avaliação</span><span>One-on-one</span>
+      </span>
+    </div>
+
+    <div class="ferramentas">
+      <button class="pill" data-orient="invertida">▾ Invertida</button>
+      <button class="pill" data-orient="lateral" aria-pressed="true">▸ Lateral</button>
+      <button class="pill" data-orient="pessoa">◻ Por pessoa</button>
+      <button class="pill escuro" id="btExportar">Exportar</button>
+      <span class="dica">roda = zoom · duplo clique = focar · B = gaveta</span>
+    </div>
+
+    <div class="niveis">
+      <span class="rot">NÍVEIS</span>
+      <button class="niv" data-prof="0">N0</button>
+      <button class="niv" data-prof="1" aria-pressed="true">N1</button>
+      <button class="niv" data-prof="2">N2</button>
+      <span class="zoom" id="zoomTxt">150 %</span>
+    </div>
+
+    <div class="tela" id="tela">
+      <div class="mundo" id="mundo">
+        <div class="cab-tela">
+          <h4>Organograma</h4>
+          <p id="legendaTela">6 unidades · profundidade 1 · orientação lateral — a árvore cresce para a direita</p>
+          <span class="data" id="dataTela">08/09/2026</span>
+        </div>
+        <div class="regua" id="regua"><div class="tr"></div></div>
+      </div>
+    </div>
+
+    <div class="quadro-pe">
+      <span>Mesma base, três leituras. Nenhum redesenho manual.</span>
+      <span class="estado" id="estadoTela">carga de 08/09/2026 · 6 unidades</span>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEMA -->
+<section id="problema">
+  <div class="olho">o problema</div>
+  <h2>O organograma do slide nasce velho.</h2>
+  <p class="sub-sec">Ele é desenhado à mão, atualizado quando alguém lembra e
+    vive separado da base de colaboradores, das avaliações e das conversas de
+    valor. Quem precisa decidir estrutura acaba decidindo com a versão de seis
+    meses atrás.</p>
+
+  <div class="par">
+    <div class="lado hoje">
+      <div class="rot-l">hoje</div>
+      <ul>
+        <li>Organograma em slide, redesenhado a cada mudança de time.</li>
+        <li>Base de pessoas numa planilha, avaliações em outra, skills em nenhuma.</li>
+        <li>Ninguém diz de cabeça quantos níveis a empresa tem, nem quem tem 19 liderados.</li>
+        <li>Gestor que saiu continua na base e deixa pessoas sem chefe declarado.</li>
+        <li>Cada pergunta da diretoria vira uma tarde de tabela dinâmica.</li>
+      </ul>
+    </div>
+    <div class="lado">
+      <div class="rot-l">com o Peoples</div>
+      <ul>
+        <li>Uma URL sempre atual, com data de carga estampada na tela.</li>
+        <li>Canvas, estrutura, tabela, skills, avaliação e one-on-one na mesma base.</li>
+        <li>Nível, headcount e liderados diretos calculados a cada carga.</li>
+        <li>Órfãos, ciclos e gestor inexistente apontados antes da publicação.</li>
+        <li>Exportação do recorte que está na tela, pronta para o slide.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- NÚMEROS -->
+<section id="escala">
+  <div class="olho">escala de uma implantação real</div>
+  <h2>266 pessoas cabem numa tela — se a navegação for por foco.</h2>
+  <p class="sub-sec">Desenhar a árvore inteira lado a lado pede 53 mil pixels de
+    largura. Por isso o canvas navega por foco e profundidade: você escolhe uma
+    unidade, diz quantos níveis quer ver e o resto fica fora do caminho.</p>
+  <div class="numeros">
+    <div class="num"><b>266</b><span>pessoas na árvore</span></div>
+    <div class="num"><b>N0–N5</b><span>níveis do conselho à base</span></div>
+    <div class="num"><b>3</b><span>orientações da mesma árvore</span></div>
+    <div class="num"><b>8</b><span>filtros combináveis sobre o canvas</span></div>
+  </div>
+  <div class="filtros">
+    <span class="filtro">Vertical</span><span class="filtro">Natureza</span>
+    <span class="filtro">Centro de custo</span><span class="filtro">Departamento</span>
+    <span class="filtro">Cargo</span><span class="filtro">Gestor</span>
+    <span class="filtro">Nível</span><span class="filtro">Vínculo</span>
+  </div>
+  <p style="margin-top:14px;font-size:var(--t-apoio);color:var(--texto-60)">
+    Os filtros valem para todas as leituras: o que você filtra no canvas continua
+    filtrado na tabela e na estrutura.</p>
+</section>
+
+<!-- MÓDULOS -->
+<section id="modulos">
+  <div class="olho">o que vem junto</div>
+  <h2>Não é só o desenho da hierarquia.</h2>
+  <p class="sub-sec">O organograma é a porta de entrada. O que sustenta a
+    adoção é o resto do ciclo de gestão de pessoas rodando sobre o mesmo
+    cadastro.</p>
+
+  <div class="mods">
+    <div class="mod destaque"><div class="n">canvas</div>
+      <h3>Organograma navegável</h3>
+      <p>Três orientações, profundidade por nível, foco em qualquer unidade,
+        zoom e exportação do recorte visível.</p></div>
+    <div class="mod"><div class="n">estrutura · tabela</div>
+      <h3>A mesma base, sem desenho</h3>
+      <p>Lista hierárquica e tabela filtrável para quem precisa conferir,
+        exportar ou corrigir cadastro.</p></div>
+    <div class="mod"><div class="n">painel rh</div>
+      <h3>Indicadores de pessoas</h3>
+      <p>Headcount por vertical e departamento, liderados diretos por gestor,
+        profundidade e vagas abertas.</p></div>
+    <div class="mod"><div class="n">tempo de empresa</div>
+      <h3>Senioridade e retenção</h3>
+      <p>Distribuição de tempo de casa por área — onde a experiência está
+        concentrada e onde ela está saindo.</p></div>
+    <div class="mod"><div class="n">skills</div>
+      <h3>Matriz de competências</h3>
+      <p>O que cada time sabe fazer, ligado à pessoa e à posição na estrutura,
+        não a uma planilha paralela.</p></div>
+    <div class="mod"><div class="n">conversa de valor · one-on-one</div>
+      <h3>Ciclo de conversas</h3>
+      <p>Registro das conversas de valor e dos one-on-ones no mesmo lugar em que
+        a estrutura vive.</p></div>
+    <div class="mod"><div class="n">avaliação</div>
+      <h3>Avaliação e avaliação mestre</h3>
+      <p>Ciclos de avaliação com a visão consolidada para RH e diretoria, já
+        organizada pela hierarquia real.</p></div>
+    <div class="mod destaque"><div class="n">marIA</div>
+      <h3>Assistente de pessoas</h3>
+      <p>Pergunte em português sobre a estrutura e receba a resposta com o
+        recorte correspondente aberto na tela.</p></div>
+    <div class="mod"><div class="n">agentes · GPlanSiS|ORG</div>
+      <h3>Rotinas automatizadas</h3>
+      <p>Agentes acompanham carga, integridade e pendências de cadastro e
+        avisam quando algo sai do lugar.</p></div>
+  </div>
+</section>
+
+<!-- CARD -->
+<section id="card">
+  <div class="olho">a unidade de trabalho</div>
+  <h2>Cada card é o registro completo de uma posição.</h2>
+  <p class="sub-sec">Não é uma caixinha com nome e cargo. É o ponto em que
+    identificação, responsabilidades e vínculo com o resto do sistema se
+    encontram — e é por ele que a edição acontece.</p>
+
+  <div class="anatomia">
+    <div class="card-real">
+      <div class="cod">482 90.11 · DIR</div>
+      <h4>Ana Duarte Vieira</h4>
+      <div class="cargo">Diretor Executivo / CEO<br>Board</div>
+      <div class="cod" style="margin-top:6px">ana.vieira@exemplo.com</div>
+      <ul>
+        <li>Responder pelo resultado consolidado</li>
+        <li>Presidir os fóruns de governança</li>
+        <li>Decidir investimentos e parcerias</li>
+      </ul>
+      <span class="mais">+11</span>
+    </div>
+
+    <div class="legendas">
+      <div class="leg"><b>482 90.11 · DIR</b>
+        <span>Código da posição, centro de custo e sigla da unidade — a
+          identificação que o RH e a controladoria já usam.</span></div>
+      <div class="leg"><b>nome e cargo</b>
+        <span>Vindos do cadastro, não digitados no desenho. Mudou no cadastro,
+          mudou no organograma.</span></div>
+      <div class="leg"><b>responsabilidades</b>
+        <span>O que a posição responde. É o que transforma o organograma em
+          documento útil para onboarding e sucessão.</span></div>
+      <div class="leg"><b>+11</b>
+        <span>Quantos liderados a subárvore tem além do que está visível. Um
+          clique expande sem perder o contexto.</span></div>
+      <div class="leg"><b>botão direito</b>
+        <span>Abre as ações da unidade: editar, criar colaborador, focar
+          subárvore, colapsar.</span></div>
+      <div class="leg" style="border-bottom:0"><b>dados fictícios</b>
+        <span>Demonstração nunca usa pessoa real. Na sua instalação, o acesso é
+          por perfil.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- IMPLANTAÇÃO -->
+<section id="implantacao">
+  <div class="olho">como entra na empresa</div>
+  <h2>Começa com a planilha que o RH já exporta.</h2>
+  <p class="sub-sec">Sem projeto de integração para ver valor. A API do sistema
+    de RH entra depois, e a operação de quem usa não muda quando entrar.</p>
+
+  <div class="passos">
+    <div class="passo"><span class="i">01</span><div>
+      <h3>Carga da base</h3>
+      <p>Colaboradores com gestor direto, centro de custo e cargo. Coluna que
+        falta vira pendência, não bloqueio.</p>
+      <span class="prazo">mesmo dia</span></div></div>
+    <div class="passo"><span class="i">02</span><div>
+      <h3>Validação da estrutura</h3>
+      <p>Ciclos, órfãos, duplicidade e gestor inexistente. Você recebe a lista
+        nominal do que precisa de decisão.</p>
+      <span class="prazo">primeira semana</span></div></div>
+    <div class="passo"><span class="i">03</span><div>
+      <h3>Publicação e acesso</h3>
+      <p>URL interna, perfis de acesso e mascaramento de custo. Gestor vê o seu
+        time; diretoria vê o todo.</p>
+      <span class="prazo">segunda semana</span></div></div>
+    <div class="passo"><span class="i">04</span><div>
+      <h3>Ciclo de pessoas ligado</h3>
+      <p>Skills, conversas de valor, one-on-one e avaliação passam a rodar sobre
+        a estrutura já publicada.</p>
+      <span class="prazo">a partir do primeiro mês</span></div></div>
+    <div class="passo"><span class="i">05</span><div>
+      <h3>Integração com o sistema de RH</h3>
+      <p>Quando a API entrar, a carga manual sai. Mesmas telas, mesmos
+        indicadores, mesma trilha.</p>
+      <span class="prazo">quando você quiser</span></div></div>
+  </div>
+</section>
+</div>
+
+<!-- CONFIANÇA -->
+<section id="confianca" class="escuro">
+  <div class="faixa">
+    <div class="olho">dado de pessoa</div>
+    <h2>Estrutura organizacional é dado sensível. O produto trata assim.</h2>
+    <div class="conf">
+      <div><h3>Acesso por perfil</h3>
+        <p>Gestor enxerga a própria subárvore. Custo aparece agregado e
+          mascarável. Remuneração individual não entra no sistema.</p></div>
+      <div><h3>Trilha auditável</h3>
+        <p>Alterações de estrutura ficam em registro encadeado por hash. Dá para
+          dizer o que mudou, quando e por quem — e provar.</p></div>
+      <div><h3>Onde os dados ficam</h3>
+        <p>Instalação dedicada, banco sob seu controle e exportação completa a
+          qualquer momento.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="faixa">
+<!-- PERGUNTAS -->
+<section id="perguntas">
+  <div class="olho">antes de você perguntar</div>
+  <h2>As dúvidas da primeira reunião.</h2>
+  <details><summary>Precisa integrar com o sistema de RH para começar?</summary>
+    <p>Não. A primeira carga é a planilha que o RH já exporta; a integração via
+      API entra depois e não muda a rotina de quem usa.</p></details>
+  <details><summary>E se a nossa base estiver bagunçada?</summary>
+    <p>É o caso comum. A validação devolve a lista nominal de órfãos, ciclos e
+      gestores inexistentes — o Peoples costuma ser o primeiro lugar onde esses
+      problemas ficam visíveis.</p></details>
+  <details><summary>Aguenta quantas pessoas?</summary>
+    <p>A navegação por foco e profundidade foi feita para bases grandes. Em
+      operação com 266 pessoas e seis níveis, o recorte abre sem esperar a
+      árvore inteira.</p></details>
+  <details><summary>Dá para usar o organograma nas apresentações?</summary>
+    <p>Sim. A exportação sai com o recorte que está na tela, então o slide passa
+      a ter a mesma data de corte do sistema.</p></details>
+  <details><summary>Quem consegue ver o custo por pessoa?</summary>
+    <p>Ninguém, por padrão. Custo aparece agregado por time ou vertical e é
+      mascarável por perfil de acesso.</p></details>
+  <details><summary>Precisamos usar todos os módulos?</summary>
+    <p>Não. A maioria começa por canvas, estrutura e tabela. Skills, avaliação e
+      one-on-one entram quando a base já está confiável.</p></details>
+</section>
+</div>
+
+<!-- FECHAMENTO -->
+<section id="falar" class="fecha">
+  <div class="faixa">
+    <div class="olho" style="color:#ffd9c2">próximo passo</div>
+    <h2>Traga sua base. Sai da reunião com a estrutura na tela.</h2>
+    <p style="max-width:52ch">Sessão de 40 minutos: carregamos uma amostra da sua
+      base, rodamos a validação e navegamos a sua estrutura real — não uma
+      demonstração genérica.</p>
+    <div class="acoes">
+      <a class="bt bt-acao" href="mailto:contato@gplansis.com?subject=Peoples%20-%20demonstra%C3%A7%C3%A3o">Agendar demonstração</a>
+      <a class="bt bt-claro" href="mailto:contato@gplansis.com?subject=Peoples%20-%20material">Receber o material técnico</a>
+    </div>
+  </div>
+</section>
+
+<div class="faixa">
+  <div class="rodape">
+    <span>GPlanSiS|Peoples · módulo de pessoas do GPlanSiS</span>
+    <span>peoples.gplansis.com</span>
+    <span>Dados de demonstração fictícios.</span>
+  </div>
+</div>
+
+<script>
+/* ── motor mínimo: mola amortecida, teto de dt, movimento reduzido ── */
+const raiz=getComputedStyle(document.documentElement);
+const tk=(n,p)=>{const v=parseFloat(raiz.getPropertyValue(n));return isNaN(v)?p:v};
+const imovel=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+let ativas=0;
+const podeAnimar=()=>!imovel()&&ativas<tk('--anim-max',3);
+function mola(el,aplicar){
+  const k=tk('--rigidez',520),c=tk('--amort',32),m=tk('--massa',1);
+  if(!podeAnimar()){aplicar(1,el);return}
+  let x=0,v=0,rod=true,ant=performance.now();ativas++;
+  (function passo(ag){
+    if(!rod)return;
+    const dt=Math.min((ag-ant)/1000,tk('--dt-teto',1/30));ant=ag;
+    v+=((-k*(x-1)-c*v)/m)*dt;x+=v*dt;aplicar(x,el);
+    if(Math.abs(x-1)<.004&&Math.abs(v)<.05){aplicar(1,el);rod=false;ativas--;return}
+    requestAnimationFrame(passo);
+  })(performance.now());
+}
+function tatil(el){
+  if(imovel())return;
+  el.style.transition='transform 70ms ease-out';el.style.transform='scale(.97)';
+  setTimeout(()=>{el.style.transition='';el.style.transform='none'},110);
+}
+
+/* ── dados de demonstração (fictícios) ── */
+const UNIDADES=[
+  {id:'ORG-0001',n:0,tit:'Diretoria',sub:'Conselho de administração',ext:'Governança corporativa',unidade:true},
+  {id:'482 90.11 · DIR',n:1,tit:'Ana Duarte Vieira',sub:'Diretor Executivo / CEO',tag:'Board',mais:'+11'},
+  {id:'510 12.04 · ENG',n:1,tit:'Marcos Ribeiro Alves',sub:'Diretor de Engenharia',tag:'Engenharia'},
+  {id:'530 44.02 · ADM',n:1,tit:'Helena Prado Matos',sub:'Diretora Administrativa',tag:'Serviços compartilhados'},
+  {id:'511 12.09 · PMO',n:2,tit:'Rafael Nunes Costa',sub:'Coordenador de Projetos'},
+  {id:'512 12.11 · AUT',n:2,tit:'Carla Menezes Lopes',sub:'Coordenadora de Automação'},
+  {id:'531 44.07 · RH',n:2,tit:'Diego Ferraz Lima',sub:'Coordenador de Pessoas'}
+];
+const LARGURA=1040,ALTURA=520;
+const COLS_LAT=[60,360,690];
+const mundo=document.getElementById('mundo'),tela=document.getElementById('tela'),
+      regua=document.getElementById('regua'),legenda=document.getElementById('legendaTela'),
+      estado=document.getElementById('estadoTela');
+let orientacao='lateral',profundidade=1;
+
+const cards=UNIDADES.map(u=>{
+  const el=document.createElement('button');
+  el.type='button';el.className='card'+(u.unidade?' unidade':'');
+  el.dataset.n=u.n;
+  el.innerHTML=
+    `<div class="cod">${u.id}</div>
+     <div class="nome">${u.tit}</div>
+     <div class="cargo">${u.sub}${u.ext?'<br>'+u.ext:''}</div>
+     ${u.tag?`<span class="tag">${u.tag}</span>`:''}
+     ${u.unidade?'<div class="marca">GPlanSiS<i>|</i>Peoples</div>':''}
+     ${u.mais?`<span class="mais">${u.mais}</span>`:''}`;
+  el.setAttribute('aria-label',`${u.tit}, ${u.sub}, nível N${u.n}`);
+  el.addEventListener('click',()=>tatil(el));
+  mundo.appendChild(el);
+  return{el,dado:u,x:0,y:0,visivel:true};
+});
+
+function marcasRegua(){
+  regua.querySelectorAll('.mk').forEach(m=>m.remove());
+  const nomes=['N0','N1','N2'].slice(0,profundidade+1);
+  nomes.forEach((nm,i)=>{
+    const m=document.createElement('div');
+    m.className='mk'+(i===0?' n0':'');
+    m.style.left=((COLS_LAT[i]+100)/LARGURA*100)+'%';
+    m.innerHTML=nm+'<i></i>';
+    regua.appendChild(m);
+  });
+}
+
+function alvos(){
+  const pos=[],colY=[0,0,0],colI=[0,0,0];
+  cards.forEach((c,i)=>{
+    const n=c.dado.n;
+    const oculto=n>profundidade;
+    let x=0,y=0;
+    if(orientacao==='lateral'){
+      x=COLS_LAT[n];
+      y=(n===0?170:130)+colY[n]*110;colY[n]++;
+    }else if(orientacao==='invertida'){
+      const linhaY=[320,205,95][n];
+      const idx=colI[n]++;
+      x=n===0?400:(80+idx*300);
+      y=linhaY;
+    }else{
+      x=60+(i%3)*320;
+      y=120+Math.floor(i/3)*130;
+    }
+    pos.push({x,y,oculto});
+  });
+  return pos;
+}
+
+function desenhar(animado){
+  const alvo=alvos();
+  cards.forEach((c,i)=>{
+    const a=alvo[i];
+    c.el.style.display=a.oculto?'none':'block';
+    if(a.oculto){c.x=a.x;c.y=a.y;return}
+    if(!animado||!podeAnimar()){
+      c.x=a.x;c.y=a.y;c.el.style.transform=`translate(${a.x}px,${a.y}px)`;return;
+    }
+    const x0=c.x,y0=c.y;
+    mola(c.el,(v,el)=>{
+      const x=x0+(a.x-x0)*v,y=y0+(a.y-y0)*v;
+      c.x=x;c.y=y;el.style.transform=`translate(${x}px,${y}px)`;
+    });
+  });
+  const visiveis=alvo.filter(a=>!a.oculto).length;
+  const texto={
+    lateral:'orientação lateral — a árvore cresce para a direita',
+    invertida:'orientação invertida — a liderança fica na base',
+    pessoa:'leitura por pessoa — sem hierarquia desenhada'
+  }[orientacao];
+  legenda.textContent=`${visiveis} unidades · profundidade ${profundidade} · ${texto}`;
+  estado.textContent=`carga de 08/09/2026 · ${visiveis} unidades visíveis`;
+  regua.style.display=orientacao==='lateral'?'block':'none';
+  if(orientacao==='lateral')marcasRegua();
+}
+
+function escalar(){
+  const s=Math.min(1,tela.clientWidth/LARGURA);
+  mundo.style.transform=`scale(${s})`;
+  mundo.style.height=ALTURA+'px';
+  tela.style.height=Math.round(ALTURA*s)+'px';
+  document.getElementById('zoomTxt').textContent=Math.round(s*100)+' %';
+}
+
+document.querySelectorAll('[data-orient]').forEach(b=>b.addEventListener('click',()=>{
+  orientacao=b.dataset.orient;
+  document.querySelectorAll('[data-orient]').forEach(x=>
+    x.setAttribute('aria-pressed',String(x===b)));
+  tatil(b);desenhar(true);
+}));
+document.querySelectorAll('[data-prof]').forEach(b=>b.addEventListener('click',()=>{
+  profundidade=+b.dataset.prof;
+  document.querySelectorAll('[data-prof]').forEach(x=>
+    x.setAttribute('aria-pressed',String(x===b)));
+  tatil(b);desenhar(true);
+}));
+document.getElementById('btExportar').addEventListener('click',e=>{
+  tatil(e.currentTarget);
+  estado.textContent='exportação do recorte visível · SVG, CSV ou JSON';
+});
+
+escalar();desenhar(false);
+addEventListener('resize',()=>{escalar();desenhar(false)});
+</script>
+</body>
+</html>

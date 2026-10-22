@@ -1,0 +1,230 @@
+{#
+  O corpo do Skills. Quem inclui é `_dcr.html` (tela inteira) e a rota `/filtros`
+  (só o corpo, alvo `#dcrCorpo`).
+
+  Quatro seções, e a ordem é a da pergunta que cada uma responde: que funções
+  existem, o quanto elas se explicam pelas outras variáveis, quem lidera onde, e
+  que competências a casa declara.
+#}
+<h1>{{ t('Skills — Descrição de Cargo e Responsabilidades') }}</h1>
+<p class="sub">
+  {{ t('Formulário {codigo} · Rev {rev}. Cada ficha é montada da estrutura vigente e completada pelo RH.',
+       codigo=formulario.codigo, rev=formulario.revisao) }}
+  {% if ativo %}<b>{{ t('filtro ativo') }}</b> —
+  {{ t('os números são do recorte que está na tela.') }}{% endif %}
+</p>
+<p style="margin:-4px 0 10px">
+  <a class="bt bt-min" href="/skills/todos.zip">{{ t('Baixar Skills de todos (.zip de .md, um por colaborador)') }}</a>
+</p>
+
+<div class="painel-numeros">
+  <div><span>{{ t('pessoas') }}</span><b class="numero">{{ r.pessoas }}</b></div>
+  <div><span>{{ t('funções') }}</span><b class="numero">{{ r.funcoes }}</b></div>
+  <div><span>{{ t('setores') }}</span><b class="numero">{{ r.setores }}</b></div>
+  <div><span>{{ t('business units') }}</span><b class="numero">{{ r.bus }}</b></div>
+  <div><span>{{ t('gestores') }}</span><b class="numero">{{ r.gestores }}</b></div>
+  <div><span>{{ t('amplitude') }}</span>
+    <b class="numero">{{ anos(r.amplitude) }}</b></div>
+</div>
+<p class="sub">{{ t('Amplitude é pessoas por gestor — diretoria, gerência e coordenação somadas. Liderança técnica e especialista não entram na conta: respondem por profundidade, não por gente.') }}</p>
+
+{% if not r.pessoas %}
+<p class="vazio">{{ t('Nenhuma pessoa neste recorte. Afrouxe o filtro para ver os números.') }}</p>
+{% else %}
+
+<div class="cfg">
+  <nav class="cfg-nav" aria-label="{{ t('Seções do Skills') }}">
+    {% for chave, rotulo in [("funcoes", t("Funções e fichas")),
+                             ("correlacoes", t("Correlações")),
+                             ("lideranca", t("Liderança por unidade")),
+                             ("competencias", t("Matriz de competência"))] %}
+    <button class="{% if secao == chave %}on{% endif %}"
+            hx-get="/vistas/dcr?aba={{ chave }}"
+            hx-target="#area" hx-swap="innerHTML">{{ rotulo }}</button>
+    {% endfor %}
+  </nav>
+
+  <div class="cfg-corpo">
+
+  {# ------------------------------------------------------------------ #}
+  {% if secao == "funcoes" %}
+  {# A ficha abre AO LADO da lista (coluna à direita), e não acima: quem compara
+     duas funções mantém a lista à vista. O painel some quando vazio (`:empty`)
+     e a lista ocupa a largura inteira. #}
+  <div class="ficha-lado">
+   <div class="ficha-lista">
+    <div class="dcr-topo">
+      <h2>{{ t('Funções por setor') }}</h2>
+      <a class="bt bt-min" href="/dcr.csv">{{ t('Exportar CSV') }}</a>
+    </div>
+    <p class="sub">{{ t('{n} funções distintas. “Descrita” marca a função cuja ficha já foi escrita pelo RH; o resto sai só do que a estrutura deduz.',
+                        n=r.funcoes) }}</p>
+    <div class="rolagem-x"><table>
+      <thead><tr>
+        <th scope="col">{{ t('Cargo') }}</th>
+        <th scope="col">{{ t('Papel') }}</th>
+        <th scope="col" class="num">{{ t('Pessoas') }}</th>
+        <th scope="col" class="num">{{ t('Setores') }}</th>
+        <th scope="col" class="num">{{ t('BUs') }}</th>
+        <th scope="col">{{ t('Ficha') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for f in funcoes %}
+        <tr class="clicavel" hx-get="/dcr/ficha/{{ f.chave|urlencode }}"
+            hx-target="#dcrFicha" hx-swap="innerHTML"
+            title="{{ t('Abrir a ficha de {cargo}', cargo=f.cargo) }}">
+          <td>{{ f.cargo or '—' }}</td>
+          <td><span class="tag {{ f.papel_codigo }}">{{ t(f.papel) }}</span></td>
+          <td class="num">{{ f.n }}</td>
+          <td class="num">{{ f.setores }}</td>
+          <td class="num">{{ f.bus }}</td>
+          <td>{% if f.descrita %}<span class="selo-ok">{{ t('descrita') }}</span>
+              {% else %}<span class="dcr-pendente">{{ t('a escrever') }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+   </div>
+   {# Clicar no fundo do modal (fora do cartão) fecha — esvaziar o alvo basta,
+      porque `.ficha-painel:empty` some. O × e o Esc fazem o mesmo. #}
+   <div id="dcrFicha" class="ficha-painel"
+        onclick="if(event.target===this)this.innerHTML=''"></div>
+  </div>
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "correlacoes" %}
+  <h2>{{ t('Correlação entre variáveis') }}</h2>
+  <p class="sub">{{ t('V de Cramér com correção de viés (Bergsma, 2013): mede associação entre variáveis categóricas, de 0 a 1. Diz que saber uma reduz a incerteza sobre a outra — não diz que uma causa a outra, e 0,60 não é «60 % de explicação».') }}</p>
+  <div class="rolagem-x"><table>
+    <thead><tr>
+      <th scope="col">{{ t('Par de variáveis') }}</th>
+      <th scope="col" class="num">V</th>
+      <th scope="col">{{ t('Força') }}</th>
+      <th scope="col" class="num">{{ t('Sem correção') }}</th>
+      <th scope="col" class="num">{{ t('Categorias') }}</th>
+      <th scope="col">{{ t('Ressalva') }}</th>
+    </tr></thead>
+    <tbody>
+      {% for c in correlacoes %}
+      <tr>
+        <td>{{ t(c.rotulo) }}</td>
+        <td class="num"><b>{{ '%.3f'|format(c.v)|replace('.', ',') }}</b></td>
+        <td>{{ t(c.forca) }}</td>
+        <td class="num cod">{{ '%.3f'|format(c.v_bruto)|replace('.', ',') }}</td>
+        <td class="num cod">{{ c.categorias_l }}×{{ c.categorias_c }}</td>
+        <td>{% if not c.confiavel %}
+            <span class="dcr-ressalva"
+                  title="{{ t('{n} célula(s) com valor esperado abaixo de 5 — regra de Cochran. O número sai, com a ressalva colada nele.', n=c.celulas_ralas) }}">{{ t('amostra rala') }}</span>
+            {% else %}<span class="cod">—</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+
+  <h2>{{ t('Business Unit × papel') }}</h2>
+  {% set m = bu_papel %}{% set rotulo_l = t('Business Unit') %}
+  {% include "_dcr_matriz.html" %}
+
+  <h2>{{ t('Onde cada função se concentra') }}</h2>
+  <p class="sub">{{ t('A matriz de {n} funções por Business Unit tem números demais para ler inteira. Esta é a leitura que sobra: a BU dominante de cada função e o quanto ela pesa. Funções com menos de {piso} pessoas entram agregadas — jogá-las fora faria o total parar de fechar.',
+                      n=r.funcoes, piso=piso_grupo) }}</p>
+  <div class="rolagem-x"><table>
+    <thead><tr>
+      <th scope="col">{{ t('Função') }}</th>
+      <th scope="col" class="num">{{ t('Pessoas') }}</th>
+      <th scope="col">{{ t('BU dominante') }}</th>
+      <th scope="col" class="num">{{ t('Concentração') }}</th>
+      <th scope="col" class="num">{{ t('BUs em que aparece') }}</th>
+    </tr></thead>
+    <tbody>
+      {% for c in concentracao[:30] %}
+      <tr>
+        <td>{{ c.rotulo }}</td>
+        <td class="num">{{ c.total }}</td>
+        <td>{{ c.dominante }}</td>
+        <td class="num">{{ c.pct }} %</td>
+        <td class="num">{{ c.espalhada }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "lideranca" %}
+  <h2>{{ t('Liderança por Business Unit') }}</h2>
+  {% set grupos = lideranca_bu %}{% include "_dcr_lideranca.html" %}
+
+  <h2>{{ t('Liderança por vertical') }}</h2>
+  {% set grupos = lideranca_vertical %}{% include "_dcr_lideranca.html" %}
+
+  <h2>{{ t('Liderança por setor') }}</h2>
+  {% set grupos = lideranca_setor %}{% include "_dcr_lideranca.html" %}
+
+  {% if amplitude %}
+  <h2>{{ t('Amplitude medida na árvore') }}</h2>
+  <p class="sub">{{ t('Subordinados diretos de cada gestor, contados na estrutura. O contraponto da tabela acima, que conta por cadastro: onde os dois números divergem muito, há gente pendurada num centro de custo que não é o de quem a lidera — e isso é achado de dado, não de organização.') }}</p>
+  <div class="rolagem-x"><table>
+    <thead><tr>
+      <th scope="col">{{ t('Gestor') }}</th>
+      <th scope="col">{{ t('Cargo') }}</th>
+      <th scope="col">{{ t('Setor') }}</th>
+      <th scope="col" class="num">{{ t('Diretos') }}</th>
+    </tr></thead>
+    <tbody>
+      {% for g in amplitude[:20] %}
+      <tr class="clicavel"
+          hx-get="/fragmentos/painel/{{ g.id }}?canvas=0&amp;vista=dcr"
+          hx-target="#painel" hx-swap="innerHTML"
+          title="{{ t('Abrir na gaveta') }}">
+        <td>{{ g.nome }}</td>
+        <td>{{ g.cargo or '—' }}</td>
+        <td>{{ g.setor or '—' }}</td>
+        <td class="num">{{ g.diretos }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  {% endif %}
+
+  {# ------------------------------------------------------------------ #}
+  {% else %}
+  <h2>{{ t('Matriz de competência') }}</h2>
+  <p class="sub">{{ t('{d} de {p} pessoas declararam alguma competência ({c} %). A cobertura vem antes de qualquer célula: numa área onde 8 de 30 preencheram, a matriz descreve os 8 — e não a área.',
+                      d=competencias.declararam, p=competencias.pessoas,
+                      c=competencias.cobertura) }}</p>
+
+  {% if not competencias.distintas %}
+  <p class="vazio">{{ t('Nenhuma competência declarada neste recorte. O campo existe no cadastro de cada pessoa e na carga da planilha; enquanto ninguém o preenche, a matriz não tem o que cruzar.') }}</p>
+  {% else %}
+  {% if competencias.ocultas %}
+  <p class="sub">{{ t('Mostrando as {n} competências mais frequentes; outras {o} ficaram de fora da matriz.',
+                      n=competencias.competencias|length, o=competencias.ocultas) }}</p>
+  {% endif %}
+  <div class="rolagem-x"><table class="matriz">
+    <thead><tr>
+      <th scope="col">{{ t('Função') }}</th>
+      <th scope="col" class="num">{{ t('Pessoas') }}</th>
+      <th scope="col" class="num">{{ t('Cobertura') }}</th>
+      {% for c in competencias.competencias %}
+      <th scope="col" class="num vert" title="{{ c.rotulo }} · {{ c.n }}">{{ c.rotulo }}</th>
+      {% endfor %}
+    </tr></thead>
+    <tbody>
+      {% for g in competencias.grupos[:40] %}
+      <tr>
+        <td>{{ g.rotulo }}</td>
+        <td class="num">{{ g.n }}</td>
+        <td class="num">{{ g.cobertura }} %</td>
+        {% for v in g.celulas %}
+        <td class="num{% if not v %} zero{% endif %}">{{ v or '' }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  {% endif %}
+  {% endif %}
+
+  </div>
+</div>
+{% endif %}

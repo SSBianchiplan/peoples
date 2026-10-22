@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="{{ idioma }}" data-tema="escuro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>{{ t('Entrar') }} · GPlanSiS|Peoples</title>
+<link rel="icon" href="/marca/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/marca/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#2D3336">
+<meta name="apple-mobile-web-app-title" content="Peoples">
+<style>
+:root{
+  --laranja:#EB6A20; --ambar:#F6A709; --grafite:#2D3336; --cinza:#7D8286;
+  --tinta:#F1F3F3; --tinta-2:#B6BCBE; --nevoa:#7D8286;
+  --painel:#1F2426; --linha:#3D4548; --campo:#262C2F;
+  --fonte:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:var(--fonte);color:var(--tinta);background:#000;
+     font-size:14px;line-height:1.45}
+
+/* As duas lâminas dividem a tela ao meio; o card entra por cima, no vinco.
+   Elas são fundo — o escurecimento existe para o card ganhar o contraste que
+   a foto não garante em nenhum ponto específico. */
+.palco{position:fixed;inset:0;display:grid;grid-template-columns:1fr 1fr}
+.lamina{position:relative;overflow:hidden;background:#000}
+/* O enquadramento empurra o conteúdo de cada lâmina para a borda externa: o
+   card fica no vinco, e o que interessa em cada imagem não some debaixo dele. */
+.lamina img.fundo{width:100%;height:100%;object-fit:cover;display:block;
+  opacity:.9}
+.lamina.esq img.fundo{object-position:18% center}
+.lamina.dir img.fundo{object-position:82% center}
+.lamina::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(0,0,0,.18) 0%,rgba(0,0,0,.82) 100%)}
+.lamina.dir::after{background:linear-gradient(270deg,rgba(0,0,0,.18) 0%,rgba(0,0,0,.82) 100%)}
+
+/* Lâmina da direita: o lockup e a chamada são texto vivo, não imagem chapada —
+   assim acompanham o idioma e continuam nítidos em qualquer densidade. */
+.capa{position:absolute;inset:0;z-index:1;display:flex;align-items:center;
+  justify-content:flex-end;gap:30px;padding:0 5% 0 44%}
+/* O lockup veio do PDF sem canal alfa: o fundo preto some com `screen` sobre
+   uma lâmina escura, e assim não preciso reeditar o arquivo da marca. */
+.capa img{width:min(172px,34%);height:auto;display:block;flex:none;
+  mix-blend-mode:screen}
+.capa p{margin:0;font-size:clamp(12px,1.15vw,15px);font-weight:500;
+  letter-spacing:.14em;line-height:1.95;color:#FFFFFF}
+.capa p b{color:#FFFFFF;font-weight:700;display:block}
+
+/* Espelho da direita: o bloco de valores da lâmina de cultura fica junto da
+   borda esquerda, longe do card. */
+.selo{position:absolute;left:5%;bottom:9%;z-index:1;max-width:38%}
+.selo b{display:block;font-size:clamp(15px,1.7vw,22px);line-height:1.2;
+  color:#FFFFFF;font-weight:700}
+.selo span{display:block;margin-top:8px;font-size:11px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--laranja)}
+
+.entrada{position:fixed;inset:0;display:flex;align-items:center;
+  justify-content:center;padding:24px;z-index:2}
+.cartao{width:min(410px,100%);background:rgba(31,36,38,.94);
+  border:1px solid var(--linha);border-top:3px solid var(--laranja);
+  border-radius:10px;padding:30px 32px 26px;
+  box-shadow:0 26px 70px rgba(0,0,0,.66);backdrop-filter:blur(9px)}
+/* O logo já é branco com canal alfa: sobre o cartão escuro entra direto, sem
+   `mix-blend-mode` como o lockup da lâmina precisa. */
+.logo{display:block;width:min(158px,62%);height:auto;margin:2px auto 14px}
+.dica{margin:10px 0 22px;text-align:center;font-size:12.5px;color:var(--tinta-2)}
+
+label{display:block;margin:12px 0 5px;font-size:11px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--nevoa)}
+input[type=email],input[type=password]{width:100%;background:var(--campo);color:var(--tinta);
+  border:1px solid var(--linha);border-radius:4px;font:inherit;font-size:14px;
+  padding:10px 12px}
+input[type=email]:focus,input[type=password]:focus{outline:2px solid var(--laranja);outline-offset:1px;
+  border-color:var(--laranja)}
+
+.bt{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;
+  border:0;border-radius:5px;font:inherit;font-size:14px;font-weight:700;
+  padding:12px 16px;cursor:pointer;margin-top:16px}
+/* Grafite sobre o laranja: 4,04:1. Branco daria 3,17:1 e reprovaria em AA. */
+.bt.forte{background:var(--laranja);color:#2D3336}
+.bt.forte:hover{filter:brightness(1.07)}
+.bt.ms{background:#FFFFFF;color:#2D3336}
+.bt.ms:hover{background:#EDEEEF}
+.bt svg{width:17px;height:17px;flex:none}
+
+.ou{display:flex;align-items:center;gap:12px;margin:20px 0 4px;
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--nevoa)}
+.ou::before,.ou::after{content:"";flex:1;height:1px;background:var(--linha)}
+
+.erro{margin:14px 0 0;padding:9px 12px;border-radius:4px;font-size:12.5px;
+  background:#3A2A20;color:#F0854A;border-left:3px solid var(--laranja)}
+.pista{margin:16px 0 0;font-size:11.5px;color:var(--nevoa);text-align:center}
+.rodape{position:fixed;left:0;right:0;bottom:14px;text-align:center;z-index:2;
+  font-size:11px;color:rgba(255,255,255,.42);letter-spacing:.04em}
+
+@media (max-width:900px){
+  /* Abaixo disto as duas lâminas viram tiras ilegíveis: fica uma só, e o card
+     ganha a tela inteira. */
+  .palco{grid-template-columns:1fr}
+  .lamina.dir{display:none}
+  .capa{display:none}
+  /* E o selo sai com elas. Ele é `position:absolute` com `max-width:38%`: num
+     celular de 390 px isso são 148 px de largura, a frase quebra em oito linhas
+     e sobe por trás do card — no retrato ela aparecia atravessada em cima do
+     "Esqueceu a senha?". É arte de fundo (`aria-hidden`), então esconder não
+     perde informação nenhuma; deixá-la só embaralhava a única coisa que importa
+     nesta tela, que é entrar. */
+  .selo{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="palco" aria-hidden="true">
+  <div class="lamina esq">
+    <img class="fundo" src="/marca/cultura.jpg" alt="">
+    <div class="selo">
+      <span>{{ t('Nosso propósito') }}</span>
+      <b>{{ t('Entenda sua organização, desenvolva talentos e transforme dados humanos em decisões estratégicas.') }}</b>
+    </div>
+  </div>
+  <div class="lamina dir">
+    <img class="fundo" src="/marca/fundo-organograma.jpg" alt="">
+    <div class="capa">
+      <img src="/marca/lockup-peoples.png" alt="">
+      <p>{{ t('Conectados pelo sucesso:') }}
+        <b>{{ t('explore nossa estrutura organizacional') }}</b></p>
+    </div>
+  </div>
+</div>
+
+<main class="entrada">
+  <div class="cartao">
+    <img class="logo" src="/marca/peoples-branco.png" alt="GPlanSiS|Peoples">
+
+    {% if primeiro %}
+    <p class="dica">{{ t('Primeiro acesso: ainda não há nenhum usuário. Crie o administrador inicial.') }}</p>
+    <form action="/entrar/primeiro" method="post" autocomplete="off">
+      <label for="email">{{ t('E-mail') }}</label>
+      <input id="email" name="email" type="email" autocomplete="username" autofocus required
+             placeholder="{{ exemplo }}">
+      <label for="senha">{{ t('Senha') }}</label>
+      <input id="senha" name="senha" type="password" autocomplete="new-password" required
+             minlength="{{ minimo }}">
+      <label for="repetir">{{ t('Repita a senha') }}</label>
+      <input id="repetir" name="repetir" type="password" autocomplete="new-password" required
+             minlength="{{ minimo }}">
+      <button class="bt forte" type="submit">{{ t('Criar administrador inicial') }}</button>
+    </form>
+    {% else %}
+    <p class="dica">{{ t('Entre com o e-mail e a senha do seu acesso.') }}</p>
+    <form action="/entrar" method="post">
+      <label for="email">{{ t('E-mail') }}</label>
+      <input id="email" name="email" type="email" autocomplete="username" autofocus required
+             placeholder="{{ exemplo }}">
+      <label for="senha">{{ t('Senha') }}</label>
+      <input id="senha" name="senha" type="password" autocomplete="current-password" required>
+      <button class="bt forte" type="submit">{{ t('Entrar') }}</button>
+    </form>
+    <p class="pista">{{ t('Esqueceu a senha? Peça ao administrador do Peoples uma senha temporária.') }}</p>
+    {% endif %}
+
+    {% if aviso %}<p class="pista" role="status">{{ aviso }}</p>{% endif %}
+    {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+  </div>
+</main>
+
+<p class="rodape">{% if cfg.tenant and cfg.tenant != 'GPlanSiS|Peoples' %}{{ cfg.tenant }} · {% endif %}GPlanSiS|Peoples</p>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+{#
+  O passo a passo de boas-vindas.
+
+  A MarIA entra pela direita, na base da tela, apresenta o sistema e leva a
+  pessoa por cada controle. Os passos vêm de `ajuda.py` — texto de interface
+  passa pelo catálogo de idiomas, e passo escrito em JavaScript não seria
+  varrido por ele.
+
+  O véu é um `<svg>` com um retângulo furado, e não quatro divs em volta do
+  alvo: o furo tem cantos arredondados e acompanha qualquer forma sem quatro
+  contas que precisam concordar entre si. `pointer-events` fica no véu inteiro,
+  então o clique não vaza para o sistema atrás — durante a visita, a única coisa
+  clicável é a visita.
+#}
+<div class="tour" id="tour" role="dialog" aria-modal="true"
+     aria-labelledby="tourTitulo" data-passos="{{ passos_ajuda()|length }}">
+
+  <svg class="tour-veu" id="tourVeu" aria-hidden="true" preserveAspectRatio="none">
+    <defs>
+      <mask id="tourFuro">
+        <rect x="0" y="0" width="100%" height="100%" fill="#fff"/>
+        <rect id="tourBuraco" x="0" y="0" width="0" height="0" rx="7" fill="#000"/>
+      </mask>
+    </defs>
+    <rect x="0" y="0" width="100%" height="100%" fill="rgba(11,14,15,.72)"
+          mask="url(#tourFuro)"/>
+    <rect id="tourAro" x="0" y="0" width="0" height="0" rx="7"
+          fill="none" stroke="#EB6A20" stroke-width="2"/>
+  </svg>
+
+  {# A MarIA fica fora do balão: ela entra uma vez, pela direita, e acompanha a
+     visita inteira sem repetir a entrada a cada passo. #}
+  <img class="tour-maria" id="tourMaria" src="/marca/maria/MarIA_acenando.png" alt="">
+
+  {# O balão de fala dela: recebe a pessoa logada pelo nome e oferece a história.
+     Separado do balão do passo a passo — este é a saudação, aquele são os passos. #}
+  {% set primeiro_nome = (usuario.nome.split()[0]) if usuario and usuario.nome else t('colega') %}
+  <div class="tour-maria-oi" id="tourMariaOi" aria-live="polite">
+    <p>{{ t('Olá, {nome}! Sou a MarIA — que bom te ver por aqui.', nome=primeiro_nome) }}</p>
+    <a href="/maria/historia" target="_blank" rel="noopener">{{ t('Conheça a minha história') }} →</a>
+  </div>
+
+  <div class="tour-balao" id="tourBalao">
+    <div class="tour-topo">
+      <span class="tour-conta"><b id="tourAtual">1</b> / {{ passos_ajuda()|length }}</span>
+      <button type="button" class="tour-x" onclick="tourFechar()"
+              aria-label="{{ t('Encerrar a visita') }}"
+              title="{{ t('Encerrar a visita') }}">×</button>
+    </div>
+    <h3 id="tourTitulo"></h3>
+    <p id="tourTexto"></p>
+    <div class="tour-pe">
+      <label class="tour-nunca">
+        <input type="checkbox" id="tourNunca"> {{ t('Não mostrar de novo') }}
+      </label>
+      <div class="tour-botoes">
+        <button type="button" class="bt" id="tourAntes" onclick="tourAndar(-1)">
+          {{ t('Anterior') }}</button>
+        <button type="button" class="bt forte" id="tourDepois" onclick="tourAndar(1)">
+          {{ t('Próximo') }}</button>
+      </div>
+    </div>
+  </div>
+
+  {# Os passos viajam como dado, não como HTML pronto: o balão é um só e troca
+     de conteúdo, então nada é remontado a cada avanço. Chegam já traduzidos e já
+     formatados — `**` e crase viram `<b>` e `<code>` pelo mesmo filtro da MarIA,
+     que escapa antes de formatar. #}
+  <script type="application/json" id="tourPassos">
+    {{ passos_ajuda()|tojson }}
+  </script>
+</div>

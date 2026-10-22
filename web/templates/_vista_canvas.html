@@ -1,0 +1,137 @@
+{# INT-01: os unicos alvos htmx daqui sao #canvas (outerHTML) e #painel. #}
+<div class="vista">
+  <div class="ferramentas">
+    {# Ícone ao lado do rótulo em todos os botões da barra: em tela estreita o
+       rótulo some por CSS e sobra o desenho. O `aria-label` repete o rótulo
+       para o nome falado não depender da largura da janela. #}
+    <button class="bt forte" hx-post="/unidades/{{ layout.raiz_id }}/filho"
+            hx-target="#canvas" hx-swap="outerHTML" aria-label="{{ t('+ Unidade') }}"
+            title="{{ t('Adiciona uma unidade subordinada à raiz da vista') }}">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+           stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="rot">{{ t('+ Unidade') }}</span>
+    </button>
+    {# Cria a pessoa sob o nó selecionado (ou a raiz) e abre a ficha — o botão
+       que monta um organograma novo do zero, sem precisar clicar num card. #}
+    <button class="bt" hx-post="/colaborador/novo"
+            hx-target="#canvas" hx-swap="outerHTML" aria-label="{{ t('Criar colaborador') }}"
+            title="{{ t('Cria um colaborador sob o nó selecionado (ou a raiz) e abre a ficha') }}">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+      <span class="rot">{{ t('Criar colaborador') }}</span>
+    </button>
+    <span class="sep"></span>
+    {% include "_bt_orientacao.html" %}
+    {# Ao lado da orientação porque as duas respondem à mesma pergunta: como
+       este desenho é lido. A orientação diz de que lado fica a liderança; esta
+       diz o que é um nó — a pessoa, ou o time em que ela está. #}
+    {% include "_bt_agrupamento.html" %}
+
+    <span class="sep"></span>
+    {% include "_bt_historico.html" %}
+    {% include "_bt_exportar.html" %}
+    <span class="dica">{{ t('roda = zoom · shift+roda = deslizar · duplo clique = focar · B = gaveta') }}</span>
+  </div>
+
+  {% include "_filtros.html" %}
+
+  <div id="palco" class="palco">
+    {# Níveis e zoom moram no canto do desenho, e não na barra: os dois agem
+       sobre o que se está olhando, e a mão vai até eles sem sair do desenho.
+       Ficam fora do #lente — deslizar e dar zoom não podem levá-los junto. #}
+    <div class="canto">
+      {% include "_niveis.html" %}
+      {# Abrir e dobrar a árvore inteira: age sobre o desenho, como os níveis
+         logo acima, e como eles reenquadra depois — mudar quanta árvore existe
+         sem reenquadrar deixaria a pessoa olhando para um pedaço vazio. #}
+      {# Ícone, com o nome no `title` e no rótulo lido em voz alta: as duas setas
+         apontando para fora dizem "abrir" sem precisar de duas palavras numa
+         barra que fica sobre o desenho. #}
+      {# Quatro botões: um degrau de cada vez, e tudo de uma vez.
+
+         O passo a passo existe porque abrir 267 cards de um golpe responde a
+         pergunta errada — quem desce nível a nível está lendo a estrutura, e
+         cada passo precisa caber na tela. Chevron simples é o degrau; chevron
+         duplo é o extremo. A forma diz qual é qual sem legenda. #}
+      <div class="arvore-acoes" role="group" aria-label="{{ t('Abrir e dobrar a árvore') }}">
+        <button hx-post="/arvore/menos?vista=canvas" hx-target="#canvas" hx-swap="outerHTML"
+                aria-label="{{ t('Fechar um nível') }}" title="{{ t('Fechar um nível') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 15l6-6 6 6"/>
+          </svg>
+        </button>
+        <button hx-post="/arvore/mais?vista=canvas" hx-target="#canvas" hx-swap="outerHTML"
+                aria-label="{{ t('Abrir mais um nível') }}" title="{{ t('Abrir mais um nível') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+        <span class="risco"></span>
+        <button hx-post="/arvore/expandir?vista=canvas" hx-target="#canvas" hx-swap="outerHTML"
+                aria-label="{{ t('Abrir todos os níveis') }}" title="{{ t('Abrir todos os níveis') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 9l4-4 4 4"/><path d="M16 15l-4 4-4-4"/>
+          </svg>
+        </button>
+        <button hx-post="/arvore/colapsar?vista=canvas" hx-target="#canvas" hx-swap="outerHTML"
+                aria-label="{{ t('Recolher todos os níveis') }}" title="{{ t('Recolher todos os níveis') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 5l4 4 4-4"/><path d="M16 19l-4-4-4 4"/>
+          </svg>
+        </button>
+      </div>
+      <div class="zoom" role="group" aria-label="{{ t('Zoom do canvas') }}">
+        <button onclick="ajustar()" title="{{ t('Ajustar à tela (tecla 0)') }}" aria-label="{{ t('Ajustar à tela') }}">⊙</button>
+        <button onclick="zoom(1/1.15)" title="{{ t('Afastar') }}" aria-label="{{ t('Afastar') }}">−</button>
+        <button id="zoomPct" onclick="menuZoom()" aria-haspopup="true"
+                title="{{ t('Escolher percentual') }}">100 %</button>
+        <button onclick="zoom(1.15)" title="{{ t('Aproximar') }}" aria-label="{{ t('Aproximar') }}">+</button>
+        <button onclick="ajustarLargura()" title="{{ t('Ajustar à largura') }}" aria-label="{{ t('Ajustar à largura') }}">↔</button>
+      </div>
+    </div>
+    {# Fora do `.canto`, e de propósito: o canto tem `z-index` próprio, e
+       z-index em elemento posicionado abre contexto de empilhamento — dentro
+       dele, o 84 do menu valia 6 para o resto da página, e qualquer painel
+       passava por cima. Aqui ele é filho do palco, que não abre contexto. #}
+    <div id="zoomMenu" class="zoom-menu" role="menu">
+      {% for p in [50, 60, 70, 80, 90, 100, 125, 150, 200] %}
+      <button role="menuitem" onclick="zoomPara({{ p / 100 }})">{{ p }} %</button>
+      {% endfor %}
+    </div>
+    {# Presença: quem está online agora, no canto INFERIOR esquerdo. Fora do
+       #lente, como o .canto, para não deslizar nem dar zoom com o desenho. O
+       corpo se auto-atualiza (htmx a cada 25s), e esse mesmo pedido é o batimento
+       que mantém quem está com o canvas aberto marcado como ativo. #}
+    <div id="presenca" class="presenca">
+      <button type="button" class="presenca-bt" onclick="alternarPresenca(event)"
+              aria-haspopup="true" aria-expanded="false"
+              title="{{ t('Quem está ativo agora') }}"
+              aria-label="{{ t('Quem está ativo agora') }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span id="presencaN" class="presenca-n zero">0</span>
+      </button>
+      <div class="presenca-pop" role="dialog" aria-label="{{ t('Usuários ativos') }}">
+        <div class="presenca-topo">{{ t('Ativos agora') }}</div>
+        {# Sem hx-target: o alvo padrão do htmx é quem dispara, então a ilha
+           troca o próprio conteúdo e se auto-atualiza sem mirar #canvas/#painel
+           — o contrato INT-01 do canvas fica intacto. #}
+        <div id="presencaCorpo" hx-get="/presenca" hx-trigger="load, every 25s"
+             hx-swap="innerHTML"></div>
+      </div>
+    </div>
+    <div id="lente">
+      {% include "_canvas.html" %}
+    </div>
+  </div>
+</div>

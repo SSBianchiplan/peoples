@@ -1,0 +1,37 @@
+{#
+  Tabela cruzada genérica. Recebe `m` (o que `dcr.cruzar` devolve) e desenha a
+  grade com as marginais.
+
+  A célula zerada sai vazia, e não com "0": uma matriz de 8 x 7 com quarenta
+  zeros impressos vira ruído em que o olho não acha os números que importam.
+  A classe `zero` mantém a célula clicável e legível por leitor de tela.
+#}
+<div class="rolagem-x"><table class="matriz">
+  <thead><tr>
+    {# Já traduzido por quem inclui: `t()` aqui receberia uma variável, e a
+       varredura do catálogo não enxerga chave que chega em variável. #}
+    <th scope="col">{{ rotulo_l }}</th>
+    {% for coluna in m.colunas %}
+    <th scope="col" class="num">{{ t(coluna) }}</th>
+    {% endfor %}
+    <th scope="col" class="num">{{ t('Total') }}</th>
+  </tr></thead>
+  <tbody>
+    {% for linha in m.grade %}
+    <tr>
+      <td>{{ t(linha.rotulo) }}</td>
+      {% for v in linha.celulas %}
+      <td class="num{% if not v %} zero{% endif %}">{{ v or '' }}</td>
+      {% endfor %}
+      <td class="num"><b>{{ linha.total }}</b></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot><tr>
+    <td>{{ t('Total') }}</td>
+    {% for coluna in m.colunas %}
+    <td class="num"><b>{{ m.total_coluna[coluna] }}</b></td>
+    {% endfor %}
+    <td class="num"><b>{{ m.total }}</b></td>
+  </tr></tfoot>
+</table></div>

@@ -1,0 +1,18 @@
+{#
+  Avaliação — GEP-FOR-004.
+
+  A casca só monta a barra de filtros e a folha; o corpo mora em
+  `_talentos_corpo.html` porque é ele, e só ele, que a rota `/filtros` devolve —
+  trocar a barra a cada tecla roubaria o foco de quem digita na busca.
+
+  Respeita o recorte como o Skills, Tempo e Conversa de Valor: quem filtrou uma vertical quer o
+  9-box daquela vertical, não o da empresa inteira.
+#}
+<div class="vista">
+  {% include "_filtros.html" %}
+  <div class="folha">
+    <div id="talentosCorpo">
+      {% include "_talentos_corpo.html" %}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,13 @@
+{#
+  O PDF sai sempre em uma folha, então a escala é a única variável que decide
+  se o papel fica legível. Ela vai no rótulo do botão, antes do clique — sem
+  isso a exportação seria uma ação cega, e o usuário só descobriria o problema
+  depois de abrir o arquivo.
+#}
+<a class="bt {% if escala_pdf < piso_leitura %}apertado{% endif %}"
+   href="/export.pdf" download
+   title="{{ t('A3 paisagem em uma folha, vetorial e pesquisável.') }}
+{%- if escala_pdf < piso_leitura %} {{ t('A {pct} % o texto sai ilegível no papel: filtre, colapse ou foque uma subárvore antes de imprimir.', pct=escala_pdf) }}
+{%- else %} {{ t('O desenho atual cabe a {pct} % da escala de tela.', pct=escala_pdf) }}{% endif %}">
+  {{ t('PDF A3') }} · {{ escala_pdf }} %
+</a>

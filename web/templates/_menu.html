@@ -1,0 +1,53 @@
+{# INT-03: o servidor decide a habilitacao; o cliente so desenha. #}
+<div class="ctx-tit">{{ u.codigo }} · {{ u.nome }}</div>
+
+<button hx-get="/fragmentos/painel/{{ u.id }}" hx-target="#painel" hx-swap="innerHTML">
+  <i>{{ t('ed') }}</i> {{ t('Editar dados') }}
+</button>
+<button hx-post="/unidades/{{ u.id }}/filho" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode %}disabled{% endif %}>
+  <i>+</i> {{ t('Adicionar subordinado') }}
+</button>
+<button hx-post="/unidades/{{ u.id }}/duplicar" hx-target="#canvas" hx-swap="outerHTML"
+        {% if e_raiz or not pode %}disabled{% endif %}>
+  <i>{{ t('cp') }}</i> {{ t('Duplicar') }}
+</button>
+
+<hr>
+
+<button hx-post="/unidades/{{ u.id }}/colapsar" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not tem_filhos %}disabled{% endif %}>
+  <i>{% if colapsado %}+{% else %}−{% endif %}</i>
+  {% if colapsado %}{{ t('Expandir subárvore') }}{% else %}{{ t('Colapsar subárvore') }}{% endif %}
+</button>
+<button hx-post="/unidades/{{ u.id }}/focar" hx-target="#canvas" hx-swap="outerHTML">
+  <i>◎</i> {% if focado %}{{ t('Sair do foco') }}{% else %}{{ t('Focar nesta subárvore') }}{% endif %}
+</button>
+
+<hr>
+
+<button hx-post="/unidades/{{ u.id }}/reordenar?direcao=esquerda" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_esquerda %}disabled{% endif %}>
+  <i>←</i> {{ t('Mover para a esquerda') }}
+</button>
+<button hx-post="/unidades/{{ u.id }}/reordenar?direcao=direita" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_direita %}disabled{% endif %}>
+  <i>→</i> {{ t('Mover para a direita') }}
+</button>
+<button hx-post="/unidades/{{ u.id }}/promover" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_promover %}disabled{% endif %}>
+  <i>N−</i> {{ t('Promover um nível') }}
+</button>
+<button hx-post="/unidades/{{ u.id }}/rebaixar" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_rebaixar %}disabled{% endif %}>
+  <i>N+</i> {{ t('Rebaixar um nível') }}
+</button>
+
+<hr>
+
+{# INT-04: acao destrutiva porta confirmacao. #}
+<button class="perigo" hx-delete="/unidades/{{ u.id }}" hx-target="#canvas" hx-swap="outerHTML"
+        hx-confirm="Excluir “{{ u.nome }}”? Os subordinados passam a responder ao nível acima."
+        {% if e_raiz or not pode %}disabled{% endif %}>
+  <i>×</i> {{ t('Excluir unidade') }}
+</button>

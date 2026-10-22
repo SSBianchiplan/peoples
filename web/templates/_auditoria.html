@@ -1,0 +1,38 @@
+<div class="cartao trilha-auditoria">
+  <h2>{{ t('Trilha de auditoria') }}</h2>
+  <p class="sub">
+    {{ t('Ledger append-only com encadeamento SHA-256 (OBJ-05). A verificação percorre
+    a cadeia em O(n) e valida cada elo contra o anterior — não a continuidade de
+    <code>seq</code>, que pode ter lacuna legítima por rollback (RT-06).')|safe }}
+  </p>
+
+  <p>
+    {% if cadeia.integro %}
+    <span class="selo-ok">{{ t('Cadeia íntegra · {n} evento(s) verificado(s)', n=cadeia.total) }}</span>
+    {% else %}
+    <span class="selo-falha">{{ t('Cadeia rompida a partir do evento #{seq}', seq=cadeia.seq_falha) }}</span>
+    {% endif %}
+  </p>
+
+  {# A coluna de payload é larga por natureza: rola dentro do cartão em
+     vez de esticar a aba inteira. #}
+  <div class="rolagem-x" style="margin-top:16px"><table>
+    <thead>
+      <tr><th>{{ t('Seq') }}</th><th>{{ t('Quando (UTC)') }}</th><th>{{ t('Ator') }}</th><th>{{ t('Ação') }}</th>
+          <th>{{ t('Motivo') }}</th><th>{{ t('Payload') }}</th><th>{{ t('Hash') }}</th></tr>
+    </thead>
+    <tbody>
+      {% for e in eventos %}
+      <tr>
+        <td class="cod">{{ e.seq }}</td>
+        <td class="cod">{{ e.quando }}</td>
+        <td>{{ e.ator }}</td>
+        <td>{{ t(e.acao) }}</td>
+        <td>{{ t(e.motivo) }}</td>
+        <td class="hash" style="max-width:520px;word-break:break-word">{{ e.payload | json_br }}</td>
+        <td class="hash" title="anterior: {{ e.hash_anterior }}">{{ e.hash[:16] }}…</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>

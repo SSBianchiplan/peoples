@@ -1,0 +1,36 @@
+<div class="vista">
+  <div class="coluna">
+    <div class="ferramentas">
+      <button class="bt forte" hx-post="/unidades/{{ layout.raiz_id }}/filho"
+              hx-target="#canvas" hx-swap="outerHTML" title="Adiciona uma unidade sob a raiz">
+        + Unidade
+      </button>
+      <span class="sep"></span>
+      <button class="bt" hx-post="/orientacao" hx-target="#canvas" hx-swap="outerHTML">
+        {% if layout.invertida %}Pirâmide invertida{% else %}Pirâmide convencional{% endif %}
+      </button>
+      <span class="sep"></span>
+      <button class="bt" onclick="zoom(1.15)" aria-label="Aproximar">+</button>
+      <button class="bt" onclick="zoom(1/1.15)" aria-label="Afastar">&minus;</button>
+      <button class="bt" onclick="ajustar()">Ajustar</button>
+      <span class="sep"></span>
+      <button class="bt" hx-post="/desfazer" hx-target="#canvas" hx-swap="outerHTML">Desfazer</button>
+      <button class="bt" hx-post="/restaurar" hx-target="#canvas" hx-swap="outerHTML"
+              hx-confirm="Restaurar o organograma de referência? As edições atuais serão perdidas.">Restaurar</button>
+      <span class="sep"></span>
+      <a class="bt" href="/export.svg" download>SVG</a>
+      <a class="bt" href="/export.json" download>JSON</a>
+      <span class="dica">botão direito no card = ações · ctrl+roda = zoom · arrastar = mover</span>
+    </div>
+
+    <div id="palco" class="palco">
+      <div id="lente">
+        {% include "_canvas.html" %}
+      </div>
+    </div>
+  </div>
+
+  <aside id="painel" class="painel" aria-label="Detalhes da unidade">
+    {% include "_painel_vazio.html" %}
+  </aside>
+</div>

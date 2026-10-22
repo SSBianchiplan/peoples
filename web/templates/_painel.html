@@ -1,0 +1,267 @@
+{# O canvas viaja junto, fora de banda, para refletir a selecao (INT-02).
+   So quando ha htmx do outro lado para consumir o swap: em carga direta da
+   pagina, ou vindo da tabela, o mesmo markup seria desenhado dentro do painel. #}
+{% if oob and layout %}{% include "_canvas.html" %}{% endif %}
+
+<h2>{{ u.codigo }} <b>N{{ u_nivel }}</b></h2>
+
+{# Ficha completa em modal: todos os campos + os vínculos do colaborador no
+   sistema, num espaço maior que o da gaveta. #}
+<button type="button" class="bt forte" style="width:100%;margin:8px 0 4px"
+        hx-get="/unidades/{{ u.id }}/ficha?vista={{ vista_origem }}&contexto={{ contexto_origem|urlencode }}"
+        hx-target="#unidadeFicha" hx-swap="innerHTML">{{ t('Editar ficha completa') }}</button>
+{# O Skills desta pessoa em Markdown — o documento que vai para a Conversa de
+   Valor e o PDI. Link direto (download), sem htmx: é arquivo, não fragmento. #}
+<a class="bt" style="display:block;width:100%;text-align:center;margin:0 0 8px"
+   href="/unidades/{{ u.id }}/skills.md" download>{{ t('Skills do colaborador (.md)') }}</a>
+
+{% if trilha %}
+<div class="trilha">
+  {% for a in trilha %}{% if not loop.first %} › {% endif %}{{ a.nome }}{% endfor %}
+  › <b>{{ u.nome }}</b>
+</div>
+{% endif %}
+
+<div class="miolo">
+  {% if not pode_editar %}
+  <div class="aviso">{{ t('Perfil sem permissão de edição nesta unidade. Os campos
+    estão em leitura.') }}</div>
+  {% endif %}
+
+  {# O alvo do swap tem de existir na tela de onde a gaveta foi aberta. Fora do
+     canvas nao ha `#canvas`, e o htmx resolve o alvo ANTES de enviar — apontar
+     para la fazia a edicao pela tabela sumir sem nem chegar ao servidor. #}
+  {% set alvo = "#canvas" if oob else "#painel" %}
+  {% set troca = "outerHTML" if oob else "innerHTML" %}
+  <form hx-post="/unidades/{{ u.id }}/salvar" hx-target="{{ alvo }}" hx-swap="{{ troca }}">
+    <input type="hidden" name="vista" value="{{ vista_origem }}">
+    <input type="hidden" name="contexto" value="{{ contexto_origem }}">
+    <fieldset style="border:0;padding:0;margin:0" {% if not pode_editar %}disabled{% endif %}>
+
+      <label for="f-nome">{{ t('Nome / pessoa') }}</label>
+      <input id="f-nome" name="nome" value="{{ u.nome }}" maxlength="80" required>
+
+      <div class="dupla">
+        <div>
+          <label for="f-tipo">{{ t('Nível') }}</label>
+          <select id="f-tipo" name="tipo">
+            {% for k, rotulo in rotulos_nivel.items() %}
+            <option value="{{ k }}" {% if u.tipo == k %}selected{% endif %}>{{ t(rotulo) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="f-cc">{{ t('Centro de custo') }}</label>
+          <input id="f-cc" name="centro_custo" value="{{ u.centro_custo }}"
+                 maxlength="12" list="lista-cc" autocomplete="off">
+          <datalist id="lista-cc">
+            {% for c in centros %}
+            <option value="{{ c.n3 }}">{{ c.departamento }}{% if c.n5 %} · {{ c.n5 }}{% endif %}</option>
+            {% endfor %}
+          </datalist>
+        </div>
+      </div>
+
+      <label for="f-cargo">{{ t('Cargo / função') }}</label>
+      <input id="f-cargo" name="cargo" value="{{ u.cargo }}" maxlength="80"
+             list="lista-cargos" autocomplete="off">
+      <datalist id="lista-cargos">
+        {% for c in cargos_conhecidos %}<option value="{{ c }}"></option>{% endfor %}
+      </datalist>
+      {% if nivel_do_cargo and nivel_do_cargo != u.tipo %}
+      <p class="pista">O catálogo classifica este cargo como
+        <b>{{ rotulos_nivel.get(nivel_do_cargo, nivel_do_cargo) }}</b>; a unidade
+        está em {{ rotulos_nivel.get(u.tipo, u.tipo) }}.</p>
+      {% endif %}
+
+      <div class="dupla">
+        <div>
+          <label for="f-area">{{ t('Departamento') }}</label>
+          <input id="f-area" name="area" value="{{ u.area }}" maxlength="60">
+        </div>
+        <div>
+          <label for="f-vert">{{ t('Vertical (N2)') }}</label>
+          <input id="f-vert" name="vertical" value="{{ u.vertical }}" maxlength="12">
+        </div>
+      </div>
+
+      {# Vinculo: quem nao e empregado tem contrato, prazo e acesso diferentes.
+         Nao distinguir isso e como o acesso de um prestador sobrevive ao fim
+         do contrato. #}
+      <label for="f-vinculo">{{ t('Vínculo') }}</label>
+      <select id="f-vinculo" name="vinculo">
+        {% for chave, (rotulo, _cor) in vinculos.items() %}
+        <option value="{{ chave }}" {% if u.vinculo == chave %}selected{% endif %}>{{ t(rotulo) }}</option>
+        {% endfor %}
+      </select>
+
+      <div class="dupla">
+        <div>
+          <label for="f-resp">{{ t('Responsável') }}</label>
+          <input id="f-resp" name="responsavel" value="{{ u.responsavel }}"
+                 maxlength="60" placeholder="{{ t('se o card for uma área') }}">
+        </div>
+        <div>
+          {# O rótulo carrega o link. Um botão ao lado do campo brigaria com ele
+             pela largura da gaveta, e o `mailto:` só faz sentido quando há
+             endereço — sem ele, o rótulo continua sendo só um rótulo. #}
+          <label for="f-email">{{ t('E-mail corporativo') }}
+            {% if u.email %}<a class="mailto" href="mailto:{{ u.email }}"
+               title="{{ t('Escrever para {quem}', quem=u.email) }}"
+               aria-label="{{ t('Escrever para {quem}', quem=u.email) }}">✉</a>{% endif %}</label>
+          <input id="f-email" name="email" type="email" value="{{ u.email }}" maxlength="120">
+        </div>
+      </div>
+
+      {# Admissão e situação. O tempo de casa NÃO é campo: é a data menos hoje,
+         e um número desses gravado hoje mente amanhã. Aparece ao lado da data,
+         calculado, para quem preenche ver na hora se acertou o ano. #}
+      <div class="dupla">
+        <div>
+          <label for="f-inicio">{{ t('Data de admissão') }}</label>
+          <input id="f-inicio" name="data_inicio" type="date"
+                 value="{{ u.data_inicio }}" max="{{ hoje_iso }}">
+          {% if anos_de_casa is not none %}
+          <p class="pista">{{ t('{anos} ano(s) de casa · {faixa}',
+             anos=anos(anos_de_casa), faixa=t(rotulo_faixa)) }}</p>
+          {% elif u.data_inicio %}
+          <p class="pista">{{ t('Data de admissão adiante de hoje: ainda a começar.') }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="f-status">{{ t('Situação') }}</label>
+          <select id="f-status" name="status">
+            <option value="">{{ t('— não declarada') }}</option>
+            {% for chave, rotulo in status_opcoes.items() %}
+            <option value="{{ chave }}" {% if u.status == chave %}selected{% endif %}>{{ t(rotulo) }}</option>
+            {% endfor %}
+          </select>
+          <p class="pista">{{ t('Inativo não some do organograma: afastamento e desligamento em curso são justamente o que alguém precisa ver.') }}</p>
+        </div>
+      </div>
+
+      <label for="f-itens">{{ t('Accountabilities') }}</label>
+      <textarea id="f-itens" name="responsabilidades" spellcheck="false">{{ texto }}</textarea>
+      <p class="pista">{{ t('Uma por linha. Prefixe com <code>&gt;</code> para marcar escopo
+        <strong>delegado</strong> — aquilo por que a unidade responde mas quem executa
+        é um subordinado.')|safe }}</p>
+
+      <label for="f-skills">{{ t('Competências') }}</label>
+      <input id="f-skills" name="competencias" value="{{ skills }}" maxlength="240"
+             placeholder="{{ t('separadas por vírgula') }}">
+
+      <div class="acoes">
+        <button type="submit" class="bt forte">{{ t('Salvar') }}</button>
+        <button type="button" class="bt" hx-get="/fragmentos/painel/{{ u.id }}"
+                hx-target="#painel" hx-swap="innerHTML">{{ t('Descartar') }}</button>
+      </div>
+    </fieldset>
+  </form>
+
+  <div class="grupo">
+    <h3>{{ t('Reporte') }}</h3>
+    <form hx-post="/unidades/{{ u.id }}/mover" hx-target="{{ alvo }}" hx-swap="{{ troca }}">
+      <input type="hidden" name="vista" value="{{ vista_origem }}">
+      <input type="hidden" name="contexto" value="{{ contexto_origem }}">
+      <label for="f-destino">{{ t('Responde a') }}</label>
+      <select id="f-destino" name="destino"
+              {% if not u.parent_id or not pode_editar %}disabled{% endif %}>
+        {% for d in destinos %}
+        <option value="{{ d.id }}" {% if d.id == u.parent_id %}selected{% endif %}>
+          {{ d.codigo }} · {{ d.nome }}{% if d.cargo %} — {{ d.cargo }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+      <p class="pista">{% if u.parent_id %}{{ t('Descendentes não aparecem na lista: a guarda
+        de ciclo recusaria o movimento (RF-02).') }}{% else %}{{ t('Esta é a unidade raiz.') }}{% endif %}</p>
+      <div class="acoes">
+        {% if u.parent_id %}
+        <button type="submit" class="bt" {% if not pode_editar %}disabled{% endif %}>{{ t('Mover') }}</button>
+        {% endif %}
+        {# Focar e um gesto do desenho. Fora do canvas nao havia o que trocar e
+           o botao virava um clique sem efeito nenhum — melhor dizer por que. #}
+        <button type="button" class="bt" hx-post="/unidades/{{ u.id }}/focar"
+                hx-target="#canvas" hx-swap="outerHTML"
+                {% if not oob %}disabled title="{{ t('Disponível no Canvas') }}"{% endif %}>
+          {{ t('Focar subárvore') }}</button>
+      </div>
+    </form>
+  </div>
+
+  {# ---------------------------------------------------------------------
+     Diretório social. O organograma diz a quem cada um responde; não diz quem
+     ajudou quem. O reconhecimento quase sempre atravessa a linha da hierarquia,
+     e é por isso que ele mora no card e não no relatório do gestor.
+     -------------------------------------------------------------------- #}
+  <div class="grupo mural">
+    <h3>
+      {{ t('Reconhecimentos e feedback') }}
+      {% if mural_conta.total %}
+      <span class="mural-selo" title="{{ t('Reconhecimentos') }}">{{ mural_conta.reconhecimento }}</span>
+      {% if mural_conta.feedback %}<span class="mural-selo fb" title="{{ t('Feedback') }}">{{ mural_conta.feedback }}</span>{% endif %}
+      {% endif %}
+    </h3>
+
+    {% if eu %}
+    <form hx-post="/mural/{{ u.id }}" hx-target="#painel" hx-swap="innerHTML">
+      <input type="hidden" name="vista" value="{{ vista_origem }}">
+      <input type="hidden" name="contexto" value="{{ contexto_origem }}">
+      <div class="mural-tipo">
+        <label class="check"><input type="radio" name="tipo" value="reconhecimento" checked>
+          <span>{{ t('Reconhecimento') }}</span></label>
+        <label class="check"><input type="radio" name="tipo" value="feedback">
+          <span>{{ t('Feedback') }}</span></label>
+      </div>
+      {# O valor força o "por quê". Sem ele o mural vira uma coluna de "valeu!". #}
+      <label for="m-valor">{{ t('Valor reconhecido') }}</label>
+      <select id="m-valor" name="valor">
+        <option value="">{{ t('— nenhum —') }}</option>
+        {% for chave, rotulo in valores_social.items() %}
+        <option value="{{ chave }}">{{ t(rotulo) }}</option>
+        {% endfor %}
+      </select>
+      <label for="m-texto">{{ t('Mensagem') }}</label>
+      <textarea id="m-texto" name="texto" rows="3" maxlength="600"
+                placeholder="{{ t('O que essa pessoa fez, e que diferença fez.') }}"></textarea>
+      <div class="acoes">
+        <button class="bt forte" type="submit">{{ t('Publicar') }}</button>
+      </div>
+      <p class="pista">{{ t('Publicação assinada e visível para todos. Você pode apagar o que escreveu; quem recebeu pode tirar do próprio card.') }}</p>
+    </form>
+    {% else %}
+    <p class="pista">{{ t('Vincule-se a uma pessoa da estrutura em Configurações › Permissões para publicar — o mural é assinado.') }}</p>
+    {% endif %}
+
+    {% if mural %}
+    <ul class="mural-lista">
+      {% for m in mural %}
+      <li class="mural-item {{ m.tipo }}">
+        <div class="mural-topo">
+          <b>{{ m.autor }}</b>
+          {% if m.autor_cargo %}<span class="mural-cargo">{{ m.autor_cargo }}</span>{% endif %}
+          <span class="mural-data">{{ m.quando[:10] }}</span>
+          {% if eu and (eu == m.autor_id or eu == u.id or sou_admin) %}
+          <button class="mural-x" title="{{ t('Remover') }}"
+                  hx-delete="/mural/{{ u.id }}/{{ m.id }}"
+                  hx-target="#painel" hx-swap="innerHTML"
+                  hx-confirm="{{ t('Remover esta mensagem?') }}">×</button>
+          {% endif %}
+        </div>
+        {% if m.valor %}<span class="mural-valor">{{ t(valores_social[m.valor]) }}</span>{% endif %}
+        <p>{{ m.texto }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="pista">{{ t('Ainda não há mensagens neste card.') }}</p>
+    {% endif %}
+  </div>
+
+  <div class="fatos">
+    <div><span>{{ t('nível lógico') }}</span><b>N{{ u_nivel }}</b></div>
+    <div><span>{{ t('responde a') }}</span><b>{{ pai.nome if pai else t("— (raiz)") }}</b></div>
+    <div><span>{{ t('subordinados diretos') }}</span><b>{{ n_filhos }}</b></div>
+    <div><span>{{ t('na subárvore') }}</span><b>{{ n_descendentes }}</b></div>
+    <div><span>{{ t('identificador') }}</span><b>{{ u.id }}</b></div>
+  </div>
+</div>

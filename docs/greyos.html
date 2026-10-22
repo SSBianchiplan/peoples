@@ -1,0 +1,173 @@
+<title>GPlanSiS|OS — o sistema operacional da GPlanSiS|Peoples</title>
+
+<style>
+:root{
+  --ground:#F8F7F6; --surface:#FFFFFF; --surface-2:#F1EFED;
+  --graphite:#2D3336; --ink:#20262A; --ink-2:#4A5053; --ink-3:#7D8286;
+  --rule:#DED9D5; --accent:#EB6A20; --amber:#F6A709; --on-graphite:#EDEBE9;
+  --accent-txt:#B4460F;
+  --f-disp:"Segoe UI Variable Display","Segoe UI Semibold",system-ui,sans-serif;
+  --f-body:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+  --shadow:0 1px 2px rgba(45,51,54,.06),0 4px 14px rgba(45,51,54,.05);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#171B1D; --surface:#262C2F; --surface-2:#1F2427;
+  --ink:#E8E9EA; --ink-2:#9AA0A3; --ink-3:#7D8286; --rule:#3A4145;
+  --accent-txt:#F0854A; --on-graphite:#EDEBE9; --shadow:none;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:var(--f-body);line-height:1.6;font-size:16px;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:0 24px 80px}
+a{color:var(--accent-txt);text-decoration:none}
+a:hover{text-decoration:underline}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.9em;
+  background:var(--surface-2);padding:1px 5px;border-radius:4px}
+
+/* topo — a marca e o acesso ao sistema */
+header{background:var(--graphite);color:var(--on-graphite);padding:44px 0 40px;margin-bottom:36px}
+header .wrap{padding-bottom:0}
+.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);font-weight:700;margin:0 0 10px}
+header h1{font-family:var(--f-disp);font-size:clamp(34px,6vw,54px);line-height:1.05;margin:0 0 12px;color:#fff}
+header p.lead{font-size:18px;color:#C9CDCF;margin:0 0 26px;max-width:620px}
+.cta{display:inline-flex;align-items:center;gap:9px;background:var(--accent);color:#fff;
+  font-weight:700;font-size:16px;padding:13px 22px;border-radius:10px;
+  box-shadow:0 10px 30px rgba(235,106,32,.35)}
+.cta:hover{filter:brightness(1.06);text-decoration:none}
+.cta small{font-weight:500;opacity:.85}
+.topo-nota{margin:14px 0 0;font-size:13px;color:#9AA0A3}
+.topo-nota code{background:#3A4145;color:#EDEBE9}
+
+h2{font-family:var(--f-disp);font-size:26px;margin:40px 0 6px;color:var(--ink)}
+h3{font-size:17px;margin:22px 0 4px}
+p{margin:10px 0}
+.sub{color:var(--ink-2);margin-top:0}
+
+.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+.tri .card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;
+  padding:16px 18px;box-shadow:var(--shadow)}
+.tri .card b{display:block;font-size:15px;color:var(--accent-txt);margin-bottom:4px}
+.tri .card span{font-size:14px;color:var(--ink-2)}
+
+.comp{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:16px 0}
+.comp li{list-style:none;background:var(--surface);border:1px solid var(--rule);
+  border-left:3px solid var(--amber);border-radius:0 10px 10px 0;padding:12px 15px}
+.comp li b{display:block;font-size:15px;margin-bottom:2px}
+.comp li span{font-size:14px;color:var(--ink-2)}
+
+.tools{margin:16px 0;padding:0}
+.tools li{list-style:none;border-bottom:1px solid var(--rule);padding:11px 0;
+  display:grid;grid-template-columns:210px 1fr;gap:14px;align-items:baseline}
+.tools li b{font-size:15px}
+.tools li span{font-size:14px;color:var(--ink-2)}
+@media (max-width:620px){.tri,.comp{grid-template-columns:1fr}
+  .tools li{grid-template-columns:1fr;gap:2px}}
+
+.callout{background:var(--surface-2);border:1px solid var(--rule);border-radius:12px;
+  padding:18px 20px;margin:26px 0}
+.callout h2{margin-top:0}
+.refs{font-size:14px;color:var(--ink-2);margin-top:34px;border-top:1px solid var(--rule);padding-top:20px}
+.refs a{margin-right:16px}
+.tm{font-size:12.5px;color:var(--ink-3);margin-top:18px}
+</style>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">GPlanSiS|Peoples · Sistema operacional de negócio</p>
+    <h1>GPlanSiS|OS</h1>
+    <p class="lead">O jeito da GPlanSiS|Peoples de rodar o negócio com foco, disciplina e
+      responsabilidade — construído sobre a metodologia <strong>EOS</strong>, o
+      Entrepreneurial Operating System.</p>
+    <a class="cta" href="https://greyos.peoples.dev/" target="_blank" rel="noopener">
+      Abrir o GPlanSiS|OS <span aria-hidden="true">→</span>
+      <small>greyos.peoples.dev</small></a>
+    <p class="topo-nota">Abre o sistema GPlanSiS|OS em <code>greyos.peoples.dev</code>,
+      numa nova aba.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <h2>O que é o EOS</h2>
+  <p class="sub">Um conjunto simples de conceitos e ferramentas práticas para
+    conseguir o que se quer do negócio.</p>
+  <p>O <strong>EOS — Entrepreneurial Operating System</strong> é uma metodologia
+    de gestão criada por Gino Wickman (do livro <em>Traction</em>) e difundida
+    pela EOS Worldwide. Ele parte de uma ideia direta: a maioria das empresas não
+    sofre por falta de talento ou de esforço, mas por falta de um <strong>sistema
+    operacional</strong> — um jeito único, compartilhado, de definir a visão,
+    executar com disciplina e trabalhar como um time saudável. O GPlanSiS|OS é a
+    aplicação desse sistema na GPlanSiS|Peoples.</p>
+
+  <p>O EOS organiza a empresa em torno de três coisas que todo negócio precisa:</p>
+  <div class="tri">
+    <div class="card"><b>Vision</b><span>Todos enxergando o mesmo destino — para
+      onde a empresa vai e como chega lá.</span></div>
+    <div class="card"><b>Traction</b><span>Disciplina e responsabilidade para
+      transformar a visão em execução, semana a semana.</span></div>
+    <div class="card"><b>Healthy</b><span>Um time de liderança coeso, funcional e
+      confiante — que decide junto e resolve o que trava.</span></div>
+  </div>
+
+  <h2>Os Seis Componentes-Chave</h2>
+  <p class="sub">O EOS fortalece a empresa em seis frentes. Onde uma delas está
+    fraca, é ali que o negócio emperra.</p>
+  <ul class="comp">
+    <li><b>Vision (Visão)</b><span>Clareza sobre quem somos, para onde vamos e o
+      plano de chegar — a mesma página para todos.</span></li>
+    <li><b>People (Pessoas)</b><span>As pessoas certas nos lugares certos, alinhadas
+      aos valores e à estrutura de responsabilidade.</span></li>
+    <li><b>Data (Dados)</b><span>Um punhado de números que dão o pulso do negócio,
+      sem depender de achismo ou de emoção.</span></li>
+    <li><b>Issues (Questões)</b><span>A disciplina de trazer os problemas à tona e
+      resolvê-los de vez, não contorná-los.</span></li>
+    <li><b>Process (Processo)</b><span>O jeito da casa documentado e seguido por
+      todos — consistência que escala.</span></li>
+    <li><b>Traction (Tração)</b><span>Metas de 90 dias e reuniões com ritmo, que
+      convertem a visão em execução real.</span></li>
+  </ul>
+
+  <h2>A Caixa de Ferramentas</h2>
+  <p class="sub">Poucas ferramentas, simples e práticas — cada uma resolve uma das
+    frentes acima.</p>
+  <ul class="tools">
+    <li><b>V/TO™</b><span>Vision/Traction Organizer: duas páginas que fecham a
+      visão e o plano de tração num documento só.</span></li>
+    <li><b>Accountability Chart</b><span>O mapa de responsabilidades — quem responde
+      por quê. Complementa o organograma com o «dono» de cada função.</span></li>
+    <li><b>Rocks</b><span>As 3 a 7 prioridades de cada trimestre (90 dias) — o que
+      precisa estar pronto para a visão andar.</span></li>
+    <li><b>Scorecard</b><span>De 5 a 15 números semanais que preveem a saúde do
+      negócio antes que o resultado apareça.</span></li>
+    <li><b>Level 10 Meeting™</b><span>A reunião semanal com pauta fixa e ritmo, que
+      mantém o time no mesmo compasso.</span></li>
+    <li><b>Issues List + IDS™</b><span>Listar as questões e resolvê-las por
+      Identify, Discuss, Solve — problema tratado uma vez, não toda semana.</span></li>
+    <li><b>Core Values &amp; Core Focus™</b><span>Os valores que definem quem fica,
+      e o foco central que define no que a empresa é a melhor.</span></li>
+    <li><b>3-Step Process Documenter™</b><span>Documentar o essencial de cada
+      processo, para o jeito certo ser seguido por todos.</span></li>
+  </ul>
+
+  <div class="callout">
+    <h2>GPlanSiS|OS na GPlanSiS|Peoples</h2>
+    <p>O GPlanSiS|OS traz o EOS para o dia a dia da GPlanSiS|Peoples: a mesma disciplina de
+      medição e melhoria contínua que aplicamos em chão de fábrica, aplicada ao
+      negócio. Ele conversa com o <strong>GPlanSiS|Peoples</strong> — o Accountability
+      Chart apoia-se na mesma estrutura de gestor direto do organograma; as
+      pessoas, os valores e a cobertura de conversas (Conversa de Valor) e clima (Peoples Place to
+      Work) alimentam o componente <em>People</em>; e os números do negócio dão o
+      <em>Data</em>.</p>
+    <p style="margin-bottom:0"><a href="https://greyos.peoples.dev/" target="_blank" rel="noopener"><strong>Abrir o GPlanSiS|OS →</strong></a></p>
+  </div>
+
+  <div class="refs">
+    <strong>Saiba mais sobre o EOS</strong> (EOS Worldwide):<br>
+    <a href="https://www.eosworldwide.com/why-eos" target="_blank" rel="noopener">Por que EOS</a>
+    <a href="https://www.eosworldwide.com/what-is-eos" target="_blank" rel="noopener">O que é EOS</a>
+    <a href="https://www.eosworldwide.com/tools" target="_blank" rel="noopener">As ferramentas</a>
+    <p class="tm">EOS®, EOS Model™, V/TO™, Level 10 Meeting™, IDS™, Core Focus™ e o
+      EOS Toolbox™ são marcas da EOS Worldwide. O GPlanSiS|OS é a implementação interna
+      da GPlanSiS|Peoples apoiada nessa metodologia.</p>
+  </div>
+</div>

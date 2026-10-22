@@ -1,0 +1,46 @@
+# O que não entra na imagem.
+#
+# Nem tudo aqui é peso: `dados/` e `.env` ficam de fora por segurança. Estado e
+# credencial vêm de volume e de ambiente — assados na imagem, viajam para
+# qualquer registry onde ela for parar.
+
+.git
+.gitignore
+
+# `.github/` entra de propósito. Ela não serve a nada em execução — o processo
+# não lê workflow —, e por isso estava fora. Fica dentro porque a imagem passa
+# a carregar a receita que a construiu: quem recebe um `docker pull` de um
+# registry consegue ler como aquele artefato foi testado e publicado, sem ter
+# acesso ao repositório. São poucos KB, e não há segredo neles — workflow é
+# público junto com o código; segredo vive em `secrets` e nunca no YAML.
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Estado de trabalho: entra por volume, nunca por camada de imagem. Uma imagem
+# com estado dentro serve o organograma de ontem e ninguém percebe.
+dados/
+
+# Dado pessoal (LGPD) e segredo.
+.env
+.env.*
+!.env.exemplo
+planilhas/
+*.xlsx
+Estrutura*.pdf
+
+# 2,9 MB de manual com telas embutidas. Ele é servido de `docs/` pela rota
+# `/panorama`, e a apresentação de entrega pela `/boas-vindas`, então os dois
+# precisam entrar — o que não entra é o resto de docs/.
+docs/spec/
+docs/apresentacao/
+docs/README.md
+
+# Artefatos de desenvolvimento.
+*.log
+*.bak
+.DS_Store
+Thumbs.db

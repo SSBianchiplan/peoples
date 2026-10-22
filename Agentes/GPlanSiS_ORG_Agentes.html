@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>GPlanSiS|ORG — Agentes de Inteligência Organizacional</title>
+<meta name="description" content="GPlanSiS|ORG: seis agentes nascidos de 18 anos de planejamento estratégico, tático e operacional. A IA recomenda; o humano decide.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232D3336'/><rect x='3' y='9' width='10' height='4' rx='1' fill='%23EB6A20'/><rect x='3' y='3' width='4' height='4' rx='1' fill='%237D8286'/><rect x='9' y='3' width='4' height='4' rx='1' fill='%237D8286'/></svg>">
+<style>
+:root{
+  --lar:#EB6A20; --amb:#F6A709; --gra:#2D3336; --cin:#7D8286;
+  --fundo:#F6F5F3; --papel:#FFFFFF; --papel2:#F0EEEB; --tinta:#1F2426; --tinta2:#4A5053; --linha:#DED9D5;
+  --lar-txt:#B4460F; --sombra:0 1px 2px rgba(45,51,54,.06),0 8px 24px rgba(45,51,54,.06);
+  --disp:"Bahnschrift","Segoe UI Semibold","Segoe UI",system-ui,sans-serif;
+  --body:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --mono:Consolas,"Cascadia Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --fundo:#121517; --papel:#1C2124; --papel2:#232A2E; --tinta:#E8E9EA; --tinta2:#A4AAAD; --linha:#343C41;
+  --lar-txt:#F0854A; --sombra:none;
+}}
+:root[data-theme="dark"]{--fundo:#121517;--papel:#1C2124;--papel2:#232A2E;--tinta:#E8E9EA;--tinta2:#A4AAAD;--linha:#343C41;--lar-txt:#F0854A;--sombra:none}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--fundo);color:var(--tinta);font-family:var(--body);line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased}
+a{color:var(--lar-txt);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:var(--disp);line-height:1.15;margin:0}
+h2{font-size:clamp(24px,3.4vw,34px);margin:64px 0 8px}
+h3{font-size:19px;margin:0 0 6px}
+p{margin:10px 0}
+.sub{color:var(--tinta2);font-size:17px;max-width:760px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--lar);font-weight:700;margin:0 0 10px}
+/* topo */
+header.hero{background:var(--gra);color:#EDEBE9;padding:56px 0 48px;position:relative;overflow:hidden}
+header.hero::after{content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(235,106,32,.28),transparent 70%)}
+header .marca{font-family:var(--disp);font-size:14px;letter-spacing:.18em;color:#B6BCBE}
+header .marca b{color:#fff}header .marca span{color:var(--lar)}
+header h1{font-size:clamp(34px,6vw,60px);color:#fff;margin:14px 0 10px;max-width:820px}
+header .lead{font-size:19px;color:#C9CDCF;max-width:700px;margin:0 0 26px}
+.regra{display:inline-flex;align-items:center;gap:10px;background:rgba(235,106,32,.14);border:1px solid rgba(235,106,32,.5);color:#fff;padding:10px 16px;border-radius:999px;font-weight:600}
+.regra i{width:10px;height:10px;border-radius:50%;background:var(--lar);display:inline-block}
+nav.sticky{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--papel) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--linha)}
+nav.sticky .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 24px;scrollbar-width:none}
+nav.sticky a{white-space:nowrap;padding:8px 12px;border-radius:8px;color:var(--tinta2);font-size:14px;font-weight:600}
+nav.sticky a:hover{background:var(--papel2);text-decoration:none;color:var(--tinta)}
+/* cards */
+.grade{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:20px}
+.card{background:var(--papel);border:1px solid var(--linha);border-radius:14px;padding:20px 22px;box-shadow:var(--sombra)}
+.card .faixa{height:4px;border-radius:4px;background:var(--lar);margin:-20px -22px 16px;border-radius:14px 14px 0 0}
+.card.amb .faixa{background:var(--amb)}.card.gra .faixa{background:var(--gra)}.card.cin .faixa{background:var(--cin)}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 12px;font-size:14px;margin:10px 0 0}
+.kv dt{color:var(--tinta2);font-weight:600}.kv dd{margin:0}
+/* timeline */
+.tl{list-style:none;margin:24px 0 0;padding:0;border-left:2px solid var(--linha)}
+.tl li{position:relative;padding:0 0 22px 26px}
+.tl li::before{content:"";position:absolute;left:-8px;top:8px;width:14px;height:14px;border-radius:50%;background:var(--lar);border:3px solid var(--fundo)}
+.tl .ano{font-family:var(--mono);font-size:13px;color:var(--lar-txt);font-weight:700;letter-spacing:.06em}
+.tl h3{margin:2px 0 4px}
+/* horizontes */
+.horiz{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:22px;border:1px solid var(--linha);border-radius:14px;overflow:hidden}
+.horiz>div{padding:20px 22px;background:var(--papel);border-right:1px solid var(--linha)}
+.horiz>div:last-child{border-right:0}
+.horiz .pr{font-family:var(--mono);font-size:12px;color:var(--tinta2);letter-spacing:.1em;text-transform:uppercase}
+.transv{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+@media (max-width:820px){.horiz{grid-template-columns:1fr}.horiz>div{border-right:0;border-bottom:1px solid var(--linha)}.transv{grid-template-columns:1fr}}
+/* agentes */
+.agente{display:grid;grid-template-columns:120px 1fr;gap:22px;align-items:start;background:var(--papel);border:1px solid var(--linha);border-radius:16px;padding:24px;margin-top:18px;box-shadow:var(--sombra)}
+.agente .avatar{width:120px;height:120px;border-radius:24px;display:grid;place-items:center;font-family:var(--disp);font-size:34px;color:#fff;background:linear-gradient(135deg,var(--gra),#4A5053);position:relative}
+.agente .avatar.lar{background:linear-gradient(135deg,var(--lar),#F0854A)}
+.agente .avatar.amb{background:linear-gradient(135deg,var(--amb),#F7C24D);color:var(--gra)}
+.agente .avatar img{width:120px;height:120px;object-fit:contain;border-radius:24px}
+.agente .avatar small{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);background:var(--papel);color:var(--tinta2);border:1px solid var(--linha);font:600 11px var(--mono);padding:2px 8px;border-radius:999px;white-space:nowrap}
+.agente h3{font-size:24px}.agente .papel{color:var(--lar-txt);font-weight:700;font-size:14px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 8px}
+.agente .duas{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+.agente ul{margin:6px 0 0;padding-left:18px;font-size:14.5px}
+.agente .hist{margin-top:14px;padding-top:12px;border-top:1px dashed var(--linha);color:var(--tinta2);font-size:15px}
+.agente .hist b{color:var(--tinta)}
+@media (max-width:720px){.agente{grid-template-columns:1fr}.agente .duas{grid-template-columns:1fr}}
+/* human gate */
+.gate{background:var(--gra);color:#EDEBE9;border-radius:16px;padding:28px 28px 24px;margin-top:24px}
+.gate h3{color:#fff;font-size:22px}
+.gate ol{margin:12px 0 0;padding-left:22px}.gate li{margin:6px 0}
+.gate .frase{font-family:var(--disp);font-size:22px;color:var(--amb);margin:14px 0 0}
+/* valores */
+.valores{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:20px}
+.valor{border-left:5px solid var(--lar);background:var(--papel);border-radius:0 12px 12px 0;padding:14px 16px}
+.valor b{font-family:var(--disp);font-size:18px;display:block}
+.valor span{color:var(--tinta2);font-size:14px}
+/* fluxo */
+.fluxo{margin-top:20px;background:var(--papel);border:1px solid var(--linha);border-radius:14px;padding:16px;overflow-x:auto}
+.fluxo svg{min-width:820px;width:100%;height:auto;display:block}
+footer{margin:72px 0 0;padding:28px 0 40px;border-top:1px solid var(--linha);color:var(--tinta2);font-size:13px}
+footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+code{font-family:var(--mono);font-size:.9em;background:var(--papel2);padding:1px 6px;border-radius:4px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="marca"><b>GPlanSiS</b><span>|</span>ORG · INTELIGÊNCIA ORGANIZACIONAL</div>
+    <h1>Seis agentes. Um método. Uma regra.</h1>
+    <p class="lead">Nascidos de dezoito anos planejando indústrias — do plano estratégico ao sequenciamento do turno, passando pelo desenho de cada processo e fluxo —, os agentes GPlanSiS|ORG leem a organização inteira e devolvem recomendações rastreáveis. Quem decide continua sendo gente.</p>
+    <span class="regra"><i></i> A IA recomenda. O humano decide.</span>
+  </div>
+</header>
+
+<nav class="sticky"><div class="wrap">
+  <a href="#historia">A história</a><a href="#metodo">O método</a><a href="#agentes">Os agentes</a>
+  <a href="#humangate">Human Gate</a><a href="#valores">Valores</a><a href="#fluxo">Como conversam</a><a href="#glossario">Glossário</a>
+</div></nav>
+
+<main class="wrap">
+
+<!-- ============================================================ HISTÓRIA -->
+<section id="historia">
+  <p class="eyebrow" style="margin-top:56px">2008 → 2026</p>
+  <h2>Dezoito anos de planejamento — do papel ao agente</h2>
+  <p class="sub">A GPlanSiS nasceu como uma prática de planejamento industrial: gente que sabia fazer uma fábrica cumprir o que prometeu. Com o tempo, o método subiu do chão de fábrica para a mesa da diretoria e desceu para o desenho de cada processo. Os agentes são a forma que esse método encontrou para caber num sistema.</p>
+  <ol class="tl">
+    <li><span class="ano">2008</span><h3>Planejamento e controle da produção</h3><p>Programação, capacidade, sequenciamento e aderência ao plano em indústrias de processo e de montagem. A primeira <b>hard skill</b> da casa: fazer o plano operacional ser cumprido — e medir quando não é.</p></li>
+    <li><span class="ano">2012</span><h3>Horizonte tático: S&amp;OP, capacidade e cadência</h3><p>O plano de semanas ganhou o plano de meses: balanceamento de demanda e capacidade, rituais de planejamento integrado, indicadores de aderência. Aqui nasceu a obsessão por <b>fluxo</b>: onde o trabalho para, por que para e quem decide.</p></li>
+    <li><span class="ano">2015</span><h3>Processos e fluxos como disciplina</h3><p>Mapeamento (BPMN, VSM), padronização, análise de causa-raiz e desenho de handoffs entre áreas. A tese da casa se consolida: <b>um processo bem desenhado é planejamento congelado</b> — e um fluxo ruim é retrabalho programado.</p></li>
+    <li><span class="ano">2018</span><h3>Estratégico: desdobramento e governança</h3><p>OKR, BSC e a ligação explícita entre meta anual, plano trimestral e rotina semanal. A mesma régua de aderência que media a fábrica passou a medir a estratégia: <b>o que foi prometido, o que foi entregue, por quê</b>.</p></li>
+    <li><span class="ano">2021</span><h3>Do papel ao dado</h3><p>O método virou dado vivo: integrações com ERP e chão de fábrica, painéis, cadeias orçado → previsto → realizado. Planejar deixou de ser uma planilha de segunda-feira e virou um sistema que sabe o estado de agora.</p></li>
+    <li><span class="ano">2024</span><h3>O hub GPlanSiS</h3><p>Uma família de sistemas com o mesmo método por dentro: <b>PriorIA</b> (planejamento avançado assistido), <b>PCP · APS · MES</b> (produção), <b>Peoples</b> (organização, pessoas e talentos), <b>iaVision</b> e <b>VisionDesk</b> (visão e campo). Cada um responde uma pergunta; juntos, respondem a organização.</p></li>
+    <li><span class="ano">2026</span><h3>GPlanSiS|ORG — os agentes</h3><p>Seis agentes com uma especialidade cada, treinados no vocabulário do método e ligados aos sistemas do hub. Eles não substituem o planejador: <b>tornam o planejamento contínuo</b> — e deixam a decisão onde ela sempre esteve.</p></li>
+  </ol>
+</section>
+
+<!-- ============================================================ MÉTODO -->
+<section id="metodo">
+  <p class="eyebrow">O método</p>
+  <h2>Três horizontes, duas camadas transversais</h2>
+  <p class="sub">Todo agente GPlanSiS|ORG fala a mesma língua: o plano vive em três horizontes ligados por cadência, e é sustentado por duas camadas que atravessam todos eles — os processos e as pessoas.</p>
+  <div class="horiz">
+    <div><div class="pr">Estratégico · anos</div><h3>Para onde</h3><p>Visão, metas e prioridades desdobradas (OKR/BSC), portfólio, cenários e riscos. Pergunta-chave: <b>o que temos de ser capazes de fazer em 3 anos que não fazemos hoje?</b></p></div>
+    <div><div class="pr">Tático · trimestres e meses</div><h3>Com o quê</h3><p>Demanda × capacidade (S&amp;OP), roadmap trimestral, alocação de gente e recursos, contratos e prazos. Pergunta-chave: <b>cabe? com quem? quando?</b></p></div>
+    <div><div class="pr">Operacional · semanas e dias</div><h3>Como, agora</h3><p>Sequenciamento, programação, rotina diária, indicadores de chão (OTD, OEE, lead time), desvios e replanejamento. Pergunta-chave: <b>o que sai hoje e o que trava?</b></p></div>
+  </div>
+  <div class="transv">
+    <div class="card cin"><div class="faixa"></div><h3>Processos &amp; Fluxos</h3><p>Mapeamento e redesenho (BPMN, VSM), padronização (POP, instruções), handoffs entre áreas, causa-raiz (A3, Ishikawa, 5 porquês). É a camada que transforma decisão em rotina.</p></div>
+    <div class="card gra"><div class="faixa"></div><h3>Pessoas &amp; Estrutura</h3><p>Organograma, cargos e Skills, accountabilities, Conversa de Valor, Avaliação e sucessão, clima. É a camada que transforma rotina em capacidade — e o lugar onde o GPlanSiS|Peoples vive.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================ AGENTES -->
+<section id="agentes">
+  <p class="eyebrow">Os agentes</p>
+  <h2>Uma especialidade cada; a mesma régua para todos</h2>
+  <p class="sub">MarIA conversa com as pessoas e orquestra os outros cinco. Cada um dos cinco cobre um horizonte ou uma camada do método, e todos entregam a mesma coisa: uma recomendação com <b>evidência, alternativa e critério</b> — nunca uma ordem.</p>
+
+  <article class="agente" id="maria">
+    <div class="avatar" style="background:none"><img src="/marca/maria/MarIA_acenando.png" alt="MarIA" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Ma'}))"><small>maestrina</small></div>
+    <div>
+      <div class="papel">Copiloto de quem usa · orquestração</div>
+      <h3>MarIA</h3>
+      <p>A voz do sistema. Recebe a pergunta de quem está na tela, entende o recorte que essa pessoa pode ver, decide qual agente responde e devolve a resposta em linguagem de gente — com a fonte ao lado. É ela que faz a visita guiada do Peoples e que escreve o relatório em PDF quando alguém pede.</p>
+      <div class="duas">
+        <div><b>Responde</b><ul><li>“Quem responde por isso?” · “Onde está o gap de competência da área X?”</li><li>“Resuma a estrutura da vertical Y para a diretoria.”</li></ul></div>
+        <div><b>Lê e entrega</b><ul><li>Lê só o que o perfil da pessoa pode ver (RBAC, LGPD).</li><li>Entrega texto, passo a passo guiado e PDF assinado com carimbo.</li></ul></div>
+      </div>
+      <p class="hist"><b>História.</b> MarIA nasceu no hub como assistente contextual dos sistemas GPlanSiS — a mesma MarIA que ajuda no PriorIA e no PCP. No Peoples ela ganhou o papel de maestrina dos agentes: sabe o que cada um faz e nunca responde sozinha o que outro sabe melhor. Seu limite é uma decisão de projeto: <b>ela recomenda, explica e registra; não altera a estrutura por conta própria.</b></p>
+    </div>
+  </article>
+
+  <article class="agente" id="plania">
+    <div class="avatar lar">Pl<small>estratégico</small></div>
+    <div>
+      <div class="papel">Horizonte estratégico · anos</div>
+      <h3>PlanIA</h3>
+      <p>Lê metas, portfólio e cenários e diz se a estrutura é capaz de entregar a estratégia. Cruza o plano de 3 anos com o que a organização sabe fazer hoje — e aponta o que falta construir, comprar ou desenvolver.</p>
+      <div class="duas">
+        <div><b>Responde</b><ul><li>“Quais competências a estratégia exige que não temos em profundidade?”</li><li>“Que posições críticas estão sem sucessor pronto?”</li></ul></div>
+        <div><b>Onde vive</b><ul><li>PriorIA (metas e portfólio) · Peoples (Skills, sucessão, 9-box).</li><li>Saída: <i>Strategy Fit</i> por área, com gaps e riscos nomeados.</li></ul></div>
+      </div>
+      <p class="hist"><b>História.</b> PlanIA carrega o hábito que a casa aprendeu em 2018: <b>meta sem desdobramento é desejo</b>. Cada recomendação dela desce até o trimestre e até o cargo — senão, não é estratégia, é discurso.</p>
+    </div>
+  </article>
+
+  <article class="agente" id="rotia">
+    <div class="avatar amb">Ro<small>tático</small></div>
+    <div>
+      <div class="papel">Horizonte tático · trimestres e meses</div>
+      <h3>RotIA</h3>
+      <p>A rota entre o plano e o dia. Balanceia demanda e capacidade, aloca gente e recursos por trimestre, antecipa gargalos de pessoas (férias, saídas, sobrecarga) e propõe redistribuições — sempre com a alternativa ao lado.</p>
+      <div class="duas">
+        <div><b>Responde</b><ul><li>“Cabe o portfólio do trimestre com a equipe que temos?”</li><li>“Que gestor está com amplitude de comando acima do saudável?”</li></ul></div>
+        <div><b>Onde vive</b><ul><li>PriorIA e PCP·APS (capacidade) · Peoples (estrutura, amplitude, tempo de casa).</li><li>Saída: plano de alocação e alertas de capacidade por área.</li></ul></div>
+      </div>
+      <p class="hist"><b>História.</b> RotIA é filha do S&amp;OP de 2012: a reunião em que produção, vendas e engenharia olham o mesmo número. Ela existe para que essa reunião não dependa de heroísmo — e para que ninguém descubra em novembro o que dava para ver em agosto.</p>
+    </div>
+  </article>
+
+  <article class="agente" id="operia">
+    <div class="avatar">Op<small>operacional</small></div>
+    <div>
+      <div class="papel">Horizonte operacional · semanas e dias</div>
+      <h3>OperIA</h3>
+      <p>Vive no agora: sequenciamento, programação, apontamentos, desvios. Lê o realizado contra o programado e diz onde replanejar — e o que a pessoa responsável precisa decidir hoje para o prazo de sexta continuar de pé.</p>
+      <div class="duas">
+        <div><b>Responde</b><ul><li>“O que trava a entrega desta semana e quem destrava?”</li><li>“Que indicador de chão saiu da faixa e desde quando?”</li></ul></div>
+        <div><b>Onde vive</b><ul><li>PCP · APS · MES (ordens, apontamentos) · VisionDesk (campo).</li><li>Saída: lista curta de decisões do dia, com dono e prazo.</li></ul></div>
+      </div>
+      <p class="hist"><b>História.</b> OperIA é a agente mais antiga em espírito: a rotina de 2008, quando a casa aprendeu que <b>plano que não é cobrado toda manhã não é plano</b>. Ela é breve por princípio — quem está no turno não tem tempo para parágrafos.</p>
+    </div>
+  </article>
+
+  <article class="agente" id="fluxia">
+    <div class="avatar" style="background:linear-gradient(135deg,#7D8286,#9EA1A4)">Fl<small>processos</small></div>
+    <div>
+      <div class="papel">Camada transversal · processos e fluxos</div>
+      <h3>FluxIA</h3>
+      <p>Enxerga o trabalho como fluxo: onde para, quantas mãos toca, quanto retorna. Lê processos mapeados (BPMN, VSM), handoffs entre áreas e o organograma como um grafo de decisões — e propõe onde padronizar, onde automatizar e onde simplesmente cortar um passo.</p>
+      <div class="duas">
+        <div><b>Responde</b><ul><li>“Por que esta proposta demora 12 dias entre comercial e engenharia?”</li><li>“Quais accountabilities estão duplicadas entre duas áreas?”</li></ul></div>
+        <div><b>Onde vive</b><ul><li>Peoples (accountabilities, delegações, Skills) · PriorIA (fluxos de projeto).</li><li>Saída: mapa de gargalos e proposta de redesenho com antes/depois.</li></ul></div>
+      </div>
+      <p class="hist"><b>História.</b> FluxIA guarda a lição de 2015: <b>um fluxo ruim é retrabalho programado</b>. Ela desconfia de toda etapa que existe “porque sempre foi assim” e pede evidência antes de aceitar uma exceção.</p>
+    </div>
+  </article>
+
+  <article class="agente" id="gentia">
+    <div class="avatar lar">Ge<small>pessoas</small></div>
+    <div>
+      <div class="papel">Camada transversal · pessoas e estrutura</div>
+      <h3>GentIA</h3>
+      <p>A agente do Peoples. Lê Skills, accountabilities, Conversas de Valor, Avaliação (9-box), clima e tempo de casa, e transforma isso em <i>insights</i> de gente: quem está pronto, onde há risco de perda de conhecimento, que competência é gap recorrente, que líder desenvolve melhor a equipe.</p>
+      <div class="duas">
+        <div><b>Responde</b><ul><li>“Quem está pronto para a coordenação de automação?”</li><li>“Que área concentra conhecimento crítico em uma pessoa só?”</li></ul></div>
+        <div><b>Onde vive</b><ul><li>Peoples — Skills, Conversa de Valor, Avaliação, Avaliação Mestre, One-on-One.</li><li>Saída: Talent, Succession, Development e Organization Insights.</li></ul></div>
+      </div>
+      <p class="hist"><b>História.</b> GentIA é a mais nova e a mais vigiada. Foi desenhada sob o <b>Human Gate</b>: ela nunca classifica uma pessoa sozinha, nunca recomenda demissão, nunca lê o que o perfil de quem pergunta não pode ver. Ela prepara a Conversa de Valor; quem conversa é o líder.</p>
+    </div>
+  </article>
+</section>
+
+<!-- ============================================================ HUMAN GATE -->
+<section id="humangate">
+  <p class="eyebrow">A regra</p>
+  <h2>Human Gate</h2>
+  <p class="sub">Todo agente GPlanSiS|ORG passa pelo mesmo portão antes de qualquer efeito no mundo real. Não é um botão de “confirmar”: é um contrato sobre o que a IA pode e o que só uma pessoa pode.</p>
+  <div class="gate">
+    <h3>O que um agente sempre faz — e o que nunca faz</h3>
+    <ol>
+      <li><b>Mostra a evidência.</b> Toda recomendação vem com a fonte: o nó do organograma, a ficha, o número e a data.</li>
+      <li><b>Oferece alternativa e critério.</b> Duas opções e a régua usada para preferir uma. Recomendação única é ordem disfarçada.</li>
+      <li><b>Respeita o recorte.</b> Lê apenas o que o perfil de quem pergunta pode ler (RBAC por pessoa, LGPD).</li>
+      <li><b>Registra.</b> A pergunta, a resposta, o custo e o autor ficam no histórico — auditáveis.</li>
+      <li><b>Não decide sobre pessoas.</b> Não classifica, não promove, não desliga, não altera a estrutura. Prepara; a liderança decide e assina.</li>
+      <li><b>Não inventa dado.</b> Quando não sabe, diz que não sabe e aponta onde alguém pode saber.</li>
+    </ol>
+    <p class="frase">A IA analisa, explica e recomenda. A liderança decide.</p>
+  </div>
+</section>
+
+<!-- ============================================================ VALORES -->
+<section id="valores">
+  <p class="eyebrow">A cultura</p>
+  <h2>Os quatro valores GPlanSiS</h2>
+  <p class="sub">São os mesmos valores que a Conversa de Valor observa em cada pessoa e que a Avaliação registra — um texto só para a casa inteira, e o critério pelo qual os agentes avaliam as próprias recomendações.</p>
+  <div class="valores">
+    <div class="valor"><b>TeamWork</b><span>Acreditamos que só crescemos juntos. Planejamento é esporte coletivo: produção, vendas, engenharia e gente olhando o mesmo número.</span></div>
+    <div class="valor" style="border-color:var(--amb)"><b>Respect</b><span>Somos abertos e acolhemos as diferenças. Divergência é informação; feedback é cuidado com forma e clareza.</span></div>
+    <div class="valor" style="border-color:var(--gra)"><b>Innovation</b><span>Superamos nossos desafios. Toda ideia vira experimento com dono, prazo e critério de sucesso — ou não é inovação.</span></div>
+    <div class="valor" style="border-color:var(--cin)"><b>Ownership</b><span>Somos conscientes e protagonistas. Fecha-se o que se abre: entrega completa, documentada, sem pendência escondida.</span></div>
+  </div>
+  <p style="margin-top:18px"><b>LMA — Liderar, Gerenciar, Responsabilizar-se.</b> É o que a Conversa de Valor pede que o liderado observe na liderança direta: inspirar e dar exemplo; estabelecer expectativas claras e acompanhar; definir metas e responder pelos resultados. A ficha completa está em <a href="/cgv/trio" target="_blank" rel="noopener">Valores e competências de liderança</a>.</p>
+</section>
+
+<!-- ============================================================ FLUXO -->
+<section id="fluxo">
+  <p class="eyebrow">Orquestração</p>
+  <h2>Como os agentes conversam</h2>
+  <p class="sub">MarIA recebe a pergunta e escolhe quem responde. Um agente pode acionar outro quando a resposta atravessa horizontes — a pergunta estratégica que só fecha com um dado operacional, ou a alocação tática que depende de uma competência que GentIA sabe onde está. Tudo volta pela MarIA, para a pessoa, pelo Human Gate.</p>
+  <div class="fluxo">
+    <svg viewBox="0 0 900 300" role="img" aria-label="Fluxo: pessoa → MarIA → PlanIA, RotIA, OperIA, FluxIA, GentIA → Human Gate → decisão humana">
+      <defs><marker id="s" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#7D8286"/></marker></defs>
+      <g font-family="Segoe UI,system-ui,sans-serif" font-size="13" fill="currentColor">
+        <rect x="20" y="120" width="110" height="60" rx="12" fill="#2D3336"/><text x="75" y="145" text-anchor="middle" fill="#fff" font-weight="700">Pessoa</text><text x="75" y="163" text-anchor="middle" fill="#B6BCBE" font-size="11">pergunta · recorte</text>
+        <line x1="130" y1="150" x2="185" y2="150" stroke="#7D8286" stroke-width="2" marker-end="url(#s)"/>
+        <rect x="190" y="110" width="130" height="80" rx="14" fill="#EB6A20"/><text x="255" y="145" text-anchor="middle" fill="#fff" font-weight="700" font-size="16">MarIA</text><text x="255" y="165" text-anchor="middle" fill="#fff" font-size="11">maestrina</text>
+        <g stroke="#7D8286" stroke-width="2" fill="none" marker-end="url(#s)">
+          <path d="M320,150 C360,150 360,40 400,40"/><path d="M320,150 C360,150 360,95 400,95"/><path d="M320,150 L400,150"/><path d="M320,150 C360,150 360,205 400,205"/><path d="M320,150 C360,150 360,260 400,260"/>
+        </g>
+        <g font-weight="700">
+          <rect x="405" y="22" width="150" height="36" rx="10" fill="#F6A709"/><text x="480" y="46" text-anchor="middle" fill="#2D3336">PlanIA · estratégico</text>
+          <rect x="405" y="77" width="150" height="36" rx="10" fill="#F6A709"/><text x="480" y="101" text-anchor="middle" fill="#2D3336">RotIA · tático</text>
+          <rect x="405" y="132" width="150" height="36" rx="10" fill="#7D8286"/><text x="480" y="156" text-anchor="middle" fill="#fff">OperIA · operacional</text>
+          <rect x="405" y="187" width="150" height="36" rx="10" fill="#7D8286"/><text x="480" y="211" text-anchor="middle" fill="#fff">FluxIA · processos</text>
+          <rect x="405" y="242" width="150" height="36" rx="10" fill="#EB6A20"/><text x="480" y="266" text-anchor="middle" fill="#fff">GentIA · pessoas</text>
+        </g>
+        <g stroke="#7D8286" stroke-width="2" fill="none" marker-end="url(#s)">
+          <path d="M555,40 C600,40 600,150 640,150"/><path d="M555,95 C600,95 600,150 640,150"/><path d="M555,150 L640,150"/><path d="M555,205 C600,205 600,150 640,150"/><path d="M555,260 C600,260 600,150 640,150"/>
+        </g>
+        <rect x="645" y="112" width="120" height="76" rx="14" fill="none" stroke="#EB6A20" stroke-width="3" stroke-dasharray="6 4"/><text x="705" y="145" text-anchor="middle" font-weight="700">Human Gate</text><text x="705" y="164" text-anchor="middle" font-size="11" fill="#7D8286">evidência · alternativa</text>
+        <line x1="765" y1="150" x2="800" y2="150" stroke="#7D8286" stroke-width="2" marker-end="url(#s)"/>
+        <rect x="805" y="120" width="80" height="60" rx="12" fill="#2D3336"/><text x="845" y="145" text-anchor="middle" fill="#fff" font-weight="700">Decide</text><text x="845" y="163" text-anchor="middle" fill="#B6BCBE" font-size="11">humano</text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- ============================================================ GLOSSÁRIO -->
+<section id="glossario">
+  <p class="eyebrow">Vocabulário</p>
+  <h2>Glossário do método</h2>
+  <div class="grade">
+    <div class="card"><div class="faixa"></div><h3>Aderência</h3><p>Realizado ÷ prometido, em qualquer horizonte: aderência ao programa, à meta, ao Skills do cargo. A régua única da casa.</p></div>
+    <div class="card amb"><div class="faixa"></div><h3>Accountability</h3><p>Aquilo por que uma posição responde — própria (executa) ou delegada (responde, mas quem executa está abaixo). Cinco por pessoa, derivadas do Skills.</p></div>
+    <div class="card gra"><div class="faixa"></div><h3>Skills</h3><p>A descrição de cargo (GEP-FOR-003): missão, responsabilidades, requisitos e competências com nível esperado 1–5. A base de toda leitura de gente.</p></div>
+    <div class="card cin"><div class="faixa"></div><h3>Conversa de Valor</h3><p>O ritual líder–liderado: entregas, valores, PDI (70/20/10), carreira e o feedback à liderança (LMA). Três ciclos por ano.</p></div>
+    <div class="card"><div class="faixa"></div><h3>Avaliação · 9-box</h3><p>Risco × impacto de perda, prontidão de sucessão e a ação para o Comitê de Meritocracia. Consolidada na Avaliação Mestre.</p></div>
+    <div class="card amb"><div class="faixa"></div><h3>PTI</h3><p>Peoples Trust Index — o indicador-mestre de clima da Avaliação Mestre: percentual de respostas positivas em cinco pilares, com piso de 5 respondentes por estrato.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap">
+  <span><b>GPlanSiS|ORG</b> · Agentes de Inteligência Organizacional · rev 1.0 · 2026</span>
+  <span>A IA propõe. O humano decide. · <a href="/">voltar ao GPlanSiS|Peoples</a></span>
+</div></footer>
+</body>
+</html>

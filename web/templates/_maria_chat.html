@@ -1,0 +1,132 @@
+{#
+  Gaveta da MarIA. A conversa vive ao lado do organograma, não numa tela à
+  parte: a pergunta quase sempre é sobre o que está na frente da pessoa, e
+  trocar de tela para perguntar faz perder o contexto que motivou a pergunta.
+#}
+<div class="mc-cabeca">
+  <img src="/marca/maria/MarIA_bracos_cruzados.png" alt="" class="mc-figura">
+  <div class="mc-titulo">
+    <b>MarIA</b>
+    <span>{{ t('Recorte: {escopo}', escopo=chat.escopo) }}</span>
+    {# Custo por chamada dito onde a pessoa vai clicar, não escondido numa aba
+       de configuração que ninguém abre antes de usar. #}
+    <em>{{ t('*USE COM MODERAÇÃO, CADA SOLICITAÇÃO GERA CUSTOS') }}</em>
+  </div>
+  <div class="mc-acoes">
+    {# Alarga a gaveta para meia tela. A resposta da MarIA vem com tabela — e
+       tabela de cinco colunas em 430 px rola para o lado dentro de uma gaveta
+       que já rola para baixo. O módulo continua a um clique, no menu da MarIA
+       lá em cima; aqui o gesto útil é ler o que ela acabou de responder. #}
+    <button class="mc-x mc-largura" onclick="alternarLarguraChat()"
+            aria-label="{{ t('Alargar ou recolher a gaveta') }}"
+            title="{{ t('Alargar ou recolher a gaveta') }}">⤢</button>
+    <button class="mc-x" title="{{ t('Fechar') }}" onclick="fecharChat()">×</button>
+  </div>
+</div>
+
+<div class="mc-corpo" id="mcCorpo">
+  {% if not chat.mensagens %}
+  <p class="mc-ola">{{ t('Olá! Posso ler e analisar o organograma no seu recorte — hierarquia, centros de custo, cargos e divergências. Pergunte ou escolha:') }}</p>
+  <div class="mc-sugestoes">
+    {% for s in chat.sugestoes %}
+    {# Já chega traduzida e com os números do recorte: traduzir de novo aqui
+       procuraria o texto em inglês no catálogo e devolveria ele mesmo. #}
+    <button class="mc-sug" onclick="perguntarChat(this.textContent)">{{ s }}</button>
+    {% endfor %}
+  </div>
+  {% else %}
+  {% for m in chat.mensagens %}
+  <div class="mc-msg {{ m.papel }}{{ ' erro' if m.papel == 'maria' and not m.ok }}">
+    {% if m.papel == 'maria' %}<span class="mc-quem">MarIA</span>{% endif %}
+    {% if m.papel == 'maria' and m.ok %}
+    {# Formatado: lista, tabela e negrito chegam como estrutura, não como
+       asterisco solto. O escape acontece antes da formatação. #}
+    <div class="mc-bolha md">{{ m.texto|md|safe }}</div>
+    {% else %}
+    <p>{{ m.texto }}</p>
+    {% endif %}
+    {% if m.papel == 'maria' and m.ok %}
+    <span class="mc-custo">{{ m.modelo }} · {{ m.entrada }}→{{ m.saida }} tok ·
+      US$ {{ '%.4f'|format(m.custo_usd) }}
+      {% if m.aid %}· <a href="/maria/assistencia/{{ m.aid }}/pdf"
+        onclick="pdfMaria(event, this.href)">PDF</a>{% endif %}</span>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+
+<form class="mc-envio" id="mcForm"
+      hx-post="/maria/chat" hx-target="#mariaChat" hx-swap="innerHTML"
+      hx-indicator="#mcPensando"
+      hx-on::before-request="mcEnviando(true)"
+      hx-on::after-request="mcEnviando(false)">
+  {# As capacidades como chips: elas são a carta da MarIA, e escolher qual está
+     em jogo muda o prompt — `analisar` compara declarado × cadastrado,
+     `planejar` marca a resposta como rascunho. Antes a gaveta mandava sempre
+     `descrever`, e as outras só existiam na tabela do módulo.
+
+     Só as que não mutam. `Executar` exige aprovação humana explícita por ação,
+     num POST próprio com a proposta inteira à vista de quem aprova — oferecê-la
+     aqui contradiria o rodapé que promete somente leitura. `Agir sozinha` está
+     fora de escopo desta onda.
+
+     Rádio, e não botão: o valor viaja no próprio envio, sem ida ao servidor a
+     cada clique, e volta escolhido no turno seguinte porque o POST o carregou. #}
+  <div class="mc-caps" role="radiogroup" aria-label="{{ t('Capacidade') }}">
+    {% for codigo, rotulo, verbo in chat.capacidades %}
+    <input type="radio" name="capacidade" id="cap-{{ codigo }}" value="{{ codigo }}"
+           class="mc-cap-in" {% if chat.capacidade == codigo %}checked{% endif %}>
+    <label class="mc-cap" for="cap-{{ codigo }}"
+           title="{{ t(rotulo) }} — {{ t(verbo) }}">{{ t(rotulo) }}</label>
+    {% endfor %}
+  </div>
+  {# O recorte é dito ANTES de enviar, e a etiqueta lá em cima acompanha a
+     escolha. Contagem filtrada sem recorte declarado é resposta inauditável.
+     `hx-include` leva a capacidade junto: sem isso, trocar o recorte devolvia a
+     gaveta com o chip de volta em `descrever`. #}
+  <select name="recorte" class="mc-recorte" aria-label="{{ t('Recorte') }}"
+          hx-get="/maria/chat" hx-target="#mariaChat" hx-swap="innerHTML"
+          hx-include="[name='capacidade']:checked" hx-trigger="change">
+    <option value="" {% if not chat.recorte %}selected{% endif %}
+      >{{ t('Tudo o que posso ver') }}</option>
+    <option value="canvas" {% if chat.recorte == 'canvas' %}selected{% endif %}
+      >{{ t('Só o que está no canvas') }}</option>
+  </select>
+  <div class="mc-linha">
+    <input id="mcTexto" name="pergunta" autocomplete="off" maxlength="2000"
+           placeholder="{{ t('Pergunte à MarIA…') }}"
+           {% if not chat.configurada %}disabled{% endif %}>
+    <button class="mc-enviar" id="mcEnviar" type="submit"
+            title="{{ t('Enviar') }}" {% if not chat.configurada %}disabled{% endif %}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m22 2-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+    {# Parar aborta a requisição no navegador. A chamada já feita à API não se
+       desfaz — e dizer o contrário seria mentir sobre o custo. #}
+    <button class="mc-parar" id="mcParar" type="button" onclick="pararChat()"
+            title="{{ t('Parar') }}">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+    </button>
+  </div>
+  {# Um giro pequeno no lugar da ilustração: enquanto a resposta não chega, o
+     que a pessoa precisa saber é que a máquina está ocupada — e 22 px de
+     retrato empurravam o rodapé para baixo a cada pergunta, fazendo a gaveta
+     pular. `prefers-reduced-motion` já para toda animação da folha de estilo,
+     e aí sobra o ponto parado, que continua dizendo o mesmo. #}
+  <span class="mc-pensando" id="mcPensando">
+    <i class="giro" aria-hidden="true"></i>{{ t('MarIA está pensando…') }}
+  </span>
+  <div class="mc-rodape">
+    {% if chat.configurada %}
+    <span>{{ t('A MarIA é somente leitura — informa e sugere; não altera dados.') }}</span>
+    <button type="button" class="mc-limpar" hx-post="/maria/chat/limpar"
+            hx-include="[name='recorte']"
+            hx-target="#mariaChat" hx-swap="innerHTML">{{ t('Limpar conversa') }}</button>
+    {% else %}
+    <span>{{ t('Sem ANTHROPIC_API_KEY: a conversa fica indisponível.') }}</span>
+    {% endif %}
+  </div>
+</form>

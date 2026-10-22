@@ -1,0 +1,38 @@
+{#
+  Recorte por profundidade, sobre o palco e no canto esquerdo.
+
+  Seleção múltipla, e não escolha única: a pergunta "como estão a diretoria e a
+  coordenação, sem o meio do caminho" só tem resposta com mais de um nível
+  marcado ao mesmo tempo.
+
+  Marcado, o nível ganha destaque âmbar no desenho; os nós que só sustentam o
+  caminho até ele ficam esmaecidos — a mesma leitura dos outros filtros, porque
+  é o mesmo mecanismo. Combina em E lógico com a barra de filtros, e vale para
+  o CSV, o SVG e o PDF: sai o que está na tela.
+
+  Fica dentro do palco e fora do `#lente` — quem procura "ver só o nível 2" está
+  olhando o desenho, mas o controle não pode dar zoom nem deslizar junto.
+
+  Os níveis vêm do desenho vigente: por equipe eles contam os degraus dos times,
+  e não os das pessoas. Oferecer um N que não existe daria um botão morto.
+
+  Fragmento próprio para voltar fora de banda — o contrato INT-01 não deixa um
+  fragmento do canvas alvejar outra coisa que não `#canvas` e `#painel`.
+#}
+<div class="niveis{% if niveis_marcados %} com-nivel{% endif %}" id="niveis"
+     role="group" aria-label="{{ t('Mostrar apenas os níveis marcados') }}"
+     {% if oob %}hx-swap-oob="true"{% endif %}>
+  <span class="rot">{{ t('Níveis') }}</span>
+  {% for n in range(profundidade_max + 1) %}
+  <button class="{% if n|string in niveis_marcados %}on{% endif %}"
+          hx-post="/niveis/{{ n }}" hx-target="#canvas" hx-swap="outerHTML"
+          aria-pressed="{{ 'true' if n|string in niveis_marcados else 'false' }}"
+          title="{{ t('Mostra apenas o nível {n}. Marque mais de um para comparar.', n=n) }}">N{{ n }}</button>
+  {% endfor %}
+  {# Só aparece quando há o que limpar: um botão que não faz nada é ruído. #}
+  {% if niveis_marcados %}
+  <button class="limpa" hx-post="/niveis/limpar"
+          hx-target="#canvas" hx-swap="outerHTML"
+          title="{{ t('Volta a mostrar todos os níveis') }}">{{ t('Limpar') }}</button>
+  {% endif %}
+</div>

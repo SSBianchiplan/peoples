@@ -1,0 +1,75 @@
+{#
+  Os oito critérios, num fragmento próprio.
+
+  Eles voltam **fora de banda** a cada `/filtros`: os domínios se filtram uns
+  aos outros, e um domínio que se estreita no servidor e não se estreita na
+  tela é pior do que não estreitar — a lista continuaria oferecendo o que já
+  não devolve ninguém.
+
+  Fora daqui ficam a busca livre e o `Limpar tudo`: a busca guarda o cursor de
+  quem está digitando, e trocá-la a cada tecla roubaria o foco.
+#}
+{% macro borracha(campo, rotulo) %}
+<button type="button" class="borracha" onclick="limparCampo('{{ campo }}', event)"
+        title="{{ t('Limpar {campo}', campo=t(rotulo)) }}"
+        aria-label="{{ t('Limpar filtro {campo}', campo=t(rotulo)) }}">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M8.5 20H21"/><path d="m15 5 4 4L9.5 18.5H5.5L3 16z"/><path d="m11 9 4 4"/>
+  </svg>
+</button>
+{% endmacro %}
+
+{% macro chip(campo, rotulo, itens, marcados, com_busca) %}
+{# Sem opção nenhuma o chip nasce desabilitado, e o `title` diz por quê: o
+   recorte dos outros filtros não deixou ninguém com este critério. Abrir um
+   popover vazio já foi defeito relatado aqui uma vez — a diferença é que agora
+   o vazio tem causa, e a causa cabe numa frase. #}
+<div class="chip{% if not itens %} vazio{% endif %}" data-campo="{{ campo }}">
+  <button type="button" class="bt" onclick="abrirPop(this)"
+          aria-haspopup="true" aria-expanded="false"
+          {% if not itens %}disabled aria-disabled="true"
+          title="{{ t('Nenhum {campo} sobrou no recorte atual', campo=t(rotulo)|lower) }}"
+          {% endif %}
+          aria-label="{{ t('Filtrar por {campo}', campo=t(rotulo)) }}">
+    {{ t(rotulo) }} <span class="conta">0</span>
+  </button>
+  {{ borracha(campo, rotulo) }}
+  <div class="pop" role="group" aria-label="{{ t(rotulo) }}">
+    {% if com_busca %}
+    <div class="pop-topo">
+      {# stopPropagation: este campo filtra a lista do popover, nao o
+         organograma. Sem isso o keyup sobe ao formulario e cada tecla vira
+         um POST /filtros com gravacao em disco. #}
+      <input type="text" class="pop-busca"
+             placeholder="{{ t('filtrar {campo}…', campo=t(rotulo)|lower) }}"
+             oninput="filtrarPop(this)" onkeyup="event.stopPropagation()"
+             autocomplete="off"
+             aria-label="{{ t('Filtrar opções de {campo}', campo=t(rotulo)) }}">
+    </div>
+    {% endif %}
+    <div class="pop-lista">
+      {% for valor, texto in itens %}
+      <label>
+        <input type="checkbox" name="{{ campo }}" value="{{ valor }}"
+               {% if valor in marcados %}checked{% endif %}>
+        <span>{{ texto }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+<span class="grupo-chips" id="chips" {% if oob %}hx-swap-oob="true"{% endif %}>
+{# Vertical de negocio (ENG, P&P, F&B) no lugar do N2 numerico: e assim que
+     a estrutura e lida. O N2 continua filtravel pela API e pelo estado. #}
+{{ chip("vertical_negocio", "Vertical",        opcoes.vertical_negocio, filtros.vertical_negocio, opcoes.vertical_negocio|length > 12) }}
+{{ chip("tipo_cc",          "Natureza",        opcoes.tipo_cc,          filtros.tipo_cc,          false) }}
+{{ chip("centro_custo",     "Centro de custo", opcoes.centro_custo,     filtros.centro_custo,     true) }}
+{{ chip("area",             "Departamento",    opcoes.area,             filtros.area,             true) }}
+{{ chip("cargo",            "Cargo",           opcoes.cargo,            filtros.cargo,            true) }}
+{{ chip("gestor",           "Gestor",          opcoes.gestor,           filtros.gestor,           true) }}
+{{ chip("tipo",             "Nível",           opcoes.tipo,             filtros.tipo,             false) }}
+{{ chip("vinculo",          "Vínculo",         opcoes.vinculo,          filtros.vinculo,          false) }}
+</span>

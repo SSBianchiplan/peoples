@@ -1,0 +1,35 @@
+{#
+  Resultado da conferência tela × banco, campo a campo (Onda DB-1). Zero
+  divergência é a prova de que o banco pode virar a fonte da leitura sem perder
+  dado. `v` vem de banco.verificar_espelho.
+#}
+{% if v.erro %}
+<div class="aviso" style="margin-top:10px">{{ t('Não foi possível conferir: o banco não respondeu.') }}</div>
+{% elif v.ok %}
+<p class="ok-linha" style="margin-top:10px">{{ t('Tela e banco batem campo a campo: {n} nó(s) conferido(s), nada perdido no caminho.', n=v.iguais) }}</p>
+{% else %}
+<div class="aviso" style="margin-top:10px">
+  {{ t('{d} de {n} nó(s) divergem entre tela e banco.', d=v.divergencias|length, n=v.total) }}
+  {% if v.so_na_tela %}{{ t('Só na tela: {n}.', n=v.so_na_tela|length) }}{% endif %}
+  {% if v.so_no_banco %}{{ t('Só no banco: {n}.', n=v.so_no_banco|length) }}{% endif %}
+</div>
+{% if v.divergencias %}
+<div class="rolagem-x">
+  <table>
+    <thead><tr>
+      <th>{{ t('Nó') }}</th>
+      <th>{{ t('Campos que divergem') }}</th>
+    </tr></thead>
+    <tbody>
+      {% for d in v.divergencias[:50] %}
+      <tr><td>{{ d.nome }}</td><td class="cod">{{ d.campos|join(', ') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if v.divergencias|length > 50 %}
+<p class="pista">{{ t('Mostrando os primeiros 50 de {n}.', n=v.divergencias|length) }}</p>
+{% endif %}
+{% endif %}
+<p class="pista">{{ t('Use <b>Escrever organograma</b> para reescrever o banco a partir da tela e zerar a divergência.')|safe }}</p>
+{% endif %}

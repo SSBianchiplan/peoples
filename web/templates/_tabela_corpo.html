@@ -1,0 +1,215 @@
+{#
+  Mesma árvore do canvas em ordem lógica raiz→folhas (API-02).
+  O colapso é o MESMO estado do canvas: colapsar aqui colapsa lá. Duas
+  representações da mesma verdade, não duas verdades.
+#}
+<h1>{{ t('Estrutura em ordem lógica') }}</h1>
+<p class="sub">
+  {{ t('Raiz → folhas, independente da orientação do canvas.') }}
+  {{ t('{n} linha(s) visível(is)', n=linhas|length) }}{% if ativo %} ·
+  {{ t('filtro ativo') }}{% endif %}.
+  {{ t('Clique em uma linha para abrir a gaveta de edição.') }}
+</p>
+
+<div class="ferramentas" style="background:none;border:0;padding:0 0 12px">
+  <span style="font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--tinta-2)">{{ t('Expandir até') }}</span>
+  {% for n in range(profundidade_max + 1) %}
+  <button class="bt" hx-post="/arvore/nivel?nivel={{ n }}&vista=tabela"
+          hx-target="#tabelaCorpo" hx-swap="innerHTML">N{{ n }}</button>
+  {% endfor %}
+  <button class="bt" hx-post="/arvore/expandir?vista=tabela"
+          hx-target="#tabelaCorpo" hx-swap="innerHTML">{{ t('Tudo') }}</button>
+  <span class="sep"></span>
+  {# O seletor de colunas. `<details>` e não popover em JavaScript: ele abre e
+     fecha sem uma linha de script, fecha com Esc, e o teclado já o alcança.
+     O formulário inteiro submete no `change` de qualquer caixa — pedir um
+     "Aplicar" depois de marcar seria um clique que não decide nada. #}
+  <details class="colunas">
+    <summary class="bt">{{ t('Colunas') }} · {{ col|length }}</summary>
+    <form class="colunas-menu" hx-post="/tabela/colunas"
+          hx-target="#tabelaCorpo" hx-swap="innerHTML"
+          hx-trigger="change from:(.colunas-menu)">
+      {% for c in colunas %}
+      <label class="check"><input type="checkbox" name="col" value="{{ c.chave }}"
+             {% if c.on %}checked{% endif %}><span>{{ t(c.rotulo) }}</span></label>
+      {% endfor %}
+    </form>
+  </details>
+  <a class="bt" href="/export.csv" download>{{ t('CSV') }}</a>
+  {% include "_bt_pdf.html" %}
+
+  {#
+    A ida e a volta da planilha, lado a lado, porque é um ciclo só: exporta,
+    edita fora, devolve. Ficam depois do separador para não se misturarem com
+    CSV e PDF, que só vão embora.
+
+    O importar não abre assistente próprio: manda o arquivo para a MESMA rota
+    dos três passos de Configurações › Carga de dados e troca `#area` pela
+    tela de lá, já no passo 2. Um segundo assistente aqui seria uma segunda
+    regra de conciliação para manter em dia — e a que diverge é sempre a que
+    ninguém está olhando.
+  #}
+  {#
+    Liga a edição da grade. Nasce escondido e o JavaScript o revela quando a
+    AG Grid sobe: sem grade montada o botão prometeria uma edição que não
+    existe — a tabela do servidor continua sendo só leitura, como sempre foi.
+
+    Quem não pode editar recebe o botão desabilitado COM O MOTIVO no título:
+    a diferença entre "não existe" e "não é para você" não pode ficar por
+    conta de adivinhação (INT-03).
+  #}
+  <span class="sep"></span>
+  <button type="button" class="bt" id="btEditarGrade" hidden
+          aria-pressed="false"
+          {% if motivo_edicao %}disabled title="{{ motivo_edicao }}"
+          {% else %}title="{{ t('Liga a edição na grade: Enter edita a célula, Tab indenta, Shift+Tab promove, e o botão direito abre as ações da linha.') }}"
+          onclick="ORGA_GRADE.alternarEdicao()"{% endif %}>
+    {{ t('Editar') }}</button>
+
+  <span class="sep"></span>
+  <a class="bt" href="/export.xlsx" download
+     title="{{ t('Duas abas: a apresentação, agrupada por nível, e a aba ORG com as colunas que a carga lê de volta. Sai o que está na tela.') }}">
+    {{ t('Exportar XLSX') }}</a>
+  {% if motivo_carga %}
+  <button type="button" class="bt" disabled title="{{ motivo_carga }}">{{ t('Importar XLSX') }}</button>
+  {% else %}
+  {# `display:contents` para o form sumir do layout: com ele ocupando lugar, o
+     botão viraria uma caixa dentro da caixa no meio da barra. #}
+  <form hx-post="/config/importar/analisar" hx-target="#area" hx-swap="innerHTML"
+        hx-encoding="multipart/form-data" style="display:contents">
+    {# Um `<button>`, e não um `<label for>`: `label` é seletor de ELEMENTO no
+       CSS da base (`display:block`, caixa alta, `margin:14px 0 5px`), e `.bt`
+       não declara `text-transform` nem `margin` — então o rótulo saía em caixa
+       alta e com margem própria, fora da linha dos vizinhos. Botão de verdade
+       também dispensa `role` e `tabindex`: o teclado já funciona. #}
+    <button type="button" class="bt" onclick="this.form.arquivo.click()"
+            title="{{ t('Abre a carga assistida em Configurações, já com o arquivo analisado: você confere o que muda antes de aplicar.') }}">
+      {{ t('Importar XLSX') }}</button>
+    {# Submete no `change`: pedir arquivo e depois pedir um clique em "Enviar"
+       é um passo que não decide nada — a análise ainda é reversível, e o que
+       de fato altera dados é o passo 3. #}
+    <input id="tbImportar" type="file" name="arquivo" accept=".xlsx" hidden
+           onchange="if(this.files.length)this.form.requestSubmit()">
+  </form>
+  {% endif %}
+</div>
+
+{#
+  Mesma fita do card, mesmos rótulos: os dois saem do cadastro de níveis.
+
+  E a legenda filtra. Ela já era a única lista dos sete níveis à vista, e quem
+  queria ver só as gerências tinha de abrir o chip `Nível` na barra e procurar
+  o item — estando o nome dele escrito ali, dois centímetros acima. Clicar no
+  que se está lendo é o gesto mais curto entre a pergunta e a resposta.
+
+  Não há filtro novo por trás: o botão marca a MESMA caixa do chip `Nível` e
+  dispara o formulário de sempre. Um segundo caminho de filtragem teria de ser
+  mantido em dia com o primeiro, e o que diverge é sempre o que ninguém olha.
+#}
+<div class="legenda" role="group" aria-label="{{ t('Filtrar por nível') }}">
+  {% for n in niveis if n.ativo %}
+  <button type="button" class="legenda-chip{% if n.codigo in filtros.tipo %} on{% endif %}"
+          data-campo="tipo" data-valor="{{ n.codigo }}"
+          aria-pressed="{{ 'true' if n.codigo in filtros.tipo else 'false' }}"
+          title="{{ t('Filtrar por {nivel}', nivel=t(n.rotulo)) }}">
+    <i style="background:var(--k-cor_{{ n.cor }})" aria-hidden="true"></i>{{ t(n.rotulo) }}
+  </button>
+  {% endfor %}
+</div>
+
+{#
+  `role` explícito em tabela, linha e célula: em tela estreita o CSS troca o
+  `display` das três para empilhar a linha em cartão, e trocar o display de um
+  <tr> apaga a semântica de tabela no navegador. Sem as funções escritas aqui,
+  o leitor de tela deixaria de anunciar "linha" e "célula" exatamente onde a
+  tela já não mostra o cabeçalho.
+
+  `--prof` na linha, e não um `padding` por célula: a mesma variável serve ao
+  recuo do nome na tela larga e ao degrau do cartão na estreita.
+
+  `data-rot` alimenta o rótulo que aparece sobre cada valor no cartão. Vem das
+  mesmas chaves do cabeçalho — o cartão não inventa vocabulário próprio.
+#}
+{#
+  A grade editável monta-se aqui, POR CIMA da tabela abaixo. Nasce escondida:
+  quem a revela é `grade.js`, e só depois de `/grade/dados` responder. Sem
+  JavaScript, com a biblioteca fora do ar ou com a rota em erro, este `<div>`
+  fica vazio e a tabela do servidor segue na tela — é a vista de sempre, e não
+  uma tela quebrada.
+
+  `aria-live` no aviso: recusa do servidor (INT-06) e confirmação de cópia
+  passam por ali, e quem usa leitor de tela precisa ouvi-las sem procurar.
+#}
+<p class="gr-aviso" id="gradeAviso" role="status" aria-live="polite" hidden></p>
+<div id="grade" class="ag-theme-quartz orga-grade" hidden></div>
+
+<div class="rolagem-x"><table class="arvore" role="table">
+  <thead role="rowgroup">
+    <tr role="row">
+      <th role="columnheader" style="width:34px"></th>
+      {# Cabeçalho e corpo leem o MESMO conjunto `col`. Duas listas — uma aqui,
+         outra lá embaixo — divergiriam na primeira coluna nova, e a tabela
+         sairia com dez títulos sobre catorze colunas. #}
+      {% for c in colunas if c.on %}
+      <th role="columnheader"
+          {% if c.chave == 'nivel_n' %}style="width:44px"{% endif %}>{{ t(c.rotulo) }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody role="rowgroup">
+    {% for l in linhas %}
+    <tr role="row" style="--prof:{{ l.d }}" data-nivel="{{ [l.d, 6]|min }}"
+        class="clicavel{% if l.achou %} achou{% endif %}{% if l.passagem %} passagem{% endif %}{% if l.u.id == selecionado %} sel{% endif %}"
+        hx-get="/fragmentos/painel/{{ l.u.id }}?canvas=0&amp;vista=tabela" hx-target="#painel"
+        hx-swap="innerHTML" title="{{ t('Abrir na gaveta') }}">
+      <td role="cell" onclick="event.stopPropagation()">
+        {% if l.n %}
+        <button class="chev" title="{{ t('Expandir subárvore') if l.colapsado else t('Colapsar subárvore') }}"
+                hx-post="/unidades/{{ l.u.id }}/colapsar?vista=tabela"
+                hx-target="#tabelaCorpo" hx-swap="innerHTML">
+          {% if l.colapsado %}+{{ l.descendentes }}{% else %}−{% endif %}
+        </button>
+        {% else %}<span class="chev vazio">·</span>{% endif %}
+      </td>
+      {% if 'codigo' in col %}<td role="cell" class="cod">{{ l.u.codigo }}</td>{% endif %}
+      {% if 'nivel_n' in col %}<td role="cell" class="cod nivel-n">N{{ l.d }}</td>{% endif %}
+      {% if 'nome' in col %}
+      <td role="cell" class="nome">
+        <b style="font-weight:{{ 600 if l.n else 400 }}">{{ l.u.nome }}</b>
+        {% if l.u.responsavel %}<br><span class="cod">{{ l.u.responsavel }}</span>{% endif %}
+      </td>{% endif %}
+      {% if 'cargo' in col %}<td role="cell" class="cargo">{{ l.u.cargo }}</td>{% endif %}
+      {% if 'tipo' in col %}<td role="cell"><span class="tag" style="border-color:var(--k-cor_{{ cores_nivel.get(l.u.tipo, "cinza") }})">{{ t(l.tipo) }}</span></td>{% endif %}
+      {% if 'area' in col %}<td role="cell" data-rot="{{ t('Departamento') }}">{{ l.u.area }}</td>{% endif %}
+      {% if 'centro_custo' in col %}<td role="cell" class="cod" data-rot="{{ t('CC') }}">{{ l.u.centro_custo }}</td>{% endif %}
+      {% if 'n5' in col %}<td role="cell" class="cod" data-rot="N5">{{ l.cc.n5 }}</td>{% endif %}
+      {% if 'vertical' in col %}<td role="cell" class="cod" data-rot="{{ t('Vertical') }}">{{ l.cc.vertical_negocio }}</td>{% endif %}
+      {% if 'tipo_cc' in col %}<td role="cell" data-rot="{{ t('Natureza') }}">{{ l.cc.tipo_cc }}</td>{% endif %}
+      {# Só a exceção ganha marca: marcar CLT, que é a maioria, viraria ruído
+         em 240 linhas e esconderia justamente quem não é empregado. #}
+      {% if 'vinculo' in col %}<td role="cell">{% if l.u.vinculo and l.u.vinculo != 'clt' %}<span class="tag vinculo-{{ l.u.vinculo }}">{{ t(vinculos[l.u.vinculo][0]) }}</span>{% endif %}</td>{% endif %}
+      {% if 'sub' in col %}<td role="cell" class="cod" data-rot="{{ t('Sub.') }}">{{ l.n or "" }}</td>{% endif %}
+      {# Sem espaço em branco dentro da célula: com ele, `:empty` nunca casaria
+         e a linha sem accountability ganharia um bloco vazio no cartão. #}
+      {% if 'accountabilities' in col %}
+      <td role="cell" class="accs">
+        {%- for r in l.u.responsabilidades -%}
+        {%- if r.origem == 'delegada' -%}<i>› {{ r.descricao }}</i>{%- else -%}{{ r.descricao }}{%- endif -%}
+        {%- if not loop.last %} · {% endif -%}
+        {%- endfor -%}
+      </td>{% endif %}
+      {# As quatro da planilha do RH. O e-mail leva o `mailto:` também aqui: a
+         grade é onde alguém varre a equipe inteira procurando com quem falar. #}
+      {% if 'email' in col %}
+      <td role="cell" class="cod" data-rot="{{ t('E-mail') }}"
+          onclick="event.stopPropagation()">
+        {% if l.u.email %}<a href="mailto:{{ l.u.email }}">{{ l.u.email }}</a>{% endif %}
+      </td>{% endif %}
+      {% if 'data_inicio' in col %}<td role="cell" class="cod" data-rot="{{ t('Admissão') }}">{{ l.u.data_inicio }}</td>{% endif %}
+      {# Calculado, nunca guardado: a coluna do RH nasce velha, e esta não. #}
+      {% if 'tempo_casa' in col %}<td role="cell" class="cod num" data-rot="{{ t('Tempo de casa') }}">{{ anos(l.anos) }}</td>{% endif %}
+      {% if 'status' in col %}<td role="cell" data-rot="{{ t('Situação') }}">{% if l.u.status %}<span class="tag">{{ t(status_rotulos.get(l.u.status, l.u.status)) }}</span>{% endif %}</td>{% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table></div>

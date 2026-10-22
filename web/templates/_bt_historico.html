@@ -1,0 +1,31 @@
+{#
+  Desfazer e Refazer.
+
+  Ícones porque o par é universal e o texto ocupava duas vezes mais barra que
+  a informação que carregava. O rótulo continua existindo para quem lê a tela
+  em voz alta e no `title` de quem passa o mouse — ícone sem nome acessível é
+  um botão mudo.
+
+  Desabilitado vem pronto do servidor (INT-03): é ele que sabe se há pilha, e
+  um botão que parece clicável e responde "nada a desfazer" ensina a pessoa a
+  desconfiar do que a tela mostra.
+#}
+<div class="hist" role="group" aria-label="{{ t('Desfazer e refazer') }}"
+     id="hist" {% if oob %}hx-swap-oob="true"{% endif %}>
+  <button hx-post="/desfazer" hx-target="#canvas" hx-swap="outerHTML"
+          {% if not tem_desfazer %}disabled{% endif %}
+          aria-label="{{ t('Desfazer') }}" title="{{ t('Desfazer') }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.4 2.6L3 13"/>
+    </svg>
+  </button>
+  <button hx-post="/refazer" hx-target="#canvas" hx-swap="outerHTML"
+          {% if not tem_refazer %}disabled{% endif %}
+          aria-label="{{ t('Refazer') }}" title="{{ t('Refazer') }}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.4 2.6L21 13"/>
+    </svg>
+  </button>
+</div>

@@ -1,0 +1,32 @@
+{#
+  O que é um nó: a pessoa, ou o time em que ela está.
+
+  Fica ao lado da orientação porque os dois respondem à mesma pergunta — como
+  este desenho é lido. A orientação diz de que lado fica a liderança.
+
+  Fragmento próprio porque o rótulo descreve o modo vigente e precisa voltar
+  fora de banda quando ele troca: o alvo continua sendo `#canvas` (INT-01), e o
+  botão acompanha por `hx-swap-oob`.
+#}
+{# `apertado`, e não `on`: `.bt.on` não existe no CSS deste projeto, e o modo
+   "por equipe" ficava sem realce nenhum enquanto o irmão "▸ Lateral" ao lado
+   acendia. Um interruptor sem estado visível é um interruptor que mente. #}
+<button class="bt{% if por_equipe %} apertado{% endif %}" id="btAgrupamento"
+        hx-post="/agrupamento" hx-target="#canvas" hx-swap="outerHTML"
+        aria-pressed="{{ 'true' if por_equipe else 'false' }}"
+        aria-label="{% if por_equipe %}{{ t('▣ Por equipe') }}{% else %}{{ t('▢ Por pessoa') }}{% endif %}"
+        {% if oob %}hx-swap-oob="true"{% endif %}
+        title="{{ t('Recolhe as pessoas dentro do seu time e desenha só a estrutura') }}">
+  {# Uma silhueta ou três: o ícone diz o que é um nó sem precisar da palavra,
+     que é o que sobra em tela estreita. #}
+  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    {% if por_equipe %}
+    <circle cx="9" cy="8" r="3"/><circle cx="17.2" cy="9" r="2.2"/>
+    <path d="M3 19a6 6 0 0 1 12 0"/><path d="M16.6 14.6A4.6 4.6 0 0 1 21 19"/>
+    {% else %}
+    <circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>
+    {% endif %}
+  </svg>
+  <span class="rot">{% if por_equipe %}{{ t('▣ Por equipe') }}{% else %}{{ t('▢ Por pessoa') }}{% endif %}</span>
+</button>

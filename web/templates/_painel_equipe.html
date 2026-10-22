@@ -1,0 +1,118 @@
+{# A gaveta de uma equipe: a hierarquia de comando dentro dela.
+
+   Read-only de propósito — a equipe é desenho derivado das pessoas, então o que
+   se edita são as pessoas. A indentação aqui é dado, não enfeite: ela diz quem
+   responde a quem dentro do departamento. Clicar num nome evidencia a pessoa e
+   abre a linha dela. #}
+<div class="p-cabeca">
+  <div class="p-cod">{{ u.codigo if u else "" }}{% if u and u.vertical %} · {{ u.vertical }}{% endif %}</div>
+  <h2>{{ u.nome if u else t('Equipe') }}</h2>
+  <p class="p-sub">{{ t('{n} pessoa(s) neste time · a indentação é quem responde a quem', n=total) }}</p>
+</div>
+
+<div class="p-corpo">
+  <ul class="eq-arvore">
+    {% for l in linhas %}
+    <li class="eq-nivel-{{ l.nivel if l.nivel < 4 else 4 }}{% if l.u.id == pessoa %} eq-alvo{% endif %}">
+      <button type="button" class="eq-pessoa"
+              hx-get="/fragmentos/equipe/{{ equipe_id }}?pessoa={{ l.u.id if l.u.id != pessoa else '' }}"
+              hx-target="#painel" hx-swap="innerHTML"
+              aria-pressed="{{ 'true' if l.u.id == pessoa else 'false' }}">
+        <span class="eq-nome">{{ l.u.nome }}</span>
+        {% if l.u.cargo %}<span class="eq-cargo">{{ l.u.cargo }}</span>{% endif %}
+        {# `+n` é notação, não frase: sem texto para traduzir, como a alça do card. #}
+        {% if l.chefia %}<span class="eq-chefia">+{{ l.chefia }}</span>{% endif %}
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+
+  {% if detalhe %}
+  {# A linha de comando da pessoa evidenciada: acima quem a chefia, abaixo quem
+     responde a ela. É o que a visão por equipe esconde de propósito. #}
+  <div class="eq-detalhe">
+    <div class="p-cod">{{ detalhe.u.codigo }}{% if detalhe.u.centro_custo %} · {{ detalhe.u.centro_custo }}{% endif %}</div>
+    <h3>{{ detalhe.u.nome }}</h3>
+    {% if detalhe.u.cargo %}<p class="eq-d-cargo">{{ detalhe.u.cargo }}</p>{% endif %}
+
+    <dl class="eq-d-campos">
+      {% if detalhe.chefe %}
+      <dt>{{ t('Responde a') }}</dt>
+      <dd>{{ detalhe.chefe.nome }}{% if detalhe.chefe.area and detalhe.chefe.area != detalhe.u.area %}
+        <small> · {{ detalhe.chefe.area }}</small>{% endif %}</dd>
+      {% endif %}
+      {% if detalhe.u.email %}
+      <dt>{{ t('E-mail') }}</dt><dd>{{ detalhe.u.email }}</dd>
+      {% endif %}
+      {% if detalhe.cc.vertical_negocio %}
+      <dt>{{ t('Vertical') }}</dt><dd>{{ detalhe.cc.vertical_negocio }}</dd>
+      {% endif %}
+      <dt>{{ t('Responde por ela') }}</dt>
+      <dd>{{ t('{n} pessoa(s) direta(s)', n=detalhe.diretos|length) }}{% if detalhe.fora %}
+        <small> · {{ t('{n} em outro time', n=detalhe.fora|length) }}</small>{% endif %}</dd>
+    </dl>
+
+    {% if detalhe.fora %}
+    <p class="eq-d-fora">{{ t('Times que respondem a esta pessoa:') }}
+      {% for f in detalhe.fora %}<code>{{ f.area or f.nome }}</code>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+    {% endif %}
+
+    <div class="eq-d-acoes">
+      <button type="button" class="bt"
+              hx-get="/fragmentos/painel/{{ detalhe.u.id }}?vista=canvas"
+              hx-target="#painel" hx-swap="innerHTML"
+              title="{{ t('A edição acontece na visão por pessoa') }}">{{ t('Abrir ficha') }}</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <p class="p-nota">{{ t('A equipe é desenhada a partir das pessoas, a cada render — ela não é gravada e não se edita aqui. Volte à visão por pessoa para alterar a estrutura.') }}</p>
+</div>
+
+<style>
+/* A árvore rola dentro da gaveta: o maior time tem 12 pessoas, e sem isto o
+   detalhe e a nota seriam empurrados para fora da vista. */
+.eq-arvore{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:1px;
+  max-height:38vh;overflow-y:auto}
+.eq-arvore li{position:relative}
+/* A indentação é o dado. O filete à esquerda dá o eixo que o olho segue. */
+.eq-nivel-1 .eq-pessoa{padding-left:20px}
+.eq-nivel-2 .eq-pessoa{padding-left:34px}
+.eq-nivel-3 .eq-pessoa{padding-left:48px}
+.eq-nivel-4 .eq-pessoa{padding-left:62px}
+.eq-nivel-1::before,.eq-nivel-2::before,.eq-nivel-3::before,.eq-nivel-4::before{
+  content:"";position:absolute;left:9px;top:0;bottom:0;width:1px;
+  background:var(--linha)}
+.eq-nivel-2::before{left:23px}
+.eq-nivel-3::before{left:37px}
+.eq-nivel-4::before{left:51px}
+
+.eq-pessoa{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;
+  width:100%;background:none;border:0;border-left:2px solid transparent;
+  border-radius:0 4px 4px 0;font:inherit;color:var(--tinta);text-align:left;
+  padding:6px 8px;cursor:pointer}
+.eq-pessoa:hover{background:var(--realce)}
+.eq-nome{font-size:13px;font-weight:600}
+.eq-cargo{font-size:11.5px;color:var(--tinta-2)}
+/* Quantos respondem a esta pessoa dentro do time — mesma leitura da alça `+n`
+   do card, e por isso o mesmo formato. */
+.eq-chefia{margin-left:auto;font-size:11px;color:var(--nevoa);
+  font-variant-numeric:tabular-nums}
+
+/* Evidência: cor não é o único canal — a borda à esquerda e o peso mudam junto. */
+.eq-alvo .eq-pessoa{background:var(--realce);border-left-color:var(--laranja)}
+.eq-alvo .eq-nome{color:var(--laranja-txt)}
+
+.eq-detalhe{margin-top:14px;padding:12px 13px;border:1px solid var(--linha);
+  border-top:2px solid var(--laranja);border-radius:5px;background:var(--realce)}
+.eq-detalhe h3{margin:2px 0 0;font-size:15px;font-weight:650}
+.eq-d-cargo{margin:1px 0 0;font-size:12.5px;color:var(--tinta-2)}
+.eq-d-campos{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;
+  margin:11px 0 0;font-size:12px}
+.eq-d-campos dt{color:var(--nevoa);white-space:nowrap}
+.eq-d-campos dd{margin:0;color:var(--tinta)}
+.eq-d-campos small{color:var(--tinta-2)}
+.eq-d-fora{margin:10px 0 0;font-size:11.5px;color:var(--tinta-2);line-height:1.6}
+.eq-d-acoes{margin-top:12px}
+.p-nota{margin:16px 0 0;font-size:11.5px;line-height:1.5;color:var(--tinta-2)}
+</style>

@@ -1,0 +1,62 @@
+{#
+  Programar a pesquisa: a janela do ciclo e a intenção de notificar os
+  colaboradores por e-mail. A programação é salva de verdade; o ENVIO do e-mail
+  fica para configurar depois (SMTP/M365) — a tela é honesta sobre isso.
+#}
+<h2>{{ t('Programar a pesquisa') }}</h2>
+<p class="sub">{{ t('Defina o ciclo e a janela de resposta, e registre a intenção de convidar os colaboradores por e-mail. O envio do e-mail é um passo à parte, a configurar.') }}</p>
+
+{% if programacao.status == 'programada' %}
+<div class="gptw-prog-estado">
+  <span class="gptw-mat mat-alto">{{ t('Programada') }}</span>
+  <b>{% set pr = (ciclos|selectattr('0','equalto',programacao.ciclo)|list|first) %}{{ t(pr[1]) }}</b>
+  {% if programacao.abertura %}<span>· {{ programacao.abertura }} → {{ programacao.fechamento or '—' }}</span>{% endif %}
+  {% if programacao.agendado_em %}<span class="pista">· {{ t('em') }} {{ programacao.agendado_em }}</span>{% endif %}
+</div>
+{% endif %}
+
+<form class="grupo" hx-post="/gptw/programar" hx-target="#area" hx-swap="innerHTML">
+  <fieldset class="cgv-secao">
+    <legend>{{ t('Janela do ciclo') }}</legend>
+    <div class="gptw-prog-grade">
+      <div>
+        <label for="prog-ciclo">{{ t('Ciclo') }}</label>
+        <select id="prog-ciclo" name="ciclo" {% if motivo_edicao %}disabled{% endif %}>
+          {% for cod, rot, quando in ciclos %}
+          <option value="{{ cod }}" {% if programacao.ciclo == cod %}selected{% endif %}>{{ t(rot) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="prog-abertura">{{ t('Abertura') }}</label>
+        <input type="date" id="prog-abertura" name="abertura" value="{{ programacao.abertura }}"
+               {% if motivo_edicao %}disabled{% endif %}>
+      </div>
+      <div>
+        <label for="prog-fechamento">{{ t('Fechamento') }}</label>
+        <input type="date" id="prog-fechamento" name="fechamento" value="{{ programacao.fechamento }}"
+               {% if motivo_edicao %}disabled{% endif %}>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="cgv-secao">
+    <legend>{{ t('Notificar colaboradores') }}</legend>
+    <label class="gptw-prog-check">
+      <input type="checkbox" name="notificar" value="1"
+             {% if programacao.notificar %}checked{% endif %}
+             {% if motivo_edicao %}disabled{% endif %}>
+      {{ t('Convidar por e-mail ao programar') }}
+    </label>
+    <p class="pista">{{ t('{n} colaboradores têm e-mail cadastrado no organograma. O disparo em si fica pendente de configuração de correio (SMTP/M365) — por ora, a programação é registrada e o convite fica pronto, não enviado.', n=com_email) }}</p>
+  </fieldset>
+
+  {% if not motivo_edicao %}
+  <div class="acoes">
+    <button class="bt forte" type="submit">{{ t('Programar pesquisa') }}</button>
+    <span class="pista">{{ t('Salva a programação. O e-mail é passo à parte, a configurar depois.') }}</span>
+  </div>
+  {% else %}
+  <p class="pista">{{ motivo_edicao }}</p>
+  {% endif %}
+</form>

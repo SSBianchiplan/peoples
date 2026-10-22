@@ -1,0 +1,161 @@
+{# Funil institucional: a leitura de negocio da apresentacao Estrutura 2026,
+   com os membros vindos do cadastro vigente. Todo o estado viaja na URL —
+   nada aqui grava no servidor, entao a tela e compartilhavel por link. #}
+<section id="estruturaRaiz" class="est" aria-label="{{ t('Estrutura institucional') }}">
+
+  <header class="est-topo">
+    <div>
+      <h2>{{ t('Estrutura GPlanSiS|Peoples') }}</h2>
+      <p class="est-lema">{{ t('Conectados pelo sucesso') }}</p>
+    </div>
+    <div class="est-resumo">
+      {{ t('{n} pessoas atendendo o cliente', n=faixas[0].pessoas)|replace(faixas[0].pessoas|string, '<strong>' ~ faixas[0].pessoas ~ '</strong>')|safe }}
+      {# Abrir e fechar as quatro faixas de uma vez. Mesmos ícones do canvas,
+         porque é o mesmo gesto — o que muda é o que está sendo dobrado. Só as
+         faixas: vertical e departamento continuam sendo escolha de quem lê. #}
+      <div class="est-tudo" role="group" aria-label="{{ t('Abrir e fechar as faixas') }}">
+        <button hx-get="/vistas/estrutura?banda={{ todas_faixas|urlencode }}{% if conferir %}&amp;conferir=1{% endif %}"
+                hx-target="#estruturaRaiz" hx-swap="outerHTML"
+                aria-label="{{ t('Abrir todas as faixas') }}" title="{{ t('Abrir todas as faixas') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 9l4-4 4 4"/><path d="M16 15l-4 4-4-4"/>
+          </svg>
+        </button>
+        <button hx-get="/vistas/estrutura?{% if conferir %}conferir=1{% endif %}"
+                hx-target="#estruturaRaiz" hx-swap="outerHTML"
+                aria-label="{{ t('Fechar todas as faixas') }}" title="{{ t('Fechar todas as faixas') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M8 5l4 4 4-4"/><path d="M16 19l-4-4-4 4"/>
+          </svg>
+        </button>
+      </div>
+      {% if divergencias %}
+      <button class="bt" hx-get="/vistas/estrutura?{{ consulta }}&amp;conferir={{ 0 if conferir else 1 }}"
+              hx-target="#estruturaRaiz" hx-swap="outerHTML"
+              aria-expanded="{{ 'true' if conferir else 'false' }}">
+        <i>!</i> {{ t('{n} divergências' if divergencias|length > 1 else '{n} divergência', n=divergencias|length) }}
+      </button>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if conferir and divergencias %}
+  <div class="est-conf" role="region" aria-label="{{ t('Divergências entre a apresentação e o cadastro') }}">
+    <p class="est-conf-nota">{{ t('A apresentação de 2026 descreve a estrutura pretendida;
+       o cadastro de centros de custo descreve a vigente. Onde discordam:') }}</p>
+    <ul>
+      {% for d in divergencias %}
+      <li class="d-{{ d.nivel }}">
+        <span class="d-tag">{{ d.onde }}</span>
+        <strong>{{ d.o_que }}</strong> — {{ d.detalhe }}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {# As quatro faixas. Largura e ordem saem da lamina: o cliente em cima e o
+     mais largo, a diretoria embaixo sustentando — mesma tese do LAY-01. #}
+  <div class="funil">
+    {% for f in faixas %}
+    <div class="faixa-linha">
+      {# `aberta` é o que decide: com tudo aberto, cada faixa fecha para si
+         mesma — clicar numa delas sai do modo "todas" e mantém a que se
+         clicou, que é o que a pessoa acabou de apontar. #}
+      {% set aberta = banda == f.chave or tudo_aberto %}
+      <button class="faixa{% if aberta %} on{% endif %}"
+              style="--larg:{{ (f.largura * 100)|round(1) }}%"
+              {% if f.chips %}
+              hx-get="/vistas/estrutura?banda={{ ('' if banda == f.chave else f.chave)|urlencode }}"
+              hx-target="#estruturaRaiz" hx-swap="outerHTML"
+              aria-expanded="{{ 'true' if aberta else 'false' }}"
+              {% else %}disabled aria-disabled="true"{% endif %}
+              title="{{ t(f.legenda) }}">
+        <span class="faixa-nome">{{ t(f.rotulo) }}</span>
+        {% if f.pessoas %}<span class="faixa-n">{{ f.pessoas }}</span>{% endif %}
+      </button>
+
+      {% if aberta and f.chips %}
+      <div class="chips" role="group" aria-label="{{ t('Membros de {faixa}', faixa=t(f.rotulo)) }}">
+        {% for c in f.chips %}
+        {# `urlencode` obrigatorio: as siglas F&B, P&P e P&M levam `&`, que sem
+           escape parte a query string e o filtro nao seleciona nada. #}
+        <button class="chip-v{% if vert and vert.sigla == c.sigla %} on{% endif %}"
+                {# Leva a banda vigente, e não a da faixa: com tudo aberto,
+                   escolher uma vertical não pode fechar as outras três. #}
+                hx-get="/vistas/estrutura?banda={{ banda|urlencode }}&amp;vertical={{ ('' if vert and vert.sigla == c.sigla else c.sigla)|urlencode }}"
+                hx-target="#estruturaRaiz" hx-swap="outerHTML"
+                aria-pressed="{{ 'true' if vert and vert.sigla == c.sigla else 'false' }}">
+          <b>{{ c.sigla }}</b>
+          <span>{{ c.nome }}</span>
+          <em>{{ c.pessoas }}</em>
+          {# Só mostra o nome da apresentação quando ele acrescenta algo: repetir
+             o nome já exibido ao lado é ruído, não informação. #}
+          {% if c.deck and c.deck != c.sigla and c.deck != c.nome %}
+          <span class="chip-deck" title="{{ t('Nome usado na apresentação') }}">{{ c.deck }}</span>
+          {% endif %}
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if vert %}
+  {# Detalhe da vertical: e a lamina 7-17 da apresentacao, viva. #}
+  <div class="est-det" role="region" aria-label="{{ t('Departamentos de {vertical}', vertical=vert.nome) }}">
+    <h3>
+      <b>{{ vert.sigla }}</b> {{ vert.nome }}
+      <span class="det-n">{{ vert.pessoas }} {{ t('pessoas') }}</span>
+      {% if vert.deck and vert.deck != vert.sigla and vert.deck != vert.nome %}
+      <span class="chip-deck">{{ t('apresentação:') }} {{ vert.deck }}</span>
+      {% endif %}
+    </h3>
+
+    <div class="det-grade">
+      <ul class="det-deps">
+        {% for d in vert.departamentos %}
+        <li>
+          <button class="dep{% if departamento == d.departamento %} on{% endif %}"
+                  hx-get="/vistas/estrutura?banda={{ banda|urlencode }}&amp;vertical={{ vert.sigla|urlencode }}&amp;departamento={{ '' if departamento == d.departamento else d.departamento|urlencode }}"
+                  hx-target="#estruturaRaiz" hx-swap="outerHTML"
+                  aria-pressed="{{ 'true' if departamento == d.departamento else 'false' }}">
+            <span class="dep-nome">{{ d.rotulo }}</span>
+            <span class="dep-n">{{ d.pessoas }}</span>
+          </button>
+          {% if not d.traduzido %}
+          <span class="dep-cru" title="{{ t('Sem nome em português no vocabulário da apresentação') }}">{{ d.departamento }}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+
+      <div class="det-pessoas">
+        {% if pessoas %}
+        <h4>{{ t('{n} em {departamento}', n=pessoas|length, departamento=rotulo_dep) }}</h4>
+        <ul>
+          {% for p in pessoas %}
+          {# Mesma gaveta do canvas: a estrutura leva a pessoa, nao a uma copia
+             dela. `contexto` volta no salvar para reconstruir esta secao. #}
+          <li><button class="pessoa"
+                      hx-get="/fragmentos/painel/{{ p.id }}?canvas=0&amp;vista=estrutura&amp;contexto={{ consulta|urlencode }}"
+                      hx-target="#painel" hx-swap="innerHTML"
+                      onclick="alternarGaveta(true)">
+            <span class="p-nome">{{ p.nome }}</span>
+            <span class="p-cargo">{{ p.cargo or '—' }}</span>
+          </button></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="det-dica">{{ t('Escolha um departamento para ver quem o compõe.') }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <p class="est-rodape">{{ t('Entenda sua organização, desenvolva talentos e transforme dados humanos em decisões estratégicas.') }}</p>
+</section>

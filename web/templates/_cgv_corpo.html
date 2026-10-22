@@ -1,0 +1,178 @@
+{#
+  O corpo da Conversa de Valor. Quem inclui é `_cgv.html` (tela inteira) e a rota `/filtros`
+  (só o corpo, alvo `#cgvCorpo`).
+
+  Quatro seções: a Agenda (quem conversa com quem, e o status dos três ciclos),
+  a Cobertura (quanto cada líder e cada ciclo já andou), a Referência (os
+  valores, competências e a régua 70/20/10 do manual) e as Ferramentas
+  (formulários em Excel, manual em PDF, passo a passo interativo).
+#}
+<h1>{{ t('Conversa de Valor — Conversas que Geram Valor') }}</h1>
+<p class="sub">
+  {{ t('O feedback estruturado da casa, três vezes ao ano. A agenda é montada da estrutura vigente; o acompanhamento é gravado por pessoa, ano e ciclo.') }}
+  {% if ativo %}<b>{{ t('filtro ativo') }}</b> —
+  {{ t('os números são do recorte que está na tela.') }}{% endif %}
+</p>
+
+<div class="painel-numeros">
+  <div><span>{{ t('pessoas') }}</span><b class="numero">{{ r.pessoas }}</b></div>
+  <div><span>{{ t('líderes') }}</span><b class="numero">{{ r.lideres }}</b></div>
+  <div><span>{{ t('conversas no ano') }}</span><b class="numero">{{ r.previstas }}</b></div>
+  <div><span>{{ t('realizadas') }}</span><b class="numero">{{ r.realizadas }}</b></div>
+  <div><span>{{ t('conclusão') }}</span><b class="numero">{{ r.pct }} %</b></div>
+  <div><span>{{ t('ano') }}</span><b class="numero">{{ ano }}</b></div>
+</div>
+{% if fonte_banco %}
+<p class="sub">{{ t('Histórico durável no PostgreSQL: as conversas de anos anteriores vêm do banco e sobrevivem à reimportação da base.') }}</p>
+{% else %}
+<p class="sub">{{ t('Banco não configurado: o acompanhamento vive no estado de trabalho. Ligue o PostgreSQL (aba Configurações) para o histórico atravessar anos.') }}</p>
+{% endif %}
+
+{% if not r.pessoas %}
+<p class="vazio">{{ t('Nenhuma pessoa neste recorte. Afrouxe o filtro para ver a agenda.') }}</p>
+{% else %}
+
+<div class="cfg">
+  <nav class="cfg-nav" aria-label="{{ t('Seções da Conversa de Valor') }}">
+    {% for chave, rotulo in [("agenda", t("Agenda de pessoas")),
+                             ("cobertura", t("Cobertura")),
+                             ("referencia", t("Referência")),
+                             ("ferramentas", t("Ferramentas"))] %}
+    <button class="{% if secao == chave %}on{% endif %}"
+            hx-get="/vistas/cgv?aba={{ chave }}"
+            hx-target="#area" hx-swap="innerHTML">{{ rotulo }}</button>
+    {% endfor %}
+  </nav>
+
+  <div class="cfg-corpo">
+
+  {# ------------------------------------------------------------------ #}
+  {% if secao == "agenda" %}
+  {# A ficha abre AO LADO da lista (coluna à direita), e não acima: quem registra
+     várias conversas seguidas mantém a lista à vista o tempo todo. O painel some
+     quando vazio (`:empty`) e a lista ocupa a largura inteira. #}
+  <div class="ficha-lado">
+   <div class="ficha-lista">
+    <div class="dcr-topo">
+      <h2>{{ t('Agenda {ano}', ano=ano) }}</h2>
+      <a class="bt bt-min" href="/cgv.csv">{{ t('Exportar CSV') }}</a>
+    </div>
+    <p class="sub">{{ t('Uma linha por pessoa, em ordem hierárquica: cada líder vem seguido da sua equipe. Os três selos são os ciclos do ano. Clique para registrar ou consultar a conversa.') }}</p>
+    {% set curto = {'pendente': '○', 'agendada': '◐', 'realizada': '●'} %}
+    {% set rots = {'pendente': t('Pendente'), 'agendada': t('Agendada'), 'realizada': t('Realizada')} %}
+    <div class="rolagem-x"><table>
+      <thead><tr>
+        <th scope="col">{{ t('Colaborador') }}</th>
+        <th scope="col">{{ t('Cargo') }}</th>
+        <th scope="col">{{ t('Líder direto') }}</th>
+        {% for c, rot, quando, m in ciclos %}
+        <th scope="col" class="num" title="{{ t(quando) }}">{{ t(rot) }}</th>
+        {% endfor %}
+      </tr></thead>
+      <tbody>
+        {% for a in agenda %}
+        <tr class="clicavel" hx-get="/cgv/ficha/{{ a.ref|urlencode }}"
+            hx-target="#cgvFicha" hx-swap="innerHTML"
+            title="{{ t('Abrir a Conversa de Valor de {nome}', nome=a.nome) }}">
+          <td><span class="cgv-ident" style="padding-left:{{ [a.profundidade, 8]|min * 13 }}px">{{ a.nome }}</span></td>
+          <td>{{ a.cargo or '—' }}</td>
+          <td>{{ a.lider_nome or '—' }}</td>
+          {% for c, rot, quando, m in ciclos %}
+          <td class="num"><span class="cgv-selo {{ a.ciclos[c] }}"
+                title="{{ t(rot) }}: {{ rots[a.ciclos[c]] }}">{{ curto[a.ciclos[c]] }}</span></td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+   </div>
+   {# Clicar no fundo do modal (fora do cartão) fecha — esvaziar o alvo basta,
+      porque `.ficha-painel:empty` some. O × e o Esc fazem o mesmo. #}
+   <div id="cgvFicha" class="ficha-painel"
+        onclick="if(event.target===this)this.innerHTML=''"></div>
+  </div>
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "cobertura" %}
+  <h2>{{ t('Cobertura por ciclo') }}</h2>
+  <p class="sub">{{ t('Quanto cada uma das três conversas do ano já foi realizada. Só «realizada» conta — agendada é intenção, não feito.') }}</p>
+  <div class="cgv-ciclos">
+    {% for c in r.por_ciclo %}
+    <div class="cgv-ciclo-card">
+      <div class="cgv-ciclo-topo"><b>{{ t(c.rotulo) }}</b><span>{{ t(c.quando) }}</span></div>
+      <div class="cgv-barra" role="img"
+           aria-label="{{ c.pct }} %">
+        <i style="width:{{ c.pct }}%"></i></div>
+      <div class="cgv-ciclo-num"><b>{{ c.pct }} %</b>
+        <span>{{ t('{f} de {t} realizadas', f=c.realizadas, t=r.pessoas) }}</span></div>
+      <div class="cgv-ciclo-det">
+        {{ t('{a} agendadas · {p} pendentes', a=c.agendadas, p=c.pendentes) }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2>{{ t('Por líder') }}</h2>
+  <p class="sub">{{ t('Cada líder conduz as três conversas de cada liderado. A ordem começa por quem tem menos caminho andado — é onde o processo precisa de empurrão.') }}</p>
+  <div class="rolagem-x"><table>
+    <thead><tr>
+      <th scope="col">{{ t('Líder') }}</th>
+      <th scope="col">{{ t('Cargo') }}</th>
+      <th scope="col" class="num">{{ t('Liderados') }}</th>
+      <th scope="col" class="num">{{ t('Conversas') }}</th>
+      <th scope="col" class="num">{{ t('Realizadas') }}</th>
+      <th scope="col" class="num">{{ t('Conclusão') }}</th>
+    </tr></thead>
+    <tbody>
+      {% for g in por_lider %}
+      <tr>
+        <td>{{ g.nome }}</td>
+        <td>{{ g.cargo or '—' }}</td>
+        <td class="num">{{ g.liderados }}</td>
+        <td class="num">{{ g.conversas }}</td>
+        <td class="num">{{ g.realizadas }}</td>
+        <td class="num"><b>{{ g.pct }} %</b></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "referencia" %}
+  {% include "_cgv_referencia.html" %}
+
+  {# ------------------------------------------------------------------ #}
+  {% else %}
+  <h2>{{ t('Ferramentas do processo') }}</h2>
+  <p class="sub">{{ t('Os formulários oficiais em Excel, o manual completo em PDF e o passo a passo interativo. O sistema não importa as planilhas: elas são o modelo que cada um preenche e envia ao RH, como o manual manda.') }}</p>
+  <div class="g3">
+    <div class="cart base">
+      <span class="num">GEP-FOR-006</span>
+      <h3>{{ t('Formulário da Equipe') }}</h3>
+      <p>{{ t('A autoavaliação e a conversa do líder com cada liderado. Três abas: Completa, Check-in 1 e Check-in 2.') }}</p>
+      <a class="bt bt-min" href="/cgv/modelo/equipe">{{ t('Baixar modelo') }}</a>
+    </div>
+    <div class="cart base">
+      <span class="num">GEP-FOR-005</span>
+      <h3>{{ t('Formulário da Liderança') }}</h3>
+      <p>{{ t('O feedback que o liderado dá à liderança direta, sobre Liderar, Gerenciar e Responsabilizar-se.') }}</p>
+      <a class="bt bt-min" href="/cgv/modelo/lideranca">{{ t('Baixar modelo') }}</a>
+    </div>
+    <div class="cart base">
+      <span class="num">{{ t('MANUAL') }}</span>
+      <h3>{{ t('Manual completo') }}</h3>
+      <p>{{ t('Feedback, aprendabilidade e o processo Conversa de Valor, por Marina Albuquerque Sá — rev. junho 2026.') }}</p>
+      <a class="bt bt-min" href="/cgv/manual" target="_blank" rel="noopener">{{ t('Abrir PDF') }}</a>
+    </div>
+  </div>
+  <div class="cart" style="margin-top:calc(var(--u,16px));border-left:3px solid var(--laranja)">
+    <h3 style="margin-bottom:8px">{{ t('Passo a passo interativo') }}</h3>
+    <p>{{ t('Um guia navegável do processo: os princípios do feedback, a estrutura da CNV, a régua 70/20/10 e a dinâmica das conversas — para quem vai conduzir ou receber uma Conversa de Valor pela primeira vez.') }}</p>
+    <a class="bt" href="/cgv/interativo" target="_blank" rel="noopener"
+       style="margin-top:10px;display:inline-block">{{ t('Abrir o passo a passo') }}</a>
+  </div>
+  {% endif %}
+
+  </div>
+</div>
+{% endif %}

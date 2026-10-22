@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversa de Valor — Passo a passo</title>
+<meta name="description" content="Passo a passo interativo das Conversas que Geram Valor da GPlanSiS|Peoples.">
+<style>
+:root{
+  --grafite:#2D3336; --breu:#0B0D0E; --aco:#7D8286; --ambar:#EB6A20; --ouro:#F6A709;
+  --papel:#E7E9E6; --folha:#FBFCFB; --linha:#C6CBC7; --linha-fina:#D8DCD9; --ambar-vago:#FBEADF;
+  --serif:ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Segoe UI Mono",Consolas,monospace;
+  --u:clamp(15px,2.35vh,29px);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--papel);color:var(--grafite);font-family:var(--serif);
+  font-size:clamp(15px,1.78vh,19px);line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+  background-image:linear-gradient(to right,rgba(125,130,134,.10) 1px,transparent 1px),
+    linear-gradient(to bottom,rgba(125,130,134,.10) 1px,transparent 1px);background-size:46px 46px}
+.deck{position:relative;z-index:1;height:100%;display:flex;flex-direction:column}
+.tela{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  padding:calc(var(--u)*1.9) clamp(20px,5vw,86px) calc(var(--u)*1.1);
+  display:flex;flex-direction:column;justify-content:center;
+  animation:entra .34s cubic-bezier(.2,.7,.3,1) both}
+.tela[hidden]{display:none}
+@keyframes entra{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.faixa{width:100%;max-width:1180px;margin:0 auto}
+.olho{font-family:var(--mono);font-size:clamp(10px,1.15vh,12px);letter-spacing:.22em;
+  text-transform:uppercase;color:var(--aco);display:flex;align-items:center;gap:12px;margin-bottom:calc(var(--u)*.8)}
+.olho::after{content:"";flex:1;height:1px;background:var(--linha)}
+.olho b{color:var(--ambar);font-weight:700}
+h1{font-size:clamp(36px,6.8vh,78px);line-height:.98;letter-spacing:-.035em;font-weight:800;margin:0 0 calc(var(--u)*.7)}
+h2{font-size:clamp(26px,4.9vh,52px);line-height:1.03;letter-spacing:-.03em;font-weight:750;margin:0 0 calc(var(--u)*.55);max-width:26ch}
+h2 em{font-style:normal;color:var(--ambar)}
+.linha-fina{font-size:clamp(16px,2.36vh,25px);line-height:1.4;max-width:64ch;margin:0 0 calc(var(--u)*.9);font-weight:400}
+.linha-fina strong{font-weight:650}
+.miuda{font-size:clamp(12px,1.6vh,15px);color:var(--aco);line-height:1.5;max-width:72ch}
+.mono{font-family:var(--mono)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:clamp(16px,3vw,48px);align-items:start}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(11px,1.5vw,20px)}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(9px,1.2vw,16px)}
+.cart{background:var(--folha);border:1px solid var(--linha-fina);border-radius:3px;
+  padding:calc(var(--u)*.8) calc(var(--u)*.9);position:relative}
+.cart.base{border-bottom:2px solid var(--ambar)}
+.cart h3{font-size:clamp(15px,2vh,20px);margin:0 0 6px;font-weight:700;letter-spacing:-.01em}
+.cart p{margin:0;font-size:clamp(12.5px,1.6vh,16px);color:var(--aco);line-height:1.46}
+.cart .num{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--ambar);display:block;margin-bottom:9px}
+ul.itens{list-style:none;margin:0;padding:0}
+ul.itens li{padding:9px 0 9px 26px;border-bottom:1px solid var(--linha-fina);position:relative;font-size:clamp(14px,1.98vh,19px)}
+ul.itens li:last-child{border-bottom:0}
+ul.itens li::before{content:"";position:absolute;left:2px;top:calc(50% - 1px);width:12px;height:2px;background:var(--ambar)}
+ul.itens li b{font-weight:650}
+.passos{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--linha)}
+.passos .p{padding:calc(var(--u)*.85) calc(var(--u)*.8);border-right:1px solid var(--linha-fina);position:relative}
+.passos .p:last-child{border-right:0}
+.passos .p::before{content:"";position:absolute;top:-1px;left:calc(var(--u)*.8);width:24px;height:3px;background:var(--ambar)}
+.passos .p .rot{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--ambar);display:block;margin-bottom:9px}
+.passos .p h3{font-size:clamp(15px,2vh,20px);margin:0 0 6px;font-weight:700}
+.passos .p p{margin:0;font-size:clamp(13px,1.65vh,16px);color:var(--aco);line-height:1.45}
+.regua{display:flex;flex-direction:column;gap:8px}
+.regua-faixa{display:flex;align-items:center;gap:18px;background:var(--folha);border:1px solid var(--linha-fina);border-radius:3px;padding:12px 18px}
+.regua-faixa.base{border-bottom:2px solid var(--ambar)}
+.regua-pct{font-family:var(--mono);font-size:clamp(26px,4vh,40px);font-weight:800;color:var(--ambar);min-width:96px;text-align:right}
+.regua-faixa b{font-size:clamp(15px,2vh,19px)}
+.regua-faixa p{margin:2px 0 0;font-size:clamp(12.5px,1.6vh,15px);color:var(--aco)}
+.cnv{display:grid;grid-template-columns:1fr 1fr;gap:clamp(10px,1.5vw,18px)}
+.cnv .passo{background:var(--folha);border:1px solid var(--linha-fina);border-left:3px solid var(--ambar);border-radius:0 3px 3px 0;padding:12px 16px}
+.cnv .passo b{font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--ambar)}
+.cnv .passo em{display:block;font-style:italic;margin-top:6px;font-size:clamp(13px,1.75vh,17px)}
+.tela.breu{background:var(--breu);color:#E8E9E7}
+.tela.breu h1,.tela.breu h2{color:#FBFCFB}
+.tela.breu .linha-fina{color:#B9BDBA}
+.tela.breu .olho{color:#7D8286}.tela.breu .olho::after{background:#3A3F41}
+.tela.breu .cart{background:#14181A;border-color:#31373A}.tela.breu .cart p{color:#9AA09D}.tela.breu .cart h3{color:#FBFCFB}
+.tela.breu .miuda{color:#7D8286}
+.tela.breu .passos{border-top-color:#3A3F41}.tela.breu .passos .p{border-right-color:#2A2F31}
+.tela.breu .passos .p h3{color:#FBFCFB}.tela.breu .passos .p p{color:#9AA09D}
+#capa{justify-content:flex-end;padding-bottom:calc(var(--u)*1.8)}
+.capa-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;margin-bottom:auto}
+.tag-sis{font-family:var(--mono);font-size:clamp(11px,1.4vh,14px);letter-spacing:.26em;font-weight:700}
+.tag-sis span{color:var(--ambar)}
+.ficha{font-family:var(--mono);font-size:10px;letter-spacing:.13em;color:var(--aco);text-align:right;line-height:1.9}
+.ficha b{color:var(--grafite);font-weight:600}
+.ajuda{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--aco);display:flex;gap:16px;flex-wrap:wrap;margin-top:calc(var(--u)*1.1)}
+.ajuda kbd{font-family:var(--mono);border:1px solid var(--linha);border-bottom-width:2px;border-radius:2px;padding:2px 6px;background:var(--folha);color:var(--grafite);font-size:10px}
+.barramento{flex:0 0 auto;border-top:1px solid var(--linha);background:rgba(251,252,251,.72);
+  backdrop-filter:blur(6px);display:flex;align-items:stretch;padding:0 clamp(12px,3vw,32px);height:52px}
+.barramento .marca{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--aco);display:flex;align-items:center;padding-right:20px;white-space:nowrap}
+.barramento .marca b{color:var(--grafite)}
+.trilho{flex:1;display:flex;align-items:stretch;min-width:0;gap:2px}
+.trilho button{flex:1;min-width:0;background:none;border:0;padding:0;cursor:pointer;position:relative;display:flex;align-items:flex-start;justify-content:center}
+.trilho button i{display:block;width:100%;height:3px;background:var(--linha);transition:background .2s,height .2s}
+.trilho button:hover i{background:var(--aco)}
+.trilho button[aria-current="true"] i{background:var(--ambar);height:6px}
+.trilho button span{position:absolute;top:14px;font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--aco);opacity:0;transition:opacity .18s;white-space:nowrap;pointer-events:none}
+.trilho button:hover span,.trilho button:focus-visible span{opacity:1}
+.contador{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--aco);display:flex;align-items:center;padding-left:20px;white-space:nowrap}
+.contador b{color:var(--grafite);font-weight:700}
+a:focus-visible,button:focus-visible{outline:2px solid var(--ambar);outline-offset:2px}
+@media (max-width:820px){.g2,.cnv{grid-template-columns:1fr}.g3,.g4,.passos{grid-template-columns:1fr 1fr}
+  .passos .p{border-bottom:1px solid var(--linha-fina)}.tela{justify-content:flex-start;padding-top:calc(var(--u)*1.3)}
+  .trilho button span{display:none}h2{max-width:none}}
+@media (max-width:520px){.g3,.g4,.passos{grid-template-columns:1fr}.ficha{text-align:left}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;transition-duration:.001s!important}}
+@media print{body{overflow:visible;background:#fff}.tela{display:flex!important;page-break-after:always;height:auto;min-height:auto;padding:24px}
+  .barramento,.ajuda{display:none!important}body::before{display:none}}
+</style>
+</head>
+<body>
+<main class="deck" id="deck">
+
+<!-- 01 · CAPA -->
+<section class="tela" id="capa" data-titulo="Boas-vindas" aria-label="Capa">
+  <div class="faixa">
+    <div class="capa-topo">
+      <div class="tag-sis">Conversa de Valor<span> · </span>CONVERSAS QUE GERAM VALOR</div>
+      <div class="ficha">GPlanSiS|Peoples<br><b>MANUAL INTERATIVO</b><br>REV. JUN · 2026</div>
+    </div>
+    <div class="olho"><b>Feedback</b> · desenvolvimento contínuo</div>
+    <h1>Conversas que<br>geram valor.</h1>
+    <p class="linha-fina" style="max-width:52ch">
+      O feedback estruturado da casa, três vezes ao ano. Um passo a passo para
+      quem vai <strong>conduzir</strong> ou <strong>receber</strong> uma Conversa de Valor —
+      os princípios, a estrutura da conversa e o processo.
+    </p>
+    <div class="ajuda">
+      <span><kbd>→</kbd> avança</span><span><kbd>←</kbd> volta</span><span><kbd>F</kbd> tela cheia</span>
+    </div>
+  </div>
+</section>
+
+<!-- 02 · O QUE É FEEDBACK -->
+<section class="tela" data-titulo="Feedback" hidden>
+  <div class="faixa">
+    <div class="olho"><b>01</b> · feedback</div>
+    <h2>Feedback é sempre <em>construtivo.</em></h2>
+    <p class="linha-fina">Uma das ferramentas mais poderosas do nosso crescimento — e ela pertence ao dia a dia, não só à avaliação anual.</p>
+    <ul class="itens">
+      <li>Dar e receber feedback tem a ver com aprendizado e crescimento — <b>intenção positiva.</b></li>
+      <li>Um feedback de qualidade <b>contextualiza</b> a situação observada e a percepção sobre o comportamento.</li>
+      <li>Enfatizar os <b>pontos fortes</b>: nossas qualidades são recursos para lidar com os desafios.</li>
+      <li>O feedback <b>olha para frente.</b></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 03 · CNV -->
+<section class="tela" data-titulo="A estrutura (CNV)" hidden>
+  <div class="faixa">
+    <div class="olho"><b>02</b> · comunicação não-violenta</div>
+    <h2>Quatro passos <em>para uma conversa que flui.</em></h2>
+    <p class="linha-fina">A Comunicação Não-Violenta dá a espinha de qualquer feedback difícil. O exemplo do manual, na íntegra:</p>
+    <div class="cnv">
+      <div class="passo"><b>Observação</b> — o que aconteceu, sem julgamento.
+        <em>"Observei que o relatório não sairá no prazo combinado…"</em></div>
+      <div class="passo"><b>Sentimento</b> — como isso faz você se sentir.
+        <em>"…e isso me deixa preocupado, porque…"</em></div>
+      <div class="passo"><b>Necessidade</b> — o que está por trás do sentimento.
+        <em>"…é importante que o prazo seja cumprido, para que os colegas confiem em nós."</em></div>
+      <div class="passo"><b>Pedido</b> — um pedido ou acordo positivo.
+        <em>"O que podemos fazer para entregar até sexta?"</em></div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 · APRENDABILIDADE 70/20/10 -->
+<section class="tela" data-titulo="Aprendabilidade" hidden>
+  <div class="faixa">
+    <div class="olho"><b>03</b> · desenvolvimento contínuo é um valor</div>
+    <h2>O PDI acelera, <em>na régua 70/20/10.</em></h2>
+    <p class="linha-fina">O Plano de Desenvolvimento Individual sai da conversa. Priorize até três competências, com ações factíveis.</p>
+    <div class="regua">
+      <div class="regua-faixa base"><b class="regua-pct">70%</b><div><b>Aprendizado experimental</b><p>Aprender fazendo: colocar o conhecimento em prática, experimentando.</p></div></div>
+      <div class="regua-faixa base"><b class="regua-pct">20%</b><div><b>Aprendizado social</b><p>Aprender com os outros: ensinar, observar, modelar.</p></div></div>
+      <div class="regua-faixa base"><b class="regua-pct">10%</b><div><b>Aprendizado formal</b><p>Aprender por cursos, leitura, documentários e vídeos.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 · O QUE É Conversa de Valor -->
+<section class="tela" data-titulo="O que é a Conversa de Valor" hidden>
+  <div class="faixa">
+    <div class="olho"><b>04</b> · o processo</div>
+    <h2>A Conversa de Valor alinha <em>expectativas e desenvolvimento.</em></h2>
+    <p class="linha-fina">Uma conversa entre líder e liderado, em torno de quatro elementos. Sem nota, sem ranking — desenvolvimento.</p>
+    <div class="g4">
+      <div class="cart base"><span class="num">01</span><h3>Entregas e Resultados</h3><p>As principais contribuições do período — e a visão de futuro.</p></div>
+      <div class="cart base"><span class="num">02</span><h3>Valores GPlanSiS</h3><p>Teamwork, Respect, Innovation, Ownership vividos no dia a dia.</p></div>
+      <div class="cart base"><span class="num">03</span><h3>PDI</h3><p>Até três competências a desenvolver, com ações e prazos.</p></div>
+      <div class="cart base"><span class="num">04</span><h3>Carreira</h3><p>Os próximos passos desejados e como a empresa pode apoiar.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 · DINÂMICA -->
+<section class="tela" data-titulo="A dinâmica" hidden>
+  <div class="faixa">
+    <div class="olho"><b>05</b> · como a conversa acontece</div>
+    <h2>Três momentos, <em>dois formulários.</em></h2>
+    <p class="linha-fina">Todos preenchem os dois formulários na condição de liderado. O mesmo arquivo vale para as três conversas do ano.</p>
+    <div class="passos">
+      <div class="p"><span class="rot">PREPARAÇÃO</span><h3>Cada um se prepara</h3><p>A liderança usa o formulário como preparação e agenda a conversa. O colaborador faz a autoavaliação e prepara o feedback à liderança.</p></div>
+      <div class="p"><span class="rot">FEEDBACK</span><h3>A conversa</h3><p>O colaborador começa pela autoavaliação; a liderança contribui. Registra-se a versão de consenso. O colaborador dá feedback à liderança.</p></div>
+      <div class="p"><span class="rot">ENCERRAMENTO</span><h3>Consolidação</h3><p>A liderança encaminha ao RH e ao colaborador a versão final e o feedback recebido. O colaborador recebe a versão enviada.</p></div>
+    </div>
+    <p class="miuda" style="margin-top:calc(var(--u)*1)">Formulário da Equipe: <b class="mono">GEP-FOR-006</b> · Formulário da Liderança: <b class="mono">GEP-FOR-005</b>. Enviados ao RH: <b class="mono">rh@gplansis.com</b></p>
+  </div>
+</section>
+
+<!-- 07 · AGENDA -->
+<section class="tela" data-titulo="A agenda do ano" hidden>
+  <div class="faixa">
+    <div class="olho"><b>06</b> · três vezes ao ano</div>
+    <h2>A regra de ouro é <em>planejar e agendar.</em></h2>
+    <p class="linha-fina">Bloqueie agora as datas do período. O que não é agendado não acontece.</p>
+    <div class="g3">
+      <div class="cart base"><span class="num">MAR / ABR</span><h3>Conversa de Valor Completa</h3><p>A conversa aprofundada sobre cada elemento. Reservar 1 hora por pessoa.</p></div>
+      <div class="cart base"><span class="num">JULHO</span><h3>Check-in 1</h3><p>Acompanhamento e ajuste de rota. Rever o PDI. Reservar 40 min por pessoa.</p></div>
+      <div class="cart base"><span class="num">NOVEMBRO</span><h3>Check-in 2</h3><p>Segundo acompanhamento da evolução. Reservar 40 min por pessoa.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 · NO SISTEMA -->
+<section class="tela breu" data-titulo="No sistema" hidden>
+  <div class="faixa">
+    <div class="olho"><b>07</b> · encerramento</div>
+    <h2>O rastro da conversa <em>fica no organograma.</em></h2>
+    <p class="linha-fina" style="max-width:58ch">
+      A aba <strong>Conversa de Valor</strong> monta a agenda de quem conversa com quem, a partir da estrutura.
+      Registre ali o status, a data e o consenso de cada conversa — o texto completo continua no
+      formulário em Excel enviado ao RH.
+    </p>
+    <div class="g3" style="margin-top:calc(var(--u)*1)">
+      <div class="cart"><span class="num" style="color:#EB6A20">AGENDA</span><h3>Quem, com quem</h3><p>Derivada da árvore: cada pessoa e o seu líder direto, os três ciclos do ano.</p></div>
+      <div class="cart"><span class="num" style="color:#EB6A20">HISTÓRICO</span><h3>Sempre à mão</h3><p>As conversas de anos anteriores ficam guardadas e podem ser consultadas a qualquer momento.</p></div>
+      <div class="cart"><span class="num" style="color:#EB6A20">FERRAMENTAS</span><h3>Modelos e manual</h3><p>Os formulários em Excel e este manual, a um clique na própria vista.</p></div>
+    </div>
+    <p class="miuda" style="margin-top:calc(var(--u)*1.3)">Dúvidas? Consulte o seu RH. &nbsp;·&nbsp; <span class="mono">Conversa de Valor — Conversas que Geram Valor · rev. junho 2026</span></p>
+  </div>
+</section>
+
+</main>
+
+<nav class="barramento" aria-label="Navegação">
+  <div class="marca"><b>Conversa de Valor</b>&nbsp;&nbsp;PASSO A PASSO</div>
+  <div class="trilho" id="trilho"></div>
+  <div class="contador"><b id="atual">01</b>&nbsp;/&nbsp;<span id="total">08</span></div>
+</nav>
+
+<script>
+(function(){
+  "use strict";
+  var telas = Array.prototype.slice.call(document.querySelectorAll(".tela"));
+  var trilho = document.getElementById("trilho");
+  var elAtual = document.getElementById("atual");
+  var pos = 0;
+  function pad(n){ return (n < 10 ? "0" : "") + n; }
+  document.getElementById("total").textContent = pad(telas.length);
+  telas.forEach(function(t, k){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = '<i></i><span>' + t.dataset.titulo + '</span>';
+    b.setAttribute("aria-label", "Ir para " + t.dataset.titulo);
+    b.addEventListener("click", function(){ ir(k); });
+    trilho.appendChild(b);
+  });
+  var botoes = trilho.querySelectorAll("button");
+  function ir(k){
+    if (k < 0 || k >= telas.length || k === pos) return;
+    telas[pos].hidden = true; pos = k; telas[pos].hidden = false; telas[pos].scrollTop = 0;
+    for (var j = 0; j < telas.length; j++) botoes[j].setAttribute("aria-current", j === pos ? "true" : "false");
+    elAtual.textContent = pad(pos + 1);
+  }
+  document.addEventListener("keydown", function(e){
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (k === "ArrowRight" || k === "PageDown" || k === " "){ e.preventDefault(); ir(pos + 1); }
+    else if (k === "ArrowLeft" || k === "PageUp"){ e.preventDefault(); ir(pos - 1); }
+    else if (k === "Home"){ e.preventDefault(); ir(0); }
+    else if (k === "End"){ e.preventDefault(); ir(telas.length - 1); }
+    else if (k === "f" || k === "F"){ e.preventDefault();
+      if (document.fullscreenElement) document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); }
+  });
+  var x0 = null, y0 = null;
+  document.addEventListener("touchstart", function(e){ x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, {passive:true});
+  document.addEventListener("touchend", function(e){
+    if (x0 === null) return;
+    var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) ir(pos + (dx < 0 ? 1 : -1));
+    x0 = null; y0 = null;
+  }, {passive:true});
+  telas.forEach(function(t, k){ t.hidden = k !== 0; });
+  botoes[0].setAttribute("aria-current", "true");
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{#
+  Detalhe de uma assistência. O histórico mostra o recorte e o custo; aqui se
+  lê a resposta inteira, formatada — e daqui sai o PDF.
+#}
+<div class="det-maria">
+  <div class="det-maria-topo">
+    <div>
+      <b>{{ t(a.capacidade|capitalize) }}</b>
+      <span class="cod">{{ a.modelo }}</span>
+      <span class="cod">{{ a.escopo }}</span>
+      <span class="cod">{{ a.quando[:16]|replace('T', ' ') }}</span>
+    </div>
+    <div class="acoes" style="margin:0">
+      {# Emissão atrás do portão: o botão existe sempre, e a recusa explica. #}
+      <a class="bt bt-min" href="/maria/assistencia/{{ a.id }}/pdf"
+         onclick="pdfMaria(event, this.href)">{{ t('Baixar PDF') }}</a>
+      <button class="bt" onclick="fecharDetalheMaria()">{{ t('Fechar') }}</button>
+    </div>
+  </div>
+
+  <p class="det-maria-pergunta"><b>{{ t('Pergunta') }}:</b> {{ a.pergunta }}</p>
+
+  {% if not validacao.libera %}
+  <div class="aviso">
+    <b>{{ t('{n} achado(s) bloqueiam a emissão do PDF.', n=validacao.achados|length) }}</b>
+    {{ t('O texto continua aqui e no histórico — o que não sai é o artefato que circula fora do sistema. Peça a resposta de novo à MarIA.') }}
+    <ul class="det-maria-achados">
+      {% for x in validacao.achados[:8] %}
+      <li><code>{{ x.regra }}</code> {{ x.mensagem }}
+        {% if x.trecho %}<span class="cod">…{{ x.trecho }}…</span>{% endif %}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {# `corpo` já vem escapado e remontado por maria.formatar: nada do texto do
+     modelo sobrevive como tag. #}
+  <div class="det-maria-corpo">{{ corpo|safe }}</div>
+
+  <p class="pista">
+    {{ t('{entrada}→{saida} tokens · US$ {custo} · validação: {estado}',
+         entrada=a.entrada, saida=a.saida, custo='%.4f'|format(a.custo_usd),
+         estado=(t('gramática {locale}', locale=validacao.locale)
+                 if validacao.completa else t('checagem mecânica'))) }}
+  </p>
+</div>

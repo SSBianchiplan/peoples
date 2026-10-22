@@ -1,0 +1,19 @@
+{#
+  Tempo de empresa. A única vista que fala do passado: tudo o mais descreve
+  como a empresa está agora, e a admissão diz como ela chegou aqui.
+
+  Respeita o filtro como as demais — os números são do recorte que está na
+  tela, não da base inteira. Um indicador que ignora o filtro responde outra
+  pergunta que a que a pessoa acabou de fazer.
+
+  A casca só monta a barra e a folha; o corpo mora em `_tempo_corpo.html`
+  porque é ele, e só ele, que a rota `/filtros` devolve.
+#}
+<div class="vista">
+  {% include "_filtros.html" %}
+  <div class="folha">
+    <div id="tempoCorpo">
+      {% include "_tempo_corpo.html" %}
+    </div>
+  </div>
+</div>

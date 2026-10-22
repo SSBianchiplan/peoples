@@ -1,0 +1,59 @@
+{#
+  Comitê de Meritocracia — o esboço.
+
+  Reúne quem o Mapa indicou (meritocracia / promoção / rotativo / outros) e
+  cruza com o que o sistema já sabe: a prontidão, o risco/impacto de perda e a
+  cobertura de Conversa de Valor do ano — quantas das três conversas a pessoa já teve. Não é o
+  processo completo do comitê; é a pauta pronta a partir do Mapa e da Conversa de Valor, sem
+  redigitar nada.
+#}
+<h2>{{ t('Comitê de Meritocracia') }}</h2>
+<p class="sub">{{ t('A pauta que sai do Mapa: os indicados por ação, cruzados com a prontidão e com a cobertura de Conversa de Valor do ano. A decisão é do comitê; o sistema só reúne o que já sabe.') }}</p>
+
+{% set ns = namespace(total=0) %}
+{% for cod, rot in acoes %}{% set ns.total = ns.total + por_acao[cod].pessoas|length %}{% endfor %}
+
+{% if not ns.total %}
+<p class="vazio">{{ t('Nenhuma ação imediata registrada neste recorte. Abra as fichas e classifique a «Ação Imediata» para montar a pauta.') }}</p>
+{% else %}
+{% for cod, rot in acoes %}
+{% set gente = por_acao[cod].pessoas %}
+{% if gente %}
+<div class="grupo">
+  <h3 class="tal-comite-tit"><span class="tal-acao a-{{ cod }}">{{ t(rot) }}</span>
+    <small>{{ gente|length }}</small></h3>
+  <div class="rolagem-x"><table>
+    <thead><tr>
+      <th scope="col">{{ t('Colaborador') }}</th>
+      <th scope="col">{{ t('Cargo') }}</th>
+      <th scope="col">{{ t('Líder direto') }}</th>
+      <th scope="col">{{ t('Prontidão') }}</th>
+      <th scope="col">{{ t('Risco/Impacto') }}</th>
+      <th scope="col" class="num">{{ t('Conversa de Valor no ano') }}</th>
+    </tr></thead>
+    <tbody>
+      {% for a in gente %}
+      <tr class="clicavel" hx-get="/talentos/ficha/{{ a.ref|urlencode }}"
+          hx-target="#talentosFicha" hx-swap="innerHTML"
+          title="{{ t('Abrir o Mapa de {nome}', nome=a.nome) }}">
+        <td>{{ a.nome }}</td>
+        <td>{{ a.cargo or '—' }}</td>
+        <td>{{ a.lider_nome or '—' }}</td>
+        <td>{% if a.prontidao %}{{ t(rot_prontidao[a.prontidao]) }}{% else %}—{% endif %}</td>
+        <td>
+          {% if a.risco_perda %}<span class="tal-selo risco-{{ a.risco_perda }}">{{ t(rot_risco[a.risco_perda]) }}</span>{% else %}—{% endif %}
+          <span class="tal-sep">/</span>
+          {% if a.impacto_perda %}<span class="tal-selo imp-{{ a.impacto_perda }}">{{ t(rot_impacto[a.impacto_perda]) }}</span>{% else %}—{% endif %}
+        </td>
+        <td class="num">{{ cobertura_cgv.get(a.ref, 0) }}/3</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endif %}
+{% endfor %}
+{% endif %}
+
+<div id="talentosFicha" class="ficha-painel"
+     onclick="if(event.target===this)this.innerHTML=''"></div>

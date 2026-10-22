@@ -1,0 +1,141 @@
+{#
+  Editor de acesso de UMA pessoa, em MODAL (papel + escopo + módulos visíveis).
+  Abre pela "Editar" da lista (hx-get -> #acessoModal, que é `.ficha-painel`).
+  Fecha no × do topo, no clique fora, ou no Esc — todos esvaziam o alvo.
+#}
+<div class="dcr-ficha">
+  <div class="dcr-cabeca">
+    <div>
+      <h2 style="margin:0;font-size:15px">{{ a.nome }}</h2>
+      <div class="cod" style="opacity:.6">{{ a.codigo }}</div>
+    </div>
+    <div class="dcr-cabeca-acoes">
+      <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
+              onclick="document.getElementById('acessoModal').innerHTML=''">×</button>
+    </div>
+  </div>
+
+  <form hx-post="/config/acessos/salvar" hx-target="#area" hx-swap="innerHTML"
+        style="padding:2px 2px 4px">
+    <input type="hidden" name="ref" value="{{ a.ref }}">
+    <div class="grade">
+      <div>
+        <label>{{ t('Papel') }}</label>
+        <select name="papel">
+          {% for chave, p in perfis.items() %}
+          <option value="{{ chave }}" {% if a.papel == chave %}selected{% endif %}>{{ t(p.rotulo) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>{{ t('Escopo') }}</label>
+        <select name="escopo_tipo">
+          {% for tp, rot in [("tudo", t("Tudo (sem recorte)")), ("proprio", t("Só o próprio nó")),
+                             ("subarvore", t("Subárvore (gestor)")), ("vertical", t("Por vertical")),
+                             ("departamento", t("Por departamento"))] %}
+          <option value="{{ tp }}" {% if a.tipo == tp %}selected{% endif %}>{{ rot }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>{{ t('Valor do escopo (opcional)') }}</label>
+        {# Autocompletar com as VERTICAIS e os DEPARTAMENTOS reais do sistema:
+           é assim que se dá "permissão por vertical" sem digitar às cegas. #}
+        <input name="escopo_valor" maxlength="80" value="{{ a.valor }}"
+               list="dl-escopo" autocomplete="off"
+               placeholder="{{ t('vazio = o da própria pessoa') }}">
+        <datalist id="dl-escopo">
+          {% for v in verticais %}<option value="{{ v }}" label="{{ t('Vertical') }}">{% endfor %}
+          {% for d in departamentos %}<option value="{{ d }}" label="{{ t('Departamento') }}">{% endfor %}
+        </datalist>
+      </div>
+    </div>
+
+    {# Visibilidade de LEITURA, independente da edição: com o escopo estreito a
+       pessoa edita só o seu, mas esta flag decide se ela VÊ tudo ou só o escopo. #}
+    <label class="check" style="margin-top:14px">
+      <input type="checkbox" name="ver_tudo" value="1" {% if a.ver_tudo %}checked{% endif %}>
+      <span>{{ t('Vê o organograma inteiro (leitura), mesmo com escopo de edição restrito') }}</span>
+    </label>
+
+    <label style="margin-top:14px">{{ t('Módulos visíveis') }}</label>
+    <div class="modulos-topo">
+      <label class="check">
+        <input type="checkbox" id="mod-todos" onchange="marcarTodosModulos(this)">
+        <span>{{ t('Selecionar todos os módulos') }}</span>
+      </label>
+      <span>{{ t('Nenhum marcado = vê todos. O Administrador vê todos de qualquer forma.') }}</span>
+    </div>
+    <div class="modulos-grade" id="mod-grade">
+      {% for chave, rot in modulos %}
+      <label class="check">
+        <input type="checkbox" name="modulos" value="{{ chave }}" onchange="sincronizarTodosModulos()"
+               {% if chave in a.modulos %}checked{% endif %}>
+        <span>{{ t(rot) }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <script>
+      function marcarTodosModulos(master){
+        document.querySelectorAll('#mod-grade input[name="modulos"]').forEach(function(c){
+          c.checked = master.checked;
+        });
+      }
+      function sincronizarTodosModulos(){
+        var cs = Array.prototype.slice.call(
+          document.querySelectorAll('#mod-grade input[name="modulos"]'));
+        var m = document.getElementById('mod-todos');
+        var n = cs.filter(function(c){ return c.checked; }).length;
+        m.checked = n === cs.length;
+        m.indeterminate = n > 0 && n < cs.length;
+      }
+      sincronizarTodosModulos();
+    </script>
+
+    <div class="acoes" style="margin-top:16px;gap:8px">
+      <button class="bt forte" type="submit" style="flex:0 0 160px">{{ t('Salvar acesso') }}</button>
+      {% if a.atribuido %}
+      <button class="bt perigo" type="button" hx-post="/config/acessos/remover"
+              hx-target="#area" hx-swap="innerHTML" hx-vals='{"ref": "{{ a.ref }}"}'>
+        {{ t('Remover acesso') }}</button>
+      {% endif %}
+      <button class="bt" type="button"
+              onclick="document.getElementById('acessoModal').innerHTML=''">{{ t('Cancelar') }}</button>
+    </div>
+  </form>
+
+  {# Senha de acesso — a CREDENCIAL, separada do RBAC acima. Formulário próprio:
+     definir senha não é salvar acesso, e um não pode disparar o outro. #}
+  <div style="padding:10px 2px 4px;border-top:1px solid var(--linha);margin-top:8px">
+    <label>{{ t('Senha de acesso') }}</label>
+    <p class="pista" style="margin:0 0 8px">
+      {% if not a.email %}{{ t('Este colaborador não tem e-mail; cadastre um e-mail antes de definir a senha.') }}
+      {% elif a.login %}{{ t('Tem senha definida') }} · {{ a.email }}{% if a.precisa_trocar %} · {{ t('troca pendente no próximo login') }}{% endif %}
+      {% else %}{{ t('Sem senha — não consegue entrar') }} · {{ a.email }}{% endif %}
+    </p>
+    {% if a.email %}
+    <form hx-post="/config/acessos/senha" hx-target="#area" hx-swap="innerHTML" autocomplete="off">
+      <input type="hidden" name="ref" value="{{ a.ref }}">
+      <div class="dupla" style="align-items:flex-end;gap:10px">
+        <div style="flex:1">
+          <label>{{ t('Nova senha (mínimo {n} caracteres)', n=a.minimo) }}</label>
+          <input name="senha" type="password" minlength="{{ a.minimo }}" required autocomplete="new-password">
+        </div>
+        <label class="check" style="margin:0 0 6px">
+          <input type="checkbox" name="temporaria" value="1" checked>
+          <span>{{ t('Exigir troca no primeiro acesso') }}</span>
+        </label>
+      </div>
+      <div class="acoes" style="margin-top:10px;gap:8px">
+        <button class="bt forte" type="submit" style="flex:0 0 160px">{{ t('Definir senha') }}</button>
+        {% if a.login %}
+        <button class="bt perigo" type="button" hx-post="/config/acessos/senha/remover"
+                hx-target="#area" hx-swap="innerHTML" hx-vals='{"ref": "{{ a.ref }}"}'
+                hx-confirm="{{ t('Remover a senha de {email}? A pessoa deixa de conseguir entrar.', email=a.email) }}">
+          {{ t('Remover senha (bloqueia o login)') }}</button>
+        {% endif %}
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>

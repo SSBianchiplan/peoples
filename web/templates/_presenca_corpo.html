@@ -1,0 +1,22 @@
+{# Corpo do popover de presença: quem está ativo agora, resolvido contra o
+   organograma. Recarregado a cada 25s pelo htmx (o próprio pedido renova a
+   presença de quem olha). O crachá de contagem no botão é atualizado por OOB —
+   fica correto mesmo com o popover fechado. #}
+{% if ativos %}
+<ul class="presenca-lista">
+  {% for a in ativos %}
+  <li class="presenca-item{{ ' eu' if a.eu }}">
+    <span class="presenca-av" aria-hidden="true">{{ a.iniciais }}</span>
+    <span class="presenca-info">
+      <b>{{ a.nome }}{% if a.eu %} · {{ t('você') }}{% endif %}</b>
+      {% if a.cargo %}<small>{{ a.cargo }}</small>{% endif %}
+    </span>
+    <span class="presenca-luz" title="{{ t('ativo agora') }}" aria-hidden="true"></span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="presenca-nada">{{ t('Ninguém por aqui agora.') }}</p>
+{% endif %}
+<span id="presencaN" hx-swap-oob="true"
+      class="presenca-n{{ ' zero' if not ativos }}">{{ ativos|length }}</span>

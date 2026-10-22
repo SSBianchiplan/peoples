@@ -1,0 +1,129 @@
+{# Sincronização do centro de custo com o Microsoft 365.
+
+   Mesmos três passos da carga por planilha, e de propósito: quem já atualizou
+   a estrutura uma vez não precisa aprender um segundo jeito de conferir antes
+   de aplicar. A diferença é que aqui o passo 1 não envia arquivo — ele vai
+   buscar no Graph. #}
+<div class="cartao">
+  <h2>{{ t('Sincronizar centro de custo com o Microsoft 365') }}</h2>
+  <p class="sub">{{ t('Lê o campo do diretório corporativo e compara com o que está gravado. Só o centro de custo é tocado, e nada é escrito no Microsoft 365.') }}</p>
+
+  {% if not m365_ligado %}
+  <div class="aviso">{{ t('Falta configurar o Microsoft Entra ID. Defina AZURE_TENANT_ID, AZURE_CLIENT_ID e AZURE_CLIENT_SECRET no ambiente, e conceda a permissão de aplicativo User.Read.All com consentimento de administrador.') }}</div>
+  {% else %}
+
+  <div class="passos">
+    <div class="passo {% if not sincronizacao %}on{% else %}feito{% endif %}">
+      <b>{{ t('Passo 1') }}</b> {{ t('Buscar no Microsoft 365') }}</div>
+    <div class="passo {% if sincronizacao %}on{% endif %}">
+      <b>{{ t('Passo 2') }}</b> {{ t('Conferir o que muda') }}</div>
+    <div class="passo"><b>{{ t('Passo 3') }}</b> {{ t('Aplicar e registrar') }}</div>
+  </div>
+
+  {% if not sincronizacao %}
+  <p class="pista">{{ t('Campo lido:') }} <code>{{ m365_campo }}</code> ·
+    {{ t('só contas habilitadas e licenciadas entram — sala, caixa compartilhada e conta de serviço ficam de fora.') }}</p>
+  <div class="acoes">
+    <button class="bt forte" style="flex:0 0 230px"
+            hx-post="/config/m365/analisar" hx-target="#area" hx-swap="innerHTML">
+      {{ t('Buscar e comparar') }}</button>
+  </div>
+
+  {% else %}
+  <p class="sub">{{ sincronizacao.total_m365 }} {{ t('conta(s) lida(s) do Microsoft 365 · campo') }}
+    <code>{{ sincronizacao.atributo }}</code></p>
+
+  {% for aviso in sincronizacao.avisos %}<div class="aviso">{{ aviso }}</div>{% endfor %}
+
+  <div class="painel-numeros">
+    <div><span>{{ t('a atualizar') }}</span><b class="numero">{{ sincronizacao.divergentes|length }}</b></div>
+    <div><span>{{ t('a preencher') }}</span><b class="numero">{{ sincronizacao.a_preencher|length }}</b></div>
+    <div><span>{{ t('em conflito') }}</span><b class="numero">{{ sincronizacao.conflitos|length }}</b></div>
+    <div><span>{{ t('já conferem') }}</span><b class="numero">{{ sincronizacao.compativeis|length }}</b></div>
+    <div><span>{{ t('sem o campo no M365') }}</span><b class="numero">{{ sincronizacao.sem_cc_no_m365|length }}</b></div>
+    <div><span>{{ t('fora do M365') }}</span><b class="numero">{{ sincronizacao.fora_do_m365|length }}</b></div>
+  </div>
+
+  <form hx-post="/config/m365/aplicar" hx-target="#area" hx-swap="innerHTML">
+    <div class="grade">
+      <label class="check"><input type="checkbox" name="atualizar" value="1" checked>
+        <span>Atualizar os {{ sincronizacao.divergentes|length }} centro(s) de custo divergentes
+          <small>{{ t('o Microsoft 365 é pelo menos tão específico quanto o que está gravado') }}</small></span></label>
+      <label class="check"><input type="checkbox" name="preencher" value="1" checked>
+        <span>Preencher os {{ sincronizacao.a_preencher|length }} que estão em branco
+          <small>{{ t('a unidade não tem centro de custo e o Microsoft 365 tem') }}</small></span></label>
+    </div>
+
+    {% if sincronizacao.divergentes %}
+    <h2 style="margin-top:20px">{{ t('A atualizar') }}</h2>
+    <div class="rolagem"><table>
+      <thead><tr><th>{{ t('Código') }}</th><th>{{ t('Unidade') }}</th><th>{{ t('Time') }}</th>
+        <th>{{ t('Gravado') }}</th><th>{{ t('No Microsoft 365') }}</th></tr></thead>
+      <tbody>{% for d in sincronizacao.divergentes %}
+        <tr><td class="cod">{{ d.codigo }}</td><td>{{ d.nome }}</td><td>{{ d.area }}</td>
+            <td class="cod">{{ d.cc_org or "—" }}</td>
+            <td class="cod"><b>{{ d.cc_m365 }}</b> <small>{{ d.bruto }}</small></td></tr>
+      {% endfor %}</tbody></table></div>
+    {% endif %}
+
+    {% if sincronizacao.a_preencher %}
+    <h2 style="margin-top:20px">{{ t('A preencher') }}</h2>
+    <div class="rolagem"><table>
+      <thead><tr><th>{{ t('Código') }}</th><th>{{ t('Unidade') }}</th><th>{{ t('Time') }}</th>
+        <th>{{ t('No Microsoft 365') }}</th></tr></thead>
+      <tbody>{% for d in sincronizacao.a_preencher %}
+        <tr><td class="cod">{{ d.codigo }}</td><td>{{ d.nome }}</td><td>{{ d.area }}</td>
+            <td class="cod"><b>{{ d.cc_m365 }}</b> <small>{{ d.bruto }}</small></td></tr>
+      {% endfor %}</tbody></table></div>
+    {% endif %}
+
+    {# Conflito não tem caixa de marcar: não é escolha de tela, é contradição
+       entre as duas fontes. Aplicar o código curto apagaria a equipe. #}
+    {% if sincronizacao.conflitos %}
+    <h2 style="margin-top:20px">{{ t('Em conflito — não aplicáveis') }}</h2>
+    <p class="pista">{{ t('O Microsoft 365 traz um código menos específico e diferente do gravado. Gravá-lo apagaria a equipe, então a correção é numa das duas fontes, por gente.') }}</p>
+    <div class="rolagem"><table>
+      <thead><tr><th>{{ t('Código') }}</th><th>{{ t('Unidade') }}</th><th>{{ t('Time') }}</th>
+        <th>{{ t('Gravado') }}</th><th>{{ t('No Microsoft 365') }}</th></tr></thead>
+      <tbody>{% for d in sincronizacao.conflitos %}
+        <tr><td class="cod">{{ d.codigo }}</td><td>{{ d.nome }}</td><td>{{ d.area }}</td>
+            <td class="cod"><b>{{ d.cc_org }}</b></td>
+            <td class="cod">{{ d.cc_m365 }} <small>{{ d.bruto }}</small></td></tr>
+      {% endfor %}</tbody></table></div>
+    {% endif %}
+
+    {% if sincronizacao.fora_do_m365 %}
+    <h2 style="margin-top:20px">{{ t('Fora do Microsoft 365') }}</h2>
+    <p class="pista">{{ t('Ninguém é removido por não ter conta: prestador e consultoria legitimamente não têm licença.') }}</p>
+    <div class="rolagem"><table>
+      <thead><tr><th>{{ t('Código') }}</th><th>{{ t('Unidade') }}</th><th>{{ t('Vínculo') }}</th>
+        <th>{{ t('Gravado') }}</th></tr></thead>
+      <tbody>{% for d in sincronizacao.fora_do_m365 %}
+        <tr><td class="cod">{{ d.codigo }}</td><td>{{ d.nome }}</td>
+            <td class="cod">{{ d.vinculo }}</td><td class="cod">{{ d.cc_org or "—" }}</td></tr>
+      {% endfor %}</tbody></table></div>
+    {% endif %}
+
+    {% if sincronizacao.sem_par %}
+    <h2 style="margin-top:20px">{{ t('Contas sem par no organograma') }}</h2>
+    <p class="pista">{{ t('Pessoa nova entra pela planilha, não por aqui: o Microsoft 365 não diz a quem ela responde, e criar sem gestor a penduraria na raiz.') }}</p>
+    <div class="rolagem"><table>
+      <thead><tr><th>{{ t('Nome') }}</th><th>{{ t('E-mail') }}</th><th>{{ t('No Microsoft 365') }}</th></tr></thead>
+      <tbody>{% for d in sincronizacao.sem_par %}
+        <tr><td>{{ d.nome }}</td><td class="cod">{{ d.email }}</td>
+            <td class="cod">{{ d.cc or "—" }}</td></tr>
+      {% endfor %}</tbody></table></div>
+    {% endif %}
+
+    <div class="acoes">
+      <button class="bt forte" style="flex:0 0 210px"
+              hx-confirm="{{ t('Aplicar a sincronização? A operação entra no ledger e pode ser desfeita uma vez.') }}">
+        {{ t('Aplicar') }}</button>
+      <button type="button" class="bt" style="flex:0 0 140px"
+              hx-post="/config/m365/cancelar" hx-target="#area" hx-swap="innerHTML">
+        {{ t('Cancelar') }}</button>
+    </div>
+  </form>
+  {% endif %}
+  {% endif %}
+</div>

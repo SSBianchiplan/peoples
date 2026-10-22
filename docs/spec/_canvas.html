@@ -1,0 +1,78 @@
+<svg id="canvas" xmlns="http://www.w3.org/2000/svg" role="tree"
+     {% if oob %}hx-swap-oob="true"{% endif %}
+     viewBox="{{ layout.viewbox }}" width="{{ layout.largura|round|int }}" height="{{ layout.altura|round|int }}"
+     aria-label="Organograma em orientação {{ layout.orientacao }}">
+<title>Organograma — orientação {{ layout.orientacao }}</title>
+<desc>{% if layout.invertida %}A unidade de liderança ocupa a base da estrutura; as unidades lideradas ficam acima dela. A hierarquia lógica permanece raiz para folhas.{% else %}A unidade de liderança ocupa o topo da estrutura.{% endif %}</desc>
+<style>
+#canvas text{font-family:"Inter","Segoe UI",system-ui,sans-serif}
+#canvas .card{fill:#fff;stroke:#c3ced6;stroke-width:1}
+#canvas .fita{fill:#8b99a4}
+#canvas .no.raiz .card{fill:#14202b;stroke:#14202b}
+#canvas .no.raiz .fita{fill:#b25f07}
+#canvas .no.raiz .t-cod{fill:#7d8f9c}
+#canvas .no.raiz .t-nome{fill:#fff}
+#canvas .no.raiz .t-pes{fill:#e0a969}
+#canvas .no.raiz .t-item{fill:#b8c4cd}
+#canvas .no.raiz .regua{stroke:#3a4b57}
+#canvas .no.raiz .mk{fill:#5a6b78}
+#canvas .no:hover .card{stroke:#5a6b78}
+#canvas .no.sel .card{stroke:#b25f07;stroke-width:2}
+#canvas .no{cursor:pointer}
+#canvas .no:focus{outline:none}
+#canvas .no:focus-visible .card{stroke:#b25f07;stroke-width:2}
+#canvas .t-cod{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;fill:#8b99a4;letter-spacing:.06em}
+#canvas .t-nome{font-size:13px;font-weight:600;fill:#14202b}
+#canvas .t-pes{font-size:11.5px;fill:#b25f07}
+#canvas .t-item{font-size:11px;fill:#5a6b78}
+#canvas .t-item.del{fill:#0b6e75;font-style:italic}
+#canvas .regua{stroke:#e2e8ec;stroke-width:1}
+#canvas .mk{fill:#c3ced6}
+#canvas .mk-del{fill:none;stroke:#0b6e75;stroke-width:1.1}
+#canvas .fio{stroke:#93a3ae;stroke-width:1.2;fill:none;stroke-linecap:square}
+#canvas .trilho{stroke:#b6c2ca;stroke-width:1}
+#canvas .tick{stroke:#b6c2ca;stroke-width:1}
+#canvas .t-cota{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;fill:#8b99a4;letter-spacing:.08em}
+#canvas .t-cota.base{fill:#b25f07;font-weight:700}
+#canvas .marco{fill:#b25f07}
+</style>
+
+<g aria-hidden="true">
+  <line class="trilho" x1="{{ layout.trilho_x }}" y1="{{ layout.trilho_y1|round(1) }}"
+        x2="{{ layout.trilho_x }}" y2="{{ layout.trilho_y2|round(1) }}"/>
+  {% for c in layout.cotas %}
+  <line class="tick" x1="{{ layout.trilho_x - 4 }}" y1="{{ c.y|round(1) }}"
+        x2="{{ layout.trilho_x + 4 }}" y2="{{ c.y|round(1) }}"/>
+  <line class="tick" x1="{{ layout.trilho_x - 4 }}" y1="{{ c.y2|round(1) }}"
+        x2="{{ layout.trilho_x + 4 }}" y2="{{ c.y2|round(1) }}"/>
+  {% if c.base %}<rect class="marco" x="{{ layout.trilho_x - 2.5 }}" y="{{ c.meio - 2.5 }}" width="5" height="5"/>{% endif %}
+  <text class="t-cota {% if c.base %}base{% endif %}" x="{{ layout.trilho_x - 9 }}"
+        y="{{ c.meio + 3 }}" text-anchor="end">{{ c.rotulo }}</text>
+  {% endfor %}
+</g>
+
+<g class="fios" aria-hidden="true">
+  {% for c in layout.conectores %}<path class="fio" fill="none" d="{{ c.d }}"/>
+  {% endfor %}
+</g>
+
+<g class="nos">
+  {% for n in layout.nos %}
+  <g class="no{% if n.sel %} sel{% endif %}{% if n.raiz %} raiz{% endif %}"
+     role="treeitem" aria-level="{{ n.nivel + 1 }}" tabindex="0"
+     aria-label="{{ n.nome }}, nível {{ n.nivel + 1 }}{% if n.raiz %}, unidade raiz{% endif %}"
+     hx-get="/fragmentos/painel/{{ n.id }}" hx-target="#painel" hx-swap="innerHTML"
+     oncontextmenu="menuNo(event,'{{ n.id }}')">
+    <rect class="card" x="{{ n.x|round(1) }}" y="{{ n.y|round(1) }}"
+          width="{{ n.w }}" height="{{ n.h|round(1) }}" rx="3"/>
+    <rect class="fita" x="{{ n.x|round(1) }}" y="{{ n.y|round(1) }}" width="{{ n.w }}" height="3"/>
+    <line class="regua" x1="{{ n.x + 12 }}" y1="{{ n.regua|round(1) }}"
+          x2="{{ n.x + n.w - 12 }}" y2="{{ n.regua|round(1) }}"/>
+    {% for t in n.textos %}<text class="{{ t.cls }}" x="{{ t.x|round(1) }}" y="{{ t.y|round(1) }}">{{ t.txt }}</text>
+    {% endfor %}
+    {% for i in n.itens %}{% if i.mx %}<circle class="{% if i.delegada %}mk-del{% else %}mk{% endif %}" cx="{{ i.mx|round(1) }}" cy="{{ i.my|round(1) }}" r="2"/>{% endif %}<text class="t-item{% if i.delegada %} del{% endif %}" x="{{ i.x|round(1) }}" y="{{ i.y|round(1) }}">{{ i.txt }}</text>
+    {% endfor %}
+  </g>
+  {% endfor %}
+</g>
+</svg>

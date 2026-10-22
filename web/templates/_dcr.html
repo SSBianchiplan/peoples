@@ -1,0 +1,18 @@
+{#
+  Skills — Descrição de Cargo e Responsabilidades (GEP-FOR-003).
+
+  A casca só monta a barra de filtros e a folha; o corpo mora em
+  `_dcr_corpo.html` porque é ele, e só ele, que a rota `/filtros` devolve —
+  trocar a barra a cada tecla roubaria o foco de quem digita na busca.
+
+  Respeita o recorte como Tempo de empresa: quem filtrou F&B quer a matriz de
+  F&B, não a da empresa inteira.
+#}
+<div class="vista">
+  {% include "_filtros.html" %}
+  <div class="folha">
+    <div id="dcrCorpo">
+      {% include "_dcr_corpo.html" %}
+    </div>
+  </div>
+</div>

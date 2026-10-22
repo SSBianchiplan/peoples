@@ -1,0 +1,182 @@
+{#
+  Fragmento unico do desenho. Serve a tela e o arquivo exportado (INT-07).
+  Conectores saem antes dos cards na ordem do documento (LAY-09).
+  Ordem do DOM = ordem logica raiz->folhas, nunca a posicao na tela (FE-03).
+
+  `k` traz as cores: na tela sao variaveis CSS (troca de tema instantanea, sem
+  round-trip); no arquivo exportado sao literais, porque papel nao tem tema e
+  variavel CSS em SVG solto nao e universalmente suportada.
+#}
+{# `data-orientacao` e o unico jeito de o enquadramento do cliente saber que
+   desenho ele tem na frente: a arvore indentada cabe na largura e se le
+   descendo, e a piramide nao. Atributo, e nao inferencia por proporcao —
+   proporcao mente num organograma de um departamento so. #}
+<svg id="canvas" xmlns="http://www.w3.org/2000/svg" role="tree"
+     data-orientacao="{{ layout.orientacao }}"
+     {% if oob %}hx-swap-oob="true"{% endif %}
+     viewBox="{{ layout.viewbox }}" width="{{ layout.largura }}" height="{{ layout.altura }}"
+     aria-label="{{ t('Organograma em orientação {orientacao}',
+                       orientacao=t(layout.orientacao)) }}">
+<title>{{ t('Organograma — orientação {orientacao}', orientacao=t(layout.orientacao)) }}</title>
+<desc>{% if layout.lateral %}{{ t('Organograma em árvore indentada: a raiz fica à esquerda, cada nível recua para a direita e a leitura desce na ordem lógica. A hierarquia e os níveis anunciados são os mesmos das demais orientações.') }}{% elif layout.invertida %}{{ t('Organograma invertido: a liderança ocupa a base; os times liderados, o topo. A hierarquia lógica permanece raiz para folhas na ordem de leitura e nos níveis anunciados.') }}{% else %}{{ t('Organograma convencional: a liderança ocupa o topo.') }}{% endif %}</desc>
+<style>
+#canvas{font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif}
+#canvas .card{fill:{{ k.card }};stroke:{{ k.borda }};stroke-width:1}
+#canvas .no.raiz .card{fill:{{ k.card_raiz }};stroke:{{ k.borda_raiz }};stroke-width:1.4}
+#canvas .no.raiz .t-cod,#canvas .no.raiz .t-area,#canvas .no.raiz .t-mail{fill:{{ k.cod_raiz }}}
+#canvas .no.raiz .t-nome{fill:{{ k.nome_raiz }}}
+#canvas .no.raiz .t-cargo,#canvas .no.raiz .t-item,#canvas .no.raiz .t-skill{fill:{{ k.corpo_raiz }}}
+#canvas .no.raiz .t-pes{fill:{{ k.pes_raiz }}}
+#canvas .no.raiz .regua{stroke:{{ k.regua_raiz }}}
+#canvas .no{cursor:pointer}
+#canvas .no .card{transition:stroke .12s ease}
+#canvas .no:hover .card{stroke:{{ k.hover }}}
+#canvas .no.sel .card{stroke:#EB6A20;stroke-width:2}
+#canvas .no.achou .card{stroke:#F6A709;stroke-width:2}
+#canvas .no.passagem{opacity:{{ k.passagem_op }}}
+#canvas .no.passagem:hover{opacity:1}
+#canvas .no:focus{outline:none}
+#canvas .no:focus-visible .card{stroke:#EB6A20;stroke-width:2.5}
+#canvas .t-cod{font-family:ui-monospace,"JetBrains Mono",Menlo,monospace;font-size:9.5px;fill:{{ k.cod }};letter-spacing:.07em}
+#canvas .t-nome{font-size:13px;font-weight:600;fill:{{ k.nome }}}
+#canvas .t-pes{font-size:11.5px;font-weight:500;fill:{{ k.pes }}}
+#canvas .t-cargo{font-size:11px;fill:{{ k.corpo }}}
+#canvas .t-area{font-size:10px;fill:{{ k.corpo }};letter-spacing:.06em}
+#canvas .t-mail{font-family:ui-monospace,Menlo,monospace;font-size:9px;fill:{{ k.cod }}}
+#canvas .t-item{font-size:11px;fill:{{ k.nome }}}
+#canvas .t-item.del{fill:{{ k.corpo }};font-style:italic}
+#canvas .t-skill{font-size:10px;fill:{{ k.corpo }};letter-spacing:.02em}
+#canvas .regua{stroke:{{ k.regua }};stroke-width:1}
+#canvas .mk{fill:{{ k.mk }}}
+{# A fita e a codificacao visual do nivel; o nivel e configuravel, entao a
+   regra sai do cadastro. O token vira o par claro/escuro correto. #}
+#canvas .fita{fill:{{ k.cor_cinza }}}
+{% for codigo, token in cores_nivel.items() %}#canvas .fita.{{ codigo }}{fill:{{ k["cor_" ~ token] }}}
+{% endfor %}
+#canvas .mk-del{fill:none;stroke:#EB6A20;stroke-width:1.2}
+#canvas .fio{stroke:{{ k.fio }};stroke-width:1.2;fill:none;stroke-linecap:square}
+#canvas .trilho,#canvas .tick{stroke:{{ k.trilho }};stroke-width:1}
+#canvas .t-cota{font-family:ui-monospace,"JetBrains Mono",Menlo,monospace;font-size:9.5px;fill:{{ k.corpo }};letter-spacing:.08em}
+#canvas .t-cota.base{fill:{{ k.cota_base }};font-weight:700}
+#canvas .marco{fill:{{ k.cota_base }}}
+#canvas .t-titulo{font-size:15px;font-weight:600;fill:{{ k.titulo }}}
+#canvas .t-sub{font-size:11px;fill:{{ k.sub }}}
+#canvas .t-data{font-family:ui-monospace,Menlo,monospace;font-size:10px;fill:{{ k.data }}}
+#canvas .regua-topo{stroke:{{ k.regua_topo }};stroke-width:1}
+#canvas .alca rect{fill:{{ k.alca_fundo }};stroke:{{ k.alca_borda }};stroke-width:1}
+#canvas .alca text{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;fill:{{ k.alca_texto }};font-weight:600}
+#canvas .alca:hover rect{fill:{{ k.alca_hover }};stroke:#EB6A20}
+#canvas .alca:hover text{fill:{{ k.alca_hover_txt }}}
+#canvas .alca{cursor:pointer}
+#canvas .voltar rect{fill:{{ k.alca_hover }};stroke:#EB6A20}
+#canvas .voltar text{font-size:10.5px;fill:{{ k.alca_hover_txt }};font-weight:500}
+</style>
+
+{# Arquivo solto nao herda fundo de lugar nenhum: sem isto, um visualizador
+   escuro renderizaria a paleta clara sobre preto. #}
+{% if exportando %}<rect x="0" y="0" width="{{ layout.largura }}" height="{{ layout.altura }}" fill="#FFFFFF"/>{% endif %}
+
+{% if layout.cabecalho %}
+<g class="cabecalho">
+  <text class="t-titulo" x="{{ layout.cabecalho.x }}" y="{{ layout.cabecalho.y_titulo }}">{{ layout.cabecalho.titulo }}</text>
+  <text class="t-data" x="{{ layout.largura - 40 }}" y="{{ layout.cabecalho.y_titulo }}" text-anchor="end">{{ layout.cabecalho.data }}</text>
+  {% for l in layout.cabecalho.linhas %}
+  <text class="t-sub" x="{{ layout.cabecalho.x }}" y="{{ layout.cabecalho.y_linhas + loop.index0 * 14 }}">{{ l }}</text>
+  {% endfor %}
+  <line class="regua-topo" x1="{{ layout.cabecalho.x }}" y1="{{ layout.cabecalho.y_regua }}"
+        x2="{{ layout.largura - 40 }}" y2="{{ layout.cabecalho.y_regua }}"/>
+  {% if layout.cabecalho.escopo and not exportando %}
+  {# A posição vem do motor: num desenho estreito a pílula desce uma linha em
+     vez de aterrissar em cima da legenda (ADR-011 — geometria é do servidor). #}
+  <g class="alca voltar" role="button" tabindex="0" aria-label="{{ t('Voltar ao organograma completo') }}"
+     hx-post="/foco/limpar" hx-target="#canvas" hx-swap="outerHTML">
+    <rect x="{{ layout.cabecalho.volta_x }}" y="{{ layout.cabecalho.volta_y }}" width="160" height="18" rx="9"/>
+    <text x="{{ layout.cabecalho.volta_x + 80 }}" y="{{ layout.cabecalho.volta_y + 13 }}" text-anchor="middle">{{ t('◂ todo o organograma') }}</text>
+  </g>
+  {% endif %}
+</g>
+{% endif %}
+
+{# cota de nivel — SIG-01..03: reforco visual do que ja esta em aria-level.
+   As coordenadas vem prontas do motor: nas piramides o trilho corre a
+   esquerda, na lateral corre no topo, e quem sabe disso e quem produz
+   geometria (ADR-011). Aqui so se desenha o que chegou. #}
+<g class="cota" aria-hidden="true">
+  <line class="trilho" x1="{{ layout.trilho.x1 }}" y1="{{ layout.trilho.y1 }}"
+        x2="{{ layout.trilho.x2 }}" y2="{{ layout.trilho.y2 }}"/>
+  {% for c in layout.cotas %}
+  <line class="tick" x1="{{ c.t1.x1 }}" y1="{{ c.t1.y1 }}" x2="{{ c.t1.x2 }}" y2="{{ c.t1.y2 }}"/>
+  <line class="tick" x1="{{ c.t2.x1 }}" y1="{{ c.t2.y1 }}" x2="{{ c.t2.x2 }}" y2="{{ c.t2.y2 }}"/>
+  {% if c.marco %}<rect class="marco" x="{{ c.marco.x }}" y="{{ c.marco.y }}" width="6" height="6"/>{% endif %}
+  <text class="t-cota{% if c.base %} base{% endif %}" x="{{ c.texto.x }}" y="{{ c.texto.y }}"
+        text-anchor="{{ c.texto.ancora }}">{{ c.rotulo }}</text>
+  {% endfor %}
+</g>
+
+{# LAY-09: conectores antes dos cards para que os cards fiquem por cima #}
+<g class="fios" aria-hidden="true">
+  {% for c in layout.conectores %}<path class="fio" fill="none" d="{{ c.d }}"/>
+  {% endfor %}
+</g>
+
+<g class="nos">
+  {% for n in layout.nos %}
+  <g class="no{% if n.sel %} sel{% endif %}{% if n.achou %} achou{% endif %}{% if n.passagem %} passagem{% endif %}{% if n.raiz %} raiz{% endif %}"
+     role="treeitem" aria-level="{{ n.nivel + 1 }}" tabindex="0"
+     {% if n.n_filhos %}aria-expanded="{{ 'false' if n.ocultos else 'true' }}"{% endif %}
+     aria-label="{{ n.nome }}{% if n.rotulo_tipo %}, {{ t(n.rotulo_tipo) }}{% endif %}, {{ t('nível {n}', n=n.nivel + 1) }}{% if n.n_filhos %}, {{ t('{n} subordinado(s) direto(s)', n=n.n_filhos) }}{% endif %}"
+     {% if not exportando %}hx-get="/fragmentos/painel/{{ n.id }}" hx-target="#painel" hx-swap="innerHTML"
+     hx-trigger="click, keyup[key=='Enter']" oncontextmenu="menuNo(event,'{{ n.id }}')"
+     ondblclick="focarNo(event,'{{ n.id }}')"
+     data-nome="{{ n.dica.nome }}" data-codigo="{{ n.dica.codigo }}" data-cargo="{{ n.dica.cargo }}"
+     data-area="{{ n.dica.area }}" data-cc="{{ n.dica.cc }}" data-mail="{{ n.dica.email }}"
+     data-tipo="{{ n.dica.tipo }}" data-sub="{{ n.n_filhos or '' }}"
+     data-skills="{{ n.dica.skills | join('  ·  ') }}" data-itens='{{ n.dica.itens | tojson }}'{% endif %}>
+    <rect class="card" x="{{ n.x }}" y="{{ n.y }}" width="{{ n.w }}" height="{{ n.h }}" rx="3"/>
+    <rect class="fita {{ n.tipo }}" x="{{ n.x }}" y="{{ n.y }}" width="{{ n.w }}" height="3"/>
+    <line class="regua" x1="{{ n.x + 12 }}" y1="{{ n.regua }}" x2="{{ n.x + n.w - 12 }}" y2="{{ n.regua }}"/>
+    {% if n.regua2 %}<line class="regua" x1="{{ n.x + 12 }}" y1="{{ n.regua2 }}" x2="{{ n.x + n.w - 12 }}" y2="{{ n.regua2 }}"/>{% endif %}
+    {% for t in n.textos %}<text class="{{ t.cls }}" x="{{ t.x }}" y="{{ t.y }}">{{ t.txt }}</text>
+    {% endfor %}
+    {# A11Y-06: delegada nao se distingue so por cor — marcador vazado + itálico #}
+    {% for i in n.itens %}{% if i.mx %}<circle class="{% if i.delegada %}mk-del{% else %}mk{% endif %}" cx="{{ i.mx }}" cy="{{ i.my }}" r="2.2"/>{% endif %}<text class="t-item{% if i.delegada %} del{% endif %}" x="{{ i.x }}" y="{{ i.y }}">{{ i.txt }}</text>
+    {% endfor %}
+    {% for s in n.skills %}<text class="t-skill" x="{{ s.x }}" y="{{ s.y }}">{{ s.txt }}</text>
+    {% endfor %}
+    {# A marca do cliente no card da raiz: é dele a estrutura (MRK-02), e a raiz
+       é o único nó que fala pela organização inteira. Duas imagens com a mesma
+       geometria, e o tema escolhe qual aparece — trocar `href` por JS faria a
+       marca piscar a cada troca de tema.
+
+       Fora da exportação de propósito: o PDF já leva o logo no cabeçalho, e o
+       SVG solto teria de embutir a imagem para não virar quadrado vazio no
+       Inkscape. Repetir a marca no papel seria dizê-la duas vezes. #}
+    {% if n.marca and not exportando %}
+    {# Sempre a versão branca: o card da raiz é grafite nos dois temas
+       (`card_raiz` #2D3336 no claro, #0E1112 no escuro) e o texto dele já é
+       branco em ambos. Alternar pela cor da página punha o logo preto sobre
+       fundo escuro no tema claro — o que sumia era a marca. #}
+    <image class="logo-raiz" href="/marca/peoples-branco.png"
+           x="{{ n.marca.x }}" y="{{ n.marca.y }}"
+           width="{{ n.marca.w }}" height="{{ n.marca.h }}"
+           preserveAspectRatio="xMidYMid meet"/>
+    {% endif %}
+  </g>
+  {% endfor %}
+</g>
+
+{% if not exportando %}
+{# Alcas de colapso: fora do <g> do card — dois alvos htmx no mesmo clique
+   dispararia duas requisicoes. #}
+<g class="alcas">
+  {% for a in layout.alcas %}
+  <g class="alca" role="button" tabindex="0" aria-label="{{ a.rotulo }}"
+     hx-post="/unidades/{{ a.id }}/colapsar" hx-target="#canvas" hx-swap="outerHTML"
+     hx-trigger="click, keyup[key=='Enter']">
+    <rect x="{{ a.x }}" y="{{ a.y }}" width="52" height="18" rx="9"/>
+    <text x="{{ a.tx }}" y="{{ a.ty }}" text-anchor="middle">{{ a.txt }}</text>
+  </g>
+  {% endfor %}
+</g>
+{% endif %}
+</svg>

@@ -1,0 +1,109 @@
+{# Corpo do One-on-One — a agenda de 1:1 de quem está logado (liderados diretos),
+   ou toda a base para RH. Cada cartão abre a ficha da pessoa em #onebyoneFicha.
+   O sigilo já foi aplicado no servidor: só chega aqui o que se pode ver. #}
+<div class="rh-topo">
+  <div>
+    <h1 class="rh-titulo">{{ t('One-on-One — 1:1 e desenvolvimento') }}</h1>
+    <p class="rh-sub">{{ t('Metodologia FUP — acompanhamento de conversas 1:1') }} · {{ hoje }}</p>
+  </div>
+</div>
+
+<div class="ob-sigilo">🔒
+  {{ t('Cada 1:1 é privado: só você, a pessoa e o RH/compliance leem. A cadeia de gestão acima não vê.') }}
+  {% if sou_rh %}<b>{{ t('Você tem acesso de RH: vê os 1:1 de todos.') }}</b>{% endif %}
+</div>
+
+<nav class="ob-abas">
+  {% for cod, rot in [('agenda', t('Agenda 1:1')), ('prm', t('PRM · Escuta ativa'))] %}
+  <button class="ob-aba{{ ' on' if secao == cod }}"
+          hx-get="/vistas/onebyone?aba={{ cod }}" hx-target="#area">{{ rot }}</button>
+  {% endfor %}
+  <a class="ob-export" href="/onebyone/export.json"
+     title="{{ t('Exporta as missões visíveis no formato do GPlanSiS|OS') }}">↧ {{ t('Missões (GPlanSiS|OS)') }}</a>
+</nav>
+
+{% if secao == 'prm' %}
+{# ===== PRM: Escuta Ativa, burnout, ciclo de vida ===== #}
+<div class="rh-kpis">
+  <div class="rh-kpi ambar"><span class="rh-kpi-val">{{ prm.clima_medio or '—' }}</span>
+    <span class="rh-kpi-rot">{{ t('Clima médio (1–5)') }}</span></div>
+  <div class="rh-kpi laranja"><span class="rh-kpi-val">{{ prm.n_alertas }}</span>
+    <span class="rh-kpi-rot">{{ t('Alertas de burnout') }}</span></div>
+  <div class="rh-kpi"><span class="rh-kpi-val">{{ prm.com_pulso }}</span>
+    <span class="rh-kpi-rot">{{ t('Com pulso registrado') }}</span></div>
+  <div class="rh-kpi"><span class="rh-kpi-val">{{ prm.total }}</span>
+    <span class="rh-kpi-rot">{{ t('No recorte') }}</span></div>
+</div>
+
+<div class="rh-grid">
+  <div class="rh-card rh-card-largo">
+    <h2>{{ t('Alertas de burnout') }} <small>({{ t('sinais derivados — insumo da conversa') }})</small></h2>
+    {% if prm.span_alto %}
+    <p class="rh-card-sub">{{ t('{n} gestor(es) com span alto (≥{k} liderados) — fator de risco; só vira alerta com sinal de engajamento (1:1 atrasado ou clima baixo).', n=prm.span_alto, k=prm.limiar_span) }}</p>
+    {% endif %}
+    <div class="ob-alertas">
+      {% for a in prm.alertas %}
+      <div class="ob-alerta" role="button" tabindex="0"
+           hx-get="/onebyone/ficha/{{ a.ref }}" hx-target="#onebyoneFicha" hx-swap="innerHTML">
+        <span class="ob-alerta-nome">{{ a.nome }} <small>{{ a.cargo }}</small></span>
+        <span class="ob-alerta-sinais">
+          {% for s in a.sinais %}<span class="rh-selo laranja">{{ t(s) }}</span>{% endfor %}</span>
+      </div>
+      {% else %}<p class="rh-vazio">{{ t('Nenhum sinal de burnout no recorte. 👏') }}</p>{% endfor %}
+    </div>
+  </div>
+  <div class="rh-card">
+    <h2>{{ t('Ciclo de vida') }}</h2>
+    <div class="rh-barras">
+      {% for e in prm.estagios %}
+      <div class="rh-barra"><span class="rh-barra-rot">{{ t(e.rotulo) }}</span>
+        <span class="rh-barra-track"><span class="rh-barra-fill" style="width:{{ (e.n / prm.total * 100) if prm.total else 0 }}%"></span></span>
+        <span class="rh-barra-val">{{ e.n }}</span></div>
+      {% else %}<p class="rh-vazio">{{ t('Ninguém com estágio de ciclo de vida marcado.') }}</p>{% endfor %}
+    </div>
+  </div>
+</div>
+
+{% else %}
+{# ===== Agenda de 1:1 ===== #}
+<div class="rh-kpis">
+  {% for rot, val, cor in [
+      (t('Minha equipe'), resumo.equipe, ''),
+      (t('1:1 atrasados'), resumo.atrasadas, 'laranja'),
+      (t('Sem 1:1 ainda'), resumo.sem_1a1, 'ambar'),
+      (t('Conversas registradas'), resumo.conversas, '') ] %}
+  <div class="rh-kpi{{ ' ' + cor if cor }}">
+    <span class="rh-kpi-val">{{ val }}</span>
+    <span class="rh-kpi-rot">{{ rot }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+{% if not tem_equipe %}
+<p class="rh-vazio">{{ t('Você não tem liderados diretos para conduzir 1:1 por aqui.') }}</p>
+{% else %}
+<div class="ob-agenda">
+  {% for p in agenda %}
+  <div class="ob-card{{ ' atrasada' if p.atrasada }}{{ ' nova' if p.n == 0 }}"
+       role="button" tabindex="0"
+       hx-get="/onebyone/ficha/{{ p.ref }}" hx-target="#onebyoneFicha" hx-swap="innerHTML">
+    <div class="ob-card-topo">
+      <span class="ob-card-nome">{{ p.nome }}</span>
+      {% if p.atrasada %}<span class="rh-selo laranja">{{ t('atrasado') }}</span>
+      {% elif p.n == 0 %}<span class="rh-selo cinza">{{ t('sem 1:1') }}</span>{% endif %}
+    </div>
+    <div class="ob-card-meta">{{ p.cargo }}{% if p.setor %} · {{ p.setor }}{% endif %}</div>
+    <div class="ob-card-cad">
+      {% if p.ultima %}
+        <span>{{ t('última') }}: {{ p.ultima }}</span>
+        <span>{{ t('próxima') }}: {{ p.proxima }}</span>
+        <span class="ob-cad-selo">{{ t(rotulo_cadencia.get(p.cadencia, p.cadencia)) }}</span>
+      {% else %}
+        <span class="ob-nunca">{{ t('nenhuma conversa ainda') }}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endif %}

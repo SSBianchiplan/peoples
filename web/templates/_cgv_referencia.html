@@ -1,0 +1,62 @@
+{#
+  A aba de Referência: o conteúdo do manual como consulta rápida. Uma fonte só —
+  `cgv.referencia()` — alimenta esta tela e o passo a passo interativo, para não
+  haver dois textos do mesmo processo que divergiriam na primeira revisão.
+#}
+<h2>{{ t('Os quatro elementos da conversa') }}</h2>
+<p class="sub">{{ t('O roteiro da Conversa de Valor Completa, no formulário da equipe (GEP-FOR-006).') }}</p>
+<div class="cgv-elementos">
+  {% for cod, rotulo, oque in elementos %}
+  <div class="cgv-elemento">
+    <b>{{ t(rotulo) }}</b>
+    <p>{{ t(oque) }}</p>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="dcr-topo">
+  <h2>{{ t('Valores GPlanSiS e competências de liderança') }}</h2>
+  <a class="bt bt-min" href="/cgv/trio" target="_blank" rel="noopener">{{ t('Abrir em tela cheia') }}</a>
+</div>
+<p class="sub">{{ t('O dossiê de cultura: os quatro valores lidos como um intertravamento — cada um precisa estar fechado para a entrega energizar — e o LMA, que define quem opera a linha (Liderar, Gerenciar, Responsabilizar-se).') }}</p>
+{# O dossiê é arquivo único e autocontido (estilos e script próprios), então
+   entra por iframe — aplicar o HTML direto na página misturaria duas folhas de
+   estilo. Rola por dentro; o botão acima abre em tela cheia. #}
+<div class="cgv-trio-embed">
+  <iframe src="/cgv/trio" title="{{ t('Valores GPlanSiS e competências de liderança') }}"
+          loading="lazy"></iframe>
+</div>
+
+<h2>{{ t('Régra 70/20/10 — o PDI') }}</h2>
+<p class="sub">{{ t('O Plano de Desenvolvimento Individual acelera o crescimento por ações estruturadas. Priorizar até três competências, factíveis.') }}</p>
+<div class="cgv-regra">
+  {% for pct, rotulo, oque in regra %}
+  <div class="cgv-regra-faixa">
+    <b class="cgv-regra-pct">{{ pct }}%</b>
+    <div><b>{{ t(rotulo) }}</b><p>{{ t(oque) }}</p></div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>{{ t('Estrutura do feedback (CNV)') }}</h2>
+<p class="sub">{{ t('Comunicação Não-Violenta: observação, sentimento, necessidade e pedido. O exemplo do manual, na íntegra.') }}</p>
+<div class="cgv-cnv">
+  {% for cod, oque, exemplo in cnv %}
+  <div class="cgv-cnv-passo">
+    <b>{{ t(cod) }}</b>
+    <span class="cgv-cnv-oque">{{ t(oque) }}</span>
+    <em>{{ t(exemplo) }}</em>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>{{ t('A agenda do ano') }}</h2>
+<div class="cgv-linha-tempo">
+  {% for cod, rotulo, quando, minutos in ciclos %}
+  <div class="cgv-marco">
+    <span class="cgv-marco-quando">{{ t(quando) }}</span>
+    <b>{{ t(rotulo) }}</b>
+    <span class="cgv-marco-dur">{{ t('reservar {n} min por pessoa', n=minutos) }}</span>
+  </div>
+  {% endfor %}
+</div>

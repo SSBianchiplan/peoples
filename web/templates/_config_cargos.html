@@ -1,0 +1,203 @@
+{#
+  Módulo Cargos e níveis. Três camadas, da mais específica para a mais geral:
+  catálogo (cargo exato) → regras (padrão) → piso. Salvar o catálogo não
+  reclassifica ninguém: aplicar é ação à parte, porque reescrever o nível de
+  267 pessoas muda a cor de todo card e a altura das faixas do desenho.
+#}
+<div class="cartao">
+  <h2>{{ t('Níveis hierárquicos') }}</h2>
+  <p class="sub">{{ t('O nível é o que a fita colorida do card codifica e o que o filtro <i>Nível</i> seleciona. O <b>código</b> não é editável: ele casa com o enum <code>org.tipo_unidade</code> do banco e com o <code>tipo</code> gravado em cada unidade.')|safe }}</p>
+
+  <form hx-post="/config/niveis" hx-target="#area" hx-swap="innerHTML">
+    <div class="rolagem-x">
+      <table>
+        <thead><tr>
+          <th style="width:60px">{{ t('Fita') }}</th><th style="width:130px">{{ t('Código') }}</th>
+          <th>{{ t('Rótulo') }}</th><th style="width:170px">{{ t('Cor') }}</th>
+          <th style="width:90px">{{ t('Ordem') }}</th><th style="width:80px">{{ t('Pessoas') }}</th>
+          <th style="width:60px">{{ t('Ativo') }}</th>
+        </tr></thead>
+        <tbody>
+          {% for n in niveis %}
+          <tr>
+            <td><i style="display:block;height:16px;border-radius:2px;
+                   background:var(--k-cor_{{ n.cor }})"
+                   title="{{ t(cores_disponiveis[n.cor].rotulo) }}"></i>
+              <input type="hidden" name="nivel" value="{{ n.codigo }}"></td>
+            <td class="cod">{{ n.codigo }}</td>
+            <td><input name="rotulo_{{ n.codigo }}" value="{{ n.rotulo }}" maxlength="40"></td>
+            <td>
+              <select name="cor_{{ n.codigo }}">
+                {% for token, par in cores_disponiveis.items() %}
+                <option value="{{ token }}" {% if n.cor == token %}selected{% endif %}>{{ t(par.rotulo) }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td><input name="ordem_{{ n.codigo }}" type="number" value="{{ n.ordem }}"
+                       min="1" max="99" class="cod"></td>
+            <td class="cod">{{ uso_nivel.get(n.codigo, 0) }}</td>
+            <td><input type="checkbox" name="ativo_{{ n.codigo }}" value="1"
+                       {% if n.ativo %}checked{% endif %} style="width:auto"></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="pista">{{ t('A cor é um <b>token</b>, não um valor: o tema escuro precisa de contrapartida para cada uma, e digitar hexadecimal furaria a paleta institucional e o contraste. No escuro a leitura inverte — o nível mais sênior vira o tom mais claro, senão o grafite da diretoria some dentro do card (1,1:1).')|safe }}</p>
+    <div class="acoes"><button class="bt forte" style="flex:0 0 160px">{{ t('Salvar níveis') }}</button></div>
+  </form>
+</div>
+
+<div class="cartao">
+  <h2>{{ t('Catálogo de cargos') }}</h2>
+  {# Chave numa linha só: Jinja concatena literais adjacentes, mas a varredura
+     do catálogo lê o primeiro e a chave ficaria pela metade. #}
+  <p class="sub">{{ t('{n} cargo(s) distintos na estrutura. O cargo exato manda sobre a regra de palavra-chave — foi a regra que gerou a primeira versão desta lista, mas o que você decidir aqui passa a valer.', n=catalogo|length) }}</p>
+
+  {% if divergencias %}
+  <div class="aviso">
+    <b>{{ t('{n} cargo(s) com nível divergente do catálogo.', n=divergencias|length) }}</b>
+    {{ t('Alguém editou o nível direto no painel, ou o catálogo mudou e ninguém aplicou:') }}
+    {% for d in divergencias[:6] %}<code>{{ d.cargo }}</code> ({{ d.total }}){% if not loop.last %} · {% endif %}{% endfor %}.
+  </div>
+  {% endif %}
+
+  <form hx-post="/config/cargos" hx-target="#area" hx-swap="innerHTML">
+    <div class="filtro-tabela">
+      <input type="search" id="buscaCargo" placeholder="{{ t('filtrar cargo ou nível…') }}"
+             oninput="filtrarTabela(this, '#tabelaCargos')" autocomplete="off"
+             aria-label="{{ t('Filtrar cargos') }}">
+      <span class="pista" id="contaCargo"></span>
+    </div>
+    <div class="rolagem" style="max-height:440px">
+      <table id="tabelaCargos">
+        <thead><tr>
+          <th>{{ t('Cargo') }}</th><th style="width:190px">{{ t('Nível') }}</th>
+          <th style="width:90px">{{ t('Pessoas') }}</th><th style="width:110px">{{ t('Origem') }}</th>
+        </tr></thead>
+        <tbody>
+          {% for c in catalogo %}
+          {% set i = loop.index0 %}
+          <tr>
+            <td>{{ c.cargo }}
+              <input type="hidden" name="cargo_i" value="{{ i }}">
+              <input type="hidden" name="cargo_{{ i }}" value="{{ c.cargo }}"></td>
+            <td>
+              <select name="nivel_{{ i }}">
+                {% for n in niveis %}
+                <option value="{{ n.codigo }}" {% if c.nivel == n.codigo %}selected{% endif %}>{{ t(n.rotulo) }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td class="cod">{{ c.pessoas }}</td>
+            <td class="cod">{{ t(c.origem or "regra") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="acoes">
+      <button class="bt forte" style="flex:0 0 170px">{{ t('Salvar catálogo') }}</button>
+      {# Fora do form do catálogo o botão seria um submit; `type=button` é o que
+         impede que abrir o modal salve a tabela inteira sem querer. #}
+      <button type="button" class="bt" style="flex:0 0 150px"
+              onclick="abrirModal('dlgCargo')">{{ t('+ Novo cargo') }}</button>
+      <button type="button" class="bt" style="flex:0 0 200px"
+              hx-post="/config/cargos/descobrir" hx-target="#area" hx-swap="innerHTML">
+        {{ t('Descobrir da estrutura') }}</button>
+      <button type="button" class="bt" style="flex:0 0 210px"
+              hx-post="/config/cargos/aplicar" hx-target="#area" hx-swap="innerHTML"
+              hx-confirm="{{ t('Reclassificar as unidades pelo catálogo? Muda a cor dos cards e a altura das faixas. Pode ser desfeito uma vez.') }}">
+        {{ t('Aplicar às unidades') }}</button>
+    </div>
+  </form>
+</div>
+
+{# `<dialog>` nativo: ESC, foco preso e fundo inerte vêm do navegador. Fica
+   fora do <form> do catálogo — um form dentro de outro é inválido em HTML e o
+   navegador descartaria o interno. #}
+<dialog id="dlgCargo" class="modal" aria-labelledby="dlgCargoTit">
+  <form hx-post="/config/cargos/novo" hx-target="#area" hx-swap="innerHTML"
+        onsubmit="fecharModal('dlgCargo')">
+    <h2 id="dlgCargoTit">{{ t('Novo cargo') }}</h2>
+    <p class="sub">{{ t('Entra no catálogo com o nível que você escolher. Criar não reclassifica ninguém — quem reescreve o nível das unidades é <b>Aplicar às unidades</b>.')|safe }}</p>
+
+    <label for="novoCargoNome">{{ t('Cargo') }}</label>
+    <input id="novoCargoNome" name="cargo" maxlength="120" required autofocus
+           placeholder="{{ t('ex.: Coordenador de Automação') }}" autocomplete="off"
+           list="cargosExistentes">
+    {# Ver o que já existe é o que evita criar “Coordenador” ao lado de
+       “Coordenador de Automação” sem perceber. #}
+    <datalist id="cargosExistentes">
+      {% for c in catalogo %}<option value="{{ c.cargo }}"></option>{% endfor %}
+    </datalist>
+
+    <label for="novoCargoNivel">{{ t('Nível') }}</label>
+    {# Nasce no piso, nao no primeiro da lista: o primeiro e Diretoria, e um
+       cargo criado sem querer como diretoria muda a cor de todo card ao
+       aplicar. O piso e o mesmo destino de quem nao casa com regra nenhuma. #}
+    <select id="novoCargoNivel" name="nivel">
+      {% for n in niveis %}{% if n.ativo %}
+      <option value="{{ n.codigo }}"
+              {% if n.codigo == nivel_piso %}selected{% endif %}>{{ t(n.rotulo) }}</option>
+      {% endif %}{% endfor %}
+    </select>
+
+    <div class="acoes">
+      <button class="bt forte" style="flex:0 0 130px">{{ t('Criar') }}</button>
+      <button type="button" class="bt" style="flex:0 0 110px"
+              onclick="fecharModal('dlgCargo')">{{ t('Cancelar') }}</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="cartao">
+  <h2>{{ t('Regras de classificação') }}</h2>
+  <p class="sub">{{ t('Usadas quando o cargo não está no catálogo — na próxima carga da planilha, por exemplo. A <b>primeira regra que casa vence</b>, por isso a ordem importa. O padrão é expressão regular sobre o cargo sem acento e em minúsculas; padrão inválido é descartado em vez de derrubar a tela.')|safe }}</p>
+
+  <form hx-post="/config/cargos/regras" hx-target="#area" hx-swap="innerHTML">
+    <div class="rolagem-x">
+      <table>
+        <thead><tr>
+          <th style="width:90px">{{ t('Ordem') }}</th><th>{{ t('Padrão') }}</th>
+          <th style="width:190px">{{ t('Nível') }}</th><th style="width:60px">{{ t('Ativa') }}</th>
+        </tr></thead>
+        <tbody>
+          {% for r in regras %}
+          {% set i = loop.index0 %}
+          <tr>
+            <td><input type="hidden" name="regra_i" value="{{ i }}">
+              <input name="rordem_{{ i }}" type="number" value="{{ r.ordem }}"
+                     min="1" max="99" class="cod"></td>
+            <td><input name="padrao_{{ i }}" value="{{ r.padrao }}" maxlength="120"
+                       class="cod"></td>
+            <td>
+              <select name="rnivel_{{ i }}">
+                {% for n in niveis %}
+                <option value="{{ n.codigo }}" {% if r.nivel == n.codigo %}selected{% endif %}>{{ t(n.rotulo) }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td><input type="checkbox" name="rativo_{{ i }}" value="1"
+                       {% if r.ativo %}checked{% endif %} style="width:auto"></td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td><input name="nova_ordem" type="number" placeholder="99" class="cod"></td>
+            <td><input name="nova_padrao" placeholder="{{ t('novo padrão, ex.: consultor|especialista') }}"
+                       maxlength="120" class="cod"></td>
+            <td>
+              <select name="nova_nivel">
+                {% for n in niveis %}<option value="{{ n.codigo }}">{{ t(n.rotulo) }}</option>{% endfor %}
+              </select>
+            </td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="pista">{{ t('Sem regra que case, o cargo cai no piso <b>{nivel}</b>.',
+                            nivel=t(rotulos_nivel.get("celula", "Célula")))|safe }}</p>
+    <div class="acoes"><button class="bt forte" style="flex:0 0 160px">{{ t('Salvar regras') }}</button></div>
+  </form>
+</div>

@@ -1,0 +1,195 @@
+{#
+  O corpo do Peoples Place to Work. Seis seções: o Painel (PTI, maturidade,
+  participação, eNPS), os Pilares (as cinco dimensões), os Segmentos (o PTI por
+  estrato, com o piso de 5), a Devolutiva (KPIs, plano de ação, integração), o
+  Questionário (responder, anônimo) e a Referência (o método e as 60 afirmações).
+#}
+<h1>{{ t('Peoples Place to Work') }}</h1>
+<p class="sub">
+  {{ t('A pesquisa de clima da casa, conduzida internamente, com o rigor de medição que a GPlanSiS|Peoples usa em chão de fábrica. O indicador-mestre é o Peoples Trust Index (PTI).') }}
+</p>
+
+{# controle de ciclo: pesquisa anual completa × pulso semestral #}
+<div class="gptw-ciclos-tabs">
+  {% for cod, rot, quando in ciclos %}
+  <button class="{% if ciclo == cod %}on{% endif %}"
+          hx-get="/vistas/gptw?aba={{ secao }}&ciclo={{ cod }}"
+          hx-target="#area" hx-swap="innerHTML">
+    {{ t(rot) }} <small>{{ t(quando) }}</small></button>
+  {% endfor %}
+</div>
+
+<div class="painel-numeros">
+  <div><span>{{ t('PTI geral') }}</span><b class="numero">{% if gti is not none %}{{ gti }} %{% else %}—{% endif %}</b></div>
+  <div><span>{{ t('maturidade') }}</span><b class="numero" style="font-size:1rem">{{ t(maturidade.rotulo) or '—' }}</b></div>
+  <div><span>{{ t('participação') }}</span><b class="numero">{{ participacao.pct }} %</b></div>
+  <div><span>{{ t('respostas') }}</span><b class="numero">{{ participacao.respostas }}</b></div>
+  <div><span>{{ t('eNPS') }}</span><b class="numero">{% if enps.enps is not none %}{{ enps.enps }}{% else %}—{% endif %}</b></div>
+  <div><span>{{ t('ano') }}</span><b class="numero">{{ ano }}</b></div>
+</div>
+{% if fonte_banco %}
+<p class="sub">{{ t('Respostas duráveis e anônimas no PostgreSQL: nenhuma linha guarda quem respondeu — só o estrato e as respostas.') }}</p>
+{% else %}
+<p class="sub">{{ t('Banco não configurado: as respostas vivem no estado de trabalho. Ligue o PostgreSQL (aba Configurações) para acumular ciclos.') }}</p>
+{% endif %}
+
+<div class="cfg">
+  <nav class="cfg-nav" aria-label="{{ t('Seções do Peoples Place to Work') }}">
+    {% for chave, rotulo in [("painel", t("Painel")),
+                             ("pilares", t("Pilares")),
+                             ("segmentos", t("Segmentos")),
+                             ("devolutiva", t("Devolutiva")),
+                             ("responder", t("Responder")),
+                             ("programar", t("Programar")),
+                             ("referencia", t("Referência"))] %}
+    <button class="{% if secao == chave %}on{% endif %}"
+            hx-get="/vistas/gptw?aba={{ chave }}&ciclo={{ ciclo }}"
+            hx-target="#area" hx-swap="innerHTML">{{ rotulo }}</button>
+    {% endfor %}
+  </nav>
+
+  <div class="cfg-corpo">
+
+  {# ------------------------------------------------------------------ #}
+  {% if secao == "painel" %}
+  {% if not participacao.respostas %}
+  <p class="vazio">{{ t('Ainda não há respostas neste ciclo. Abra «Responder» para participar — ou divulgue o link da pesquisa.') }}</p>
+  {% else %}
+  <div class="gptw-gti-grande">
+    <div class="gptw-gti-n">{{ gti }}<span>%</span></div>
+    <div class="gptw-gti-lado">
+      <span class="gptw-mat mat-{{ maturidade.codigo }}">{{ t(maturidade.rotulo) }}</span>
+      <p class="sub">{{ t(maturidade.descricao) }}</p>
+      <p class="pista">{{ t('O PTI é o percentual de respostas «Concordo» e «Concordo totalmente» (4–5) sobre as válidas.') }}</p>
+    </div>
+  </div>
+
+  <h2>{{ t('Participação') }}</h2>
+  <div class="gptw-part">
+    <div class="cgv-barra" role="img" aria-label="{{ participacao.pct }} %"><i style="width:{{ participacao.pct }}%"></i></div>
+    <p class="sub">{{ t('{r} de {e} elegíveis responderam ({p} %). Meta: {m} %.', r=participacao.respostas, e=participacao.elegiveis, p=participacao.pct, m=participacao.meta) }}
+      {% if participacao.atingiu %}<b class="gptw-ok">✓ {{ t('meta atingida') }}</b>
+      {% else %}<b>{{ t('faltam {n}', n=participacao.faltam) }}</b>{% endif %}</p>
+  </div>
+
+  <h2>{{ t('PTI por pilar') }}</h2>
+  <div class="gptw-pilar-barras">
+    {% for p in por_pilar %}
+    <div class="gptw-pilar-linha">
+      <span class="gptw-pilar-rot">{{ t(p.rotulo) }}</span>
+      <div class="cgv-barra {% if p.gti is not none and p.gti < meta_gti_pilar %}abaixo{% endif %}"
+           role="img" aria-label="{{ p.gti }} %"><i style="width:{{ p.gti or 0 }}%"></i></div>
+      <span class="gptw-pilar-num">{% if p.gti is not none %}<b>{{ p.gti }} %</b>{% else %}—{% endif %}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="pista">{{ t('Meta: nenhum pilar abaixo de {m} %. As barras em laranja estão abaixo da meta.', m=meta_gti_pilar) }}</p>
+
+  <div class="g3" style="margin-top:calc(var(--u,16px))">
+    <div class="cart base"><span class="num">{{ enps.enps if enps.enps is not none else '—' }}</span>
+      <h3>{{ t('eNPS (proxy)') }}</h3>
+      <p>{{ t('{p} promotores · {n} neutros · {d} detratores. Derivado da afirmação «Recomendaria a GPlanSiS|Peoples». Meta ≥ {m}.', p=enps.promotores, n=enps.neutros, d=enps.detratores, m=enps.meta) }}</p></div>
+    <div class="cart base"><span class="num">{{ gti_validas }}</span>
+      <h3>{{ t('Respostas válidas') }}</h3>
+      <p>{{ t('O total de marcações Likert consideradas no PTI.') }}</p></div>
+    <div class="cart base"><span class="num">{{ piso }}</span>
+      <h3>{{ t('Piso de anonimato') }}</h3>
+      <p>{{ t('Nenhum recorte com menos de {n} respondentes é publicado.', n=piso) }}</p></div>
+  </div>
+  {% endif %}
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "pilares" %}
+  <h2>{{ t('Os cinco pilares do Peoples Trust Index') }}</h2>
+  <p class="sub">{{ t('A confiança é o pilar estruturante. Todos são medidos sob a ótica do colaborador.') }}</p>
+  <div class="gptw-pilar-cards">
+    {% for p in por_pilar %}
+    <div class="gptw-pilar-card">
+      <div class="gptw-pilar-topo">
+        <b>{{ t(p.rotulo) }}</b>
+        {% if p.gti is not none %}<span class="gptw-mat mat-{{ p.maturidade.codigo }}">{{ p.gti }} %</span>{% else %}<span class="pista">{{ t('sem amostra') }}</span>{% endif %}
+      </div>
+      <p class="sub">{{ t(p.descricao) }}</p>
+      <div class="cgv-barra {% if p.gti is not none and p.gti < meta_gti_pilar %}abaixo{% endif %}"><i style="width:{{ p.gti or 0 }}%"></i></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if destaques.forcas or destaques.oportunidades %}
+  <div class="gptw-duas">
+    <div>
+      <h3>{{ t('Top forças') }}</h3>
+      <ul class="gptw-lista-af">
+        {% for a in destaques.forcas %}
+        <li><b>{{ a.gti }} %</b> <span>{{ t(a.texto) }}</span> <small>{{ t(a.pilar_rotulo) }}</small></li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div>
+      <h3>{{ t('Top oportunidades') }}</h3>
+      <ul class="gptw-lista-af">
+        {% for a in destaques.oportunidades %}
+        <li><b class="fraco">{{ a.gti }} %</b> <span>{{ t(a.texto) }}</span> <small>{{ t(a.pilar_rotulo) }}</small></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% else %}
+  <p class="pista">{{ t('Forças e oportunidades aparecem quando há respostas suficientes (piso de {n}).', n=piso) }}</p>
+  {% endif %}
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "segmentos" %}
+  <h2>{{ t('Clima por segmento') }}</h2>
+  <p class="sub">{{ t('O PTI recortado pelos estratos que o organograma já conhece. Nenhum recorte com menos de {n} respondentes é publicado — sobe agregado, para não isolar quem respondeu.', n=piso) }}</p>
+  {% for dim, rot in dimensoes %}
+  {% set bloco = por_dimensao[dim] %}
+  <div class="grupo">
+    <h3>{{ t(rot) }}</h3>
+    {% if not bloco.grupos %}
+    <p class="pista">{{ t('Nenhum recorte desta dimensão atingiu o piso de {n} respondentes.', n=piso) }}</p>
+    {% else %}
+    <div class="rolagem-x"><table>
+      <thead><tr>
+        <th scope="col">{{ t(rot) }}</th>
+        <th scope="col" class="num">{{ t('Respondentes') }}</th>
+        <th scope="col" class="num">{{ t('PTI') }}</th>
+        <th scope="col">{{ t('Maturidade') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for g in bloco.grupos %}
+        <tr>
+          <td>{{ t(g.rotulo) }}</td>
+          <td class="num">{{ g.n }}</td>
+          <td class="num"><b>{{ g.gti }} %</b></td>
+          <td><span class="gptw-mat mat-{{ g.maturidade.codigo }}">{{ t(g.maturidade.rotulo) }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% if bloco.ocultos %}
+    <p class="pista">{{ t('{o} recorte(s) com menos de {n} respondentes ({r} respostas) ficaram ocultos pelo piso de anonimato.', o=bloco.ocultos, n=piso, r=bloco.respostas_ocultas) }}</p>
+    {% endif %}
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "devolutiva" %}
+  {% include "_gptw_devolutiva.html" %}
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "responder" %}
+  {% include "_gptw_responder.html" %}
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "programar" %}
+  {% include "_gptw_programar.html" %}
+
+  {# ------------------------------------------------------------------ #}
+  {% else %}
+  {% include "_gptw_referencia.html" %}
+  {% endif %}
+
+  </div>
+</div>

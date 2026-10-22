@@ -1,0 +1,15 @@
+{#
+  Peoples Place to Work — a pesquisa de clima anônima.
+
+  Sem a barra de filtros do topo: a pesquisa é da casa inteira, e é a
+  SEGMENTAÇÃO (por nível, área, vínculo, faixa de casa, modelo de trabalho),
+  respeitando o piso de 5 respondentes, que recorta o clima — não o filtro do
+  organograma. A moldura só carrega o corpo; o htmx troca as seções por dentro.
+#}
+<div class="vista">
+  <div class="folha">
+    <div id="gptwCorpo">
+      {% include "_gptw_corpo.html" %}
+    </div>
+  </div>
+</div>

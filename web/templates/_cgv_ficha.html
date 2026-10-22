@@ -1,0 +1,166 @@
+{#
+  A ficha de Conversa de Valor: os três ciclos do ano como STEPS, cada um com o formulário
+  inteiro (GEP-FOR-006) — entregas, valores GPlanSiS, PDI e carreira. Cada step salva
+  sozinho na base (Postgres quando há; estado sempre), então quem terminou a
+  Completa não espera os check-ins para persistir.
+
+  Os steps trocam por CSS (radios ocultos), sem JavaScript. `aberto` diz qual
+  vem selecionado — o primeiro, ou o que acabou de ser gravado.
+#}
+{% if not f %}
+<div class="dcr-ficha">
+  <p class="vazio">
+    <strong>{{ t('Pessoa fora do recorte') }}</strong>
+    {{ t('Essa matrícula não existe na estrutura vigente ou está fora do filtro atual. Pessoa some da base a cada carga — um link guardado cai aqui.') }}
+  </p>
+</div>
+{% else %}
+{% set curto = {'pendente': '○', 'agendada': '◐', 'realizada': '●'} %}
+<div class="dcr-ficha cgv-steps">
+  {# radios primeiro: o seletor `~` alcança abas e painéis sem :has() #}
+  {% for c in f.ciclos %}
+  <input type="radio" name="cgv-step" id="cgv-step-{{ c.codigo }}" class="cgv-step-radio"
+         {% if aberto == c.codigo %}checked{% endif %} hidden>
+  {% endfor %}
+
+  <div class="dcr-cabeca">
+    <div>
+      <h2>{{ t('Conversas que Geram Valor') }} · {{ f.ano }}</h2>
+      <span class="cod">{{ f.nome }} · {{ f.cargo or '—' }}
+        {% if f.lider_nome %}· {{ t('líder') }}: {{ f.lider_nome }}{% endif %}</span>
+    </div>
+    <div class="dcr-cabeca-acoes">
+      <a class="bt bt-min" href="/cgv/ficha/{{ f.ref|urlencode }}/pdf">{{ t('Baixar PDF') }}</a>
+      <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
+              hx-get="/cgv/vazio" hx-target="closest .ficha-painel" hx-swap="innerHTML">×</button>
+    </div>
+  </div>
+
+  {# abas dos três ciclos #}
+  <div class="cgv-tabs">
+    {% for c in f.ciclos %}
+    <label for="cgv-step-{{ c.codigo }}" class="cgv-tab">
+      <span class="cgv-selo {{ c.status }}">{{ curto[c.status] }}</span>
+      <b>{{ t(c.rotulo) }}</b>
+      <small>{{ t(c.quando) }} · {{ c.preenchidas }}/5</small>
+    </label>
+    {% endfor %}
+  </div>
+
+  {# painéis: o formulário completo de cada ciclo #}
+  <div class="cgv-panels">
+    {% for c in f.ciclos %}
+    <form class="cgv-panel" id="painel-{{ c.codigo }}"
+          hx-post="/cgv/ficha/{{ f.ref|urlencode }}/{{ c.codigo }}"
+          hx-target="#cgvFicha" hx-swap="innerHTML">
+      <input type="hidden" name="ano" value="{{ f.ano }}">
+
+      <div class="cgv-ciclo-linha">
+        <label for="{{ c.codigo }}-status">{{ t('Status') }}</label>
+        <select id="{{ c.codigo }}-status" name="status"
+                {% if motivo_edicao %}disabled{% endif %}>
+          {% for cod, rot in status %}
+          <option value="{{ cod }}" {% if c.status == cod %}selected{% endif %}>{{ t(rot) }}</option>
+          {% endfor %}
+        </select>
+        <label for="{{ c.codigo }}-data">{{ t('Data') }}</label>
+        <input type="date" id="{{ c.codigo }}-data" name="data" value="{{ c.data }}"
+               {% if motivo_edicao %}disabled{% endif %}>
+      </div>
+
+      {# 1 · Entregas e Resultados #}
+      <fieldset class="cgv-secao">
+        <legend>{{ t('Entregas e Resultados') }}</legend>
+        <textarea name="entregas" rows="3" {% if motivo_edicao %}disabled{% endif %}
+          placeholder="{{ t('Principais contribuições do período — pontos fortes e oportunidades.') }}">{{ c.conteudo.entregas }}</textarea>
+      </fieldset>
+
+      {# 2 · Aderência aos valores GPlanSiS #}
+      <fieldset class="cgv-secao">
+        <legend>{{ t('Aderência aos Valores Organizacionais') }}</legend>
+        {% for cod, sig, rot, frase in valores %}
+        <div class="cgv-valor">
+          <div class="cgv-valor-rot"><b>{{ sig }}</b><span>{{ t(frase) }}</span></div>
+          <textarea name="val_{{ cod }}" rows="2" {% if motivo_edicao %}disabled{% endif %}
+            placeholder="{{ t('Comportamento observado neste valor.') }}">{{ c.conteudo.valores[cod] }}</textarea>
+        </div>
+        {% endfor %}
+      </fieldset>
+
+      {# 3 · PDI — até três competências, ação 70/20/10 e prazo #}
+      <fieldset class="cgv-secao">
+        <legend>{{ t('PDI — Plano de Desenvolvimento Individual') }}</legend>
+        {% for i in range(1, 4) %}
+        {% set item = c.conteudo.pdi[i-1] %}
+        <div class="cgv-pdi">
+          <div class="cgv-pdi-topo">
+            <span class="cgv-pdi-n">{{ i }}</span>
+            <input name="pdi{{ i }}_comp" value="{{ item.comp }}" {% if motivo_edicao %}disabled{% endif %}
+                   placeholder="{{ t('Competência a desenvolver') }}">
+            <input name="pdi{{ i }}_prazo" value="{{ item.prazo }}" class="cgv-pdi-prazo"
+                   {% if motivo_edicao %}disabled{% endif %} placeholder="{{ t('Prazo') }}">
+          </div>
+          <textarea name="pdi{{ i }}_acao" rows="2" {% if motivo_edicao %}disabled{% endif %}
+            placeholder="{{ t('Ação — 70% prática · 20% social · 10% formal') }}">{{ item.acao }}</textarea>
+        </div>
+        {% endfor %}
+      </fieldset>
+
+      {# 4 · Expectativa de carreira #}
+      <fieldset class="cgv-secao">
+        <legend>{{ t('Expectativa de Carreira') }}</legend>
+        <textarea name="carreira" rows="2" {% if motivo_edicao %}disabled{% endif %}
+          placeholder="{{ t('Próximos passos desejados e como a organização pode apoiar.') }}">{{ c.conteudo.carreira }}</textarea>
+      </fieldset>
+
+      {# 5 · Feedback à liderança — competências (GEP-FOR-005) #}
+      <fieldset class="cgv-secao">
+        <legend>{{ t('Aderência às Competências de Liderança') }}</legend>
+        <p class="pista" style="margin:0 0 8px">{{ t('O que o liderado observa na liderança direta, sobre cada competência.') }}</p>
+        {% for cod, rot, itens in competencias %}
+        <div class="cgv-lid">
+          <div class="cgv-lid-rot">
+            <b>{{ t(rot) }}</b>
+            <span title="{{ itens|join(' · ') }}">{{ t(itens[0]) }}</span>
+          </div>
+          <textarea name="lid_{{ cod }}" rows="2" {% if motivo_edicao %}disabled{% endif %}
+            placeholder="{{ t('Registro sobre esta competência de liderança.') }}">{{ c.conteudo.lideranca[cod] }}</textarea>
+        </div>
+        {% endfor %}
+      </fieldset>
+
+      {% if not motivo_edicao %}
+      <div class="acoes">
+        <button class="bt forte" type="submit">{{ t('Gravar {ciclo}', ciclo=t(c.rotulo)) }}</button>
+        <span class="pista">{{ t('Salva na base de dados. Sem depender do Excel.') }}</span>
+      </div>
+      {% else %}
+      <p class="pista">{{ motivo_edicao }}</p>
+      {% endif %}
+    </form>
+    {% endfor %}
+  </div>
+
+  {# histórico dos anos anteriores, só leitura #}
+  <div class="grupo">
+    <h3>{{ t('Conversas anteriores') }}</h3>
+    {% if not f.historico %}
+    <p class="pista">{{ t('Nenhuma Conversa de Valor realizada em anos anteriores — ou o banco ainda não tem esse histórico.') }}</p>
+    {% else %}
+    {% for ano in f.historico %}
+    <div class="cgv-hist-ano">
+      <b class="cgv-hist-rot">{{ ano.ano }}</b>
+      <div class="cgv-hist-conversas">
+        {% for c in ano.conversas %}
+        <div class="cgv-hist-conversa">
+          <span class="cgv-hist-ciclo">{{ t(c.rotulo) }}{% if c.data %} · {{ c.data }}{% endif %}</span>
+          {% if c.cargo %}<span class="cgv-hist-meta">{{ t('cargo à época') }}: {{ c.cargo }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% endif %}

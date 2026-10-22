@@ -1,0 +1,126 @@
+{#
+  Provisionamento de TI. A fila nasce sozinha: mudar o departamento de alguém
+  no painel abre o pedido. Esta aba é onde TI o lê e o encerra.
+#}
+<div class="cartao">
+  <h2>{{ t('Provisionamento de TI') }}</h2>
+  <p class="sub">{{ t('Quando alguém muda de departamento, o acesso de software muda junto. O organograma já sabe da mudança — aqui ela vira pedido, item a item, em vez de virar um chamado escrito à mão.') }}</p>
+
+  {% if prov.destinatarios %}
+  <p class="pista">{{ t('Destinatários (equipe de TI no organograma): {emails}', emails=prov.destinatarios|join(', ')) }}</p>
+  {# O carteiro existe inteiro e liga sozinho quando a credencial aparecer. #}
+  <p class="pista">
+    {% if prov.correio.configurado %}
+    {{ t('Aviso por e-mail: ativo via {host}:{porta} ({modo}), remetente {de}.',
+         host=prov.correio.host, porta=prov.correio.porta,
+         modo=prov.correio.modo, de=prov.correio.de) }}
+    <button type="button" class="bt" style="margin-left:8px"
+            hx-post="/config/prov/testar-email" hx-target="#area" hx-swap="innerHTML">
+      {{ t('Enviar teste') }}</button>
+    {% else %}
+    {{ t('Aviso por e-mail: inativo. Defina SMTP_HOST e SMTP_DE no ambiente — o resto já está pronto. Até lá, esta fila é a notificação.') }}
+    {% endif %}
+  </p>
+  {% else %}
+  <div class="aviso">{{ t('Ninguém no organograma está marcado como TI: os pedidos ficam nesta fila e não têm a quem ser endereçados.') }}</div>
+  {% endif %}
+
+  {% if prov.abertas %}
+  <div class="rolagem-x">
+    <table>
+      <thead><tr>
+        <th style="width:170px">{{ t('Pessoa') }}</th>
+        <th style="width:200px">{{ t('Mudança') }}</th>
+        <th>{{ t('Revogar') }}</th>
+        <th>{{ t('Conceder') }}</th>
+        <th style="width:120px">{{ t('Aberto em') }}</th>
+        <th style="width:110px"></th>
+      </tr></thead>
+      <tbody>
+        {% for p in prov.abertas %}
+        <tr>
+          <td><b>{{ p.pessoa }}</b><br><span class="cod">{{ p.codigo }}</span>
+            {% if p.cargo %}<br><span class="cod">{{ p.cargo }}</span>{% endif %}</td>
+          <td>{{ p.de }} <b>→</b> {{ p.para }}</td>
+          {# Revogar antes de conceder: acesso a mais é risco, acesso a menos é
+             atrito. Só um dos dois piora com o tempo. #}
+          <td>{% for s in p.revogar %}<code class="revogar">{{ s }}</code>{% if not loop.last %} {% endif %}{% endfor %}
+              {% if not p.revogar %}—{% endif %}</td>
+          <td>{% for s in p.conceder %}<code class="conceder">{{ s }}</code>{% if not loop.last %} {% endif %}{% endfor %}
+              {% if not p.conceder %}—{% endif %}</td>
+          <td class="cod">{{ p.aberta_em[:10] }}</td>
+          <td><button class="bt" hx-post="/config/prov/{{ p.id }}/concluir"
+                      hx-target="#area" hx-swap="innerHTML">{{ t('Concluir') }}</button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="pista">{{ t('Nenhum pedido em aberto.') }}</p>
+  {% endif %}
+
+  {% if prov.sem_catalogo %}
+  <div class="aviso" style="margin-top:14px">
+    <b>{{ t('{n} departamento(s) sem software mapeado.', n=prov.sem_catalogo|length) }}</b>
+    {{ t('Mudança para uma dessas áreas não gera pedido — e o silêncio pareceria “nada a fazer”:') }}
+    {% for a in prov.sem_catalogo[:8] %}<code>{{ a }}</code>{% if not loop.last %} · {% endif %}{% endfor %}{% if prov.sem_catalogo|length > 8 %}…{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="cartao">
+  <h2>{{ t('Software por departamento') }}</h2>
+  <p class="sub">{{ t('O que cada área usa. É daqui que sai a diferença entre a área antiga e a nova. Um software em ambas as pontas não entra em nenhuma das listas — TI não deve tirar e devolver o mesmo acesso no mesmo pedido.') }}</p>
+
+  <form hx-post="/config/prov/software" hx-target="#area" hx-swap="innerHTML">
+    <div class="rolagem" style="max-height:420px">
+      <table id="tabelaSoftware">
+        <thead><tr>
+          <th style="width:260px">{{ t('Departamento') }}</th>
+          <th>{{ t('Softwares (separados por vírgula)') }}</th>
+        </tr></thead>
+        <tbody>
+          {% for linha in prov.catalogo %}
+          {% set i = loop.index0 %}
+          <tr>
+            <td><input type="hidden" name="area_i" value="{{ i }}">
+              <input name="area_{{ i }}" value="{{ linha.area }}" maxlength="60"></td>
+            <td><input name="softwares_{{ i }}" value="{{ linha.softwares|join(', ') }}"
+                       maxlength="400"></td>
+          </tr>
+          {% endfor %}
+          <tr>
+            <td><input name="nova_area" placeholder="{{ t('novo departamento') }}" maxlength="60"></td>
+            <td><input name="nova_softwares" placeholder="{{ t('ex.: ERP · Compras, Portal do Fornecedor') }}" maxlength="400"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="pista">{{ t('<b>Microsoft 365</b>, <b>Teams</b> e <b>GPlanSiS|Peoples</b> são base comum: não entram nem saem de pedido nenhum.')|safe }}</p>
+    <div class="acoes"><button class="bt forte" style="flex:0 0 190px">{{ t('Salvar catálogo de software') }}</button></div>
+  </form>
+</div>
+
+{% if prov.concluidas %}
+<div class="cartao">
+  <h2>{{ t('Concluídos') }}</h2>
+  <p class="sub">{{ t('Histórico dos últimos pedidos encerrados.') }}</p>
+  <div class="rolagem-x">
+    <table>
+      <thead><tr><th>{{ t('Pessoa') }}</th><th>{{ t('Mudança') }}</th>
+        <th>{{ t('Concluído em') }}</th><th>{{ t('Por') }}</th></tr></thead>
+      <tbody>
+        {% for p in prov.concluidas %}
+        <tr>
+          <td>{{ p.pessoa }}</td>
+          <td>{{ p.de }} → {{ p.para }}</td>
+          <td class="cod">{{ (p.concluida_em or '')[:16]|replace('T', ' ') }}</td>
+          <td>{{ p.concluida_por or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}

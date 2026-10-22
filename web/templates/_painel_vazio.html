@@ -1,0 +1,17 @@
+<h2>{{ t('Painel') }}</h2>
+<div class="vazio">
+  <strong>{{ t('Nenhuma unidade selecionada') }}</strong>
+  {{ t('Clique em um card para editar. Botão direito abre as ações da unidade.') }}
+  <ul>
+    {# O botão direito passou a ter duas respostas: no card, o que se faz com
+       a pessoa; no vazio, o que se faz com o desenho. A dica diz as duas — a
+       segunda não tem outra pista na tela. #}
+    <li>{{ t('<kbd>botão direito</kbd> no card, ações da unidade · no fundo, ações do desenho')|safe }}</li>
+    <li>{{ t('<kbd>+</kbd> <kbd>−</kbd> na alça do card colapsa ou expande a subárvore')|safe }}</li>
+    <li>{{ t('<kbd>setas</kbd> caminham entre os cards na direção visual')|safe }}</li>
+    <li>{{ t('<kbd>Enter</kbd> abre este painel · <kbd>Esc</kbd> fecha o menu')|safe }}</li>
+    <li>{{ t('<kbd>roda</kbd> zoom no ponto do cursor · <kbd>shift</kbd>+<kbd>roda</kbd> desliza')|safe }}</li>
+    <li>{{ t('<kbd>duplo clique</kbd> no card foca a subárvore · no fundo, reenquadra')|safe }}</li>
+    <li>{{ t('<kbd>0</kbd> ajusta à tela · <kbd>B</kbd> recolhe a gaveta')|safe }}</li>
+  </ul>
+</div>

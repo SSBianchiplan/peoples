@@ -1,0 +1,266 @@
+{# Ficha de 1:1 de uma pessoa, em MODAL sobre #onebyoneFicha. Mostra o status da
+   cadência, o formulário FUP para registrar uma conversa, e o histórico. `f=None`
+   quando fora do sigilo/recorte — mostra o aviso, nunca vaza conteúdo. #}
+{% if not f %}
+<div class="dcr-ficha">
+  <div class="dcr-cabeca">
+    <div><h2 style="margin:0;font-size:15px">{{ t('1:1 indisponível') }}</h2></div>
+    <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
+            onclick="document.getElementById('onebyoneFicha').innerHTML=''">×</button>
+  </div>
+  <p class="rh-vazio">🔒
+    {{ t('Este 1:1 é privado dos participantes. Você não faz parte dele.') }}</p>
+</div>
+{% else %}
+<div class="dcr-ficha ob-ficha">
+  <div class="dcr-cabeca">
+    <div>
+      <h2 style="margin:0;font-size:15px">{{ f.nome }}</h2>
+      <div class="trilha" style="margin-top:2px">{{ f.cargo }}{% if f.setor %} · {{ f.setor }}{% endif %}</div>
+    </div>
+    <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
+            onclick="document.getElementById('onebyoneFicha').innerHTML=''">×</button>
+  </div>
+
+  <div class="ob-status">
+    <div><span>{{ t('conversas') }}</span><b>{{ f.status.n }}</b></div>
+    <div><span>{{ t('última') }}</span><b>{{ f.status.ultima or '—' }}</b></div>
+    <div class="{{ 'ob-atrasada' if f.status.atrasada }}">
+      <span>{{ t('próxima') }}</span><b>{{ f.status.proxima or '—' }}</b></div>
+  </div>
+
+  {# --- Formulário FUP: registrar uma conversa 1:1 --------------------- #}
+  <form class="ob-form" hx-post="/onebyone/conversa/{{ f.ref }}"
+        hx-target="#onebyoneFicha" hx-swap="innerHTML">
+    <h3>{{ t('Registrar conversa 1:1') }}</h3>
+    <div class="ob-form-linha">
+      <label>{{ t('Data') }}
+        <input type="date" name="data" value="{{ hoje }}" {{ 'disabled' if motivo_edicao }}></label>
+      <label>{{ t('Cadência') }}
+        <select name="cadencia" {{ 'disabled' if motivo_edicao }}>
+          {% for cod, rot in cadencias %}
+          <option value="{{ cod }}"{{ ' selected' if cod == f.status.cadencia }}>{{ t(rot) }}</option>
+          {% endfor %}
+        </select></label>
+      <label>{{ t('Como a pessoa está? (1–5)') }}
+        <input type="number" name="sentimento" min="1" max="5" step="1"
+               {{ 'disabled' if motivo_edicao }}></label>
+    </div>
+    <label>{{ t('Pauta') }}
+      <textarea name="pauta" rows="2" {{ 'disabled' if motivo_edicao }}></textarea></label>
+    <label>{{ t('Notas da conversa') }}
+      <textarea name="notas" rows="3" {{ 'disabled' if motivo_edicao }}></textarea></label>
+    <label>{{ t('Próximos passos (FUP)') }}
+      <textarea name="proximos_passos" rows="2" {{ 'disabled' if motivo_edicao }}></textarea></label>
+    {% if motivo_edicao %}
+    <p class="ob-motivo">{{ motivo_edicao }}</p>
+    {% else %}
+    <button class="bt forte" type="submit">{{ t('Registrar 1:1') }}</button>
+    {% endif %}
+  </form>
+
+  {# --- Histórico (o que o sigilo deixa ver) --------------------------- #}
+  <h3 class="ob-hist-titulo">{{ t('Histórico de conversas') }}</h3>
+  <div class="ob-hist">
+    {% for c in f.conversas %}
+    <div class="ob-hist-item">
+      <div class="ob-hist-topo">
+        <b>{{ c.data or '—' }}</b>
+        {% if c.conteudo.sentimento %}<span class="ob-sent">{{ t('clima') }} {{ c.conteudo.sentimento }}/5</span>{% endif %}
+        {% if not motivo_edicao %}
+        <button class="ob-apagar" hx-post="/onebyone/conversa/{{ f.ref }}/apagar/{{ c.id }}"
+                hx-target="#onebyoneFicha" hx-swap="innerHTML"
+                hx-confirm="{{ t('Apagar esta conversa 1:1?') }}"
+                title="{{ t('Apagar') }}">×</button>{% endif %}
+      </div>
+      {% if c.conteudo.pauta %}<p><span>{{ t('Pauta') }}:</span> {{ c.conteudo.pauta }}</p>{% endif %}
+      {% if c.conteudo.notas %}<p><span>{{ t('Notas') }}:</span> {{ c.conteudo.notas }}</p>{% endif %}
+      {% if c.conteudo.proximos_passos %}
+      <p class="ob-fup"><span>{{ t('FUP') }}:</span> {{ c.conteudo.proximos_passos }}</p>{% endif %}
+    </div>
+    {% else %}
+    <p class="rh-vazio">{{ t('Nenhuma conversa registrada ainda.') }}</p>
+    {% endfor %}
+  </div>
+
+  {# --- Objetivo do trimestre ------------------------------------------ #}
+  <h3 class="ob-sec-titulo">{{ t('Objetivo do trimestre') }}
+    <small>Q{{ trimestre }} · {{ ano }}</small></h3>
+  <form class="ob-obj" hx-post="/onebyone/item/{{ f.ref }}/objetivo"
+        hx-target="#onebyoneFicha" hx-swap="innerHTML">
+    <input type="hidden" name="id" value="{{ f.objetivo.id if f.objetivo else '' }}">
+    <input type="hidden" name="ano" value="{{ ano }}">
+    <input type="hidden" name="trimestre" value="{{ trimestre }}">
+    <input name="titulo" placeholder="{{ t('O objetivo principal do trimestre') }}"
+           value="{{ f.objetivo.conteudo.titulo if f.objetivo else '' }}" {{ 'disabled' if motivo_edicao }}>
+    <div class="ob-form-linha">
+      <input name="metrica" placeholder="{{ t('Métrica / meta') }}"
+             value="{{ f.objetivo.conteudo.metrica if f.objetivo else '' }}" {{ 'disabled' if motivo_edicao }}>
+      <select name="status" {{ 'disabled' if motivo_edicao }}>
+        <option value="">—</option>
+        {% for cod, rot in status_obj %}<option value="{{ cod }}"
+          {{ 'selected' if f.objetivo and f.objetivo.conteudo.status == cod }}>{{ t(rot) }}</option>{% endfor %}
+      </select>
+    </div>
+    {% if not motivo_edicao %}<button class="bt" type="submit">{{ t('Salvar objetivo') }}</button>{% endif %}
+  </form>
+
+  {# --- Rocks (prioridades do trimestre) ------------------------------- #}
+  <h3 class="ob-sec-titulo">{{ t('Rocks do trimestre') }} <small>{{ f.rocks|length }}</small></h3>
+  <div class="ob-lista-itens">
+    {% for r in f.rocks %}
+    <form class="ob-item" hx-post="/onebyone/item/{{ f.ref }}/rock"
+          hx-target="#onebyoneFicha" hx-swap="innerHTML">
+      <input type="hidden" name="id" value="{{ r.id }}">
+      <input type="hidden" name="ano" value="{{ ano }}">
+      <input type="hidden" name="trimestre" value="{{ trimestre }}">
+      <input name="titulo" value="{{ r.conteudo.titulo }}" {{ 'disabled' if motivo_edicao }}>
+      <select name="status" {{ 'disabled' if motivo_edicao }}>
+        {% for cod, rot in status_rock %}<option value="{{ cod }}"
+          {{ 'selected' if r.conteudo.status == cod }}>{{ t(rot) }}</option>{% endfor %}
+      </select>
+      <input type="number" name="progresso" min="0" max="100" value="{{ r.conteudo.progresso }}"
+             title="{{ t('progresso %') }}" {{ 'disabled' if motivo_edicao }}>
+      {% if not motivo_edicao %}
+      <button class="bt bt-min" type="submit">{{ t('Salvar') }}</button>
+      <button class="ob-apagar" type="button" hx-post="/onebyone/item/{{ f.ref }}/apagar/{{ r.id }}"
+              hx-target="#onebyoneFicha" hx-swap="innerHTML"
+              hx-confirm="{{ t('Apagar este rock?') }}">×</button>{% endif %}
+    </form>
+    {% endfor %}
+    {% if not motivo_edicao %}
+    <form class="ob-add" hx-post="/onebyone/item/{{ f.ref }}/rock"
+          hx-target="#onebyoneFicha" hx-swap="innerHTML">
+      <input type="hidden" name="ano" value="{{ ano }}">
+      <input type="hidden" name="trimestre" value="{{ trimestre }}">
+      <input name="titulo" placeholder="{{ t('Novo rock do trimestre…') }}" required>
+      <button class="bt bt-min" type="submit">+ {{ t('Rock') }}</button>
+    </form>{% endif %}
+  </div>
+
+  {# --- Issues (IDS: identificar, discutir, resolver) ------------------ #}
+  <h3 class="ob-sec-titulo">{{ t('Issues (IDS)') }} <small>{{ f.issues|length }}</small></h3>
+  <div class="ob-lista-itens">
+    {% for i in f.issues %}
+    <form class="ob-item" hx-post="/onebyone/item/{{ f.ref }}/issue"
+          hx-target="#onebyoneFicha" hx-swap="innerHTML">
+      <input type="hidden" name="id" value="{{ i.id }}">
+      <input name="titulo" value="{{ i.conteudo.titulo }}" {{ 'disabled' if motivo_edicao }}>
+      <select name="status" {{ 'disabled' if motivo_edicao }}>
+        {% for cod, rot in status_issue %}<option value="{{ cod }}"
+          {{ 'selected' if i.conteudo.status == cod }}>{{ t(rot) }}</option>{% endfor %}
+      </select>
+      {% if not motivo_edicao %}
+      <button class="bt bt-min" type="submit">{{ t('Salvar') }}</button>
+      <button class="ob-apagar" type="button" hx-post="/onebyone/item/{{ f.ref }}/apagar/{{ i.id }}"
+              hx-target="#onebyoneFicha" hx-swap="innerHTML"
+              hx-confirm="{{ t('Apagar este issue?') }}">×</button>{% endif %}
+    </form>
+    {% endfor %}
+    {% if not motivo_edicao %}
+    <form class="ob-add" hx-post="/onebyone/item/{{ f.ref }}/issue"
+          hx-target="#onebyoneFicha" hx-swap="innerHTML">
+      <input name="titulo" placeholder="{{ t('Novo issue…') }}" required>
+      <input type="hidden" name="status" value="aberto">
+      <button class="bt bt-min" type="submit">+ {{ t('Issue') }}</button>
+    </form>{% endif %}
+  </div>
+
+  {# --- Missões de evolução (ponte Conversa de Valor → GPlanSiS|OS) ---------------------- #}
+  <h3 class="ob-sec-titulo">{{ t('Missões de evolução') }} <small>{{ f.missoes|length }}</small>
+    {% if not motivo_edicao %}
+    <button class="bt bt-min" hx-post="/onebyone/missoes-do-cgv/{{ f.ref }}"
+            hx-target="#onebyoneFicha" hx-swap="innerHTML"
+            title="{{ t('Gera missões a partir do PDI da Conversa de Valor') }}">↻ {{ t('da Conversa de Valor') }}</button>{% endif %}
+  </h3>
+  <div class="ob-lista-itens">
+    {% for ms in f.missoes %}
+    <form class="ob-missao" hx-post="/onebyone/item/{{ f.ref }}/missao"
+          hx-target="#onebyoneFicha" hx-swap="innerHTML">
+      <input type="hidden" name="id" value="{{ ms.id }}">
+      <input type="hidden" name="prazo" value="{{ ms.conteudo.prazo }}">
+      <input type="hidden" name="origem" value="{{ ms.conteudo.origem }}">
+      <div class="ob-missao-topo">
+        <input name="titulo" value="{{ ms.conteudo.titulo }}" {{ 'disabled' if motivo_edicao }}>
+        <select name="status" {{ 'disabled' if motivo_edicao }}>
+          {% for cod, rot in status_missao %}<option value="{{ cod }}"
+            {{ 'selected' if ms.conteudo.status == cod }}>{{ t(rot) }}</option>{% endfor %}
+        </select>
+      </div>
+      <input name="acao" value="{{ ms.conteudo.acao }}" placeholder="{{ t('Ação') }}" {{ 'disabled' if motivo_edicao }}>
+      <input name="evolucao" value="{{ ms.conteudo.evolucao }}" placeholder="{{ t('Evolução') }}" {{ 'disabled' if motivo_edicao }}>
+      <div class="ob-missao-pe">
+        {% if ms.conteudo.origem %}<span class="ob-fonte-selo">{{ ms.conteudo.origem }}</span>{% endif %}
+        {% if not motivo_edicao %}
+        <button class="bt bt-min" type="submit">{{ t('Salvar') }}</button>
+        <button class="ob-apagar" type="button" hx-post="/onebyone/item/{{ f.ref }}/apagar/{{ ms.id }}"
+                hx-target="#onebyoneFicha" hx-swap="innerHTML"
+                hx-confirm="{{ t('Apagar esta missão?') }}">×</button>{% endif %}
+      </div>
+    </form>
+    {% else %}<p class="rh-vazio">{{ t('Sem missões. Gere da Conversa de Valor ou adicione uma.') }}</p>{% endfor %}
+    {% if not motivo_edicao %}
+    <form class="ob-add" hx-post="/onebyone/item/{{ f.ref }}/missao"
+          hx-target="#onebyoneFicha" hx-swap="innerHTML">
+      <input name="titulo" placeholder="{{ t('Nova missão de evolução…') }}" required>
+      <input type="hidden" name="status" value="proposta">
+      <button class="bt bt-min" type="submit">+ {{ t('Missão') }}</button>
+    </form>{% endif %}
+  </div>
+
+  {# --- Carreira — até onde posso chegar (puxa Conversa de Valor + Talentos) --------- #}
+  <h3 class="ob-sec-titulo">{{ t('Carreira — até onde posso chegar') }}</h3>
+  {% if f.carreira.carreira_cgv or f.carreira.trilha or f.carreira.prontidao or f.carreira.pdi %}
+  <div class="ob-carreira-fonte">
+    <span class="ob-fonte-selo">{{ t('da Conversa de Valor e da Avaliação') }}</span>
+    {% if f.carreira.trilha %}<p><span>{{ t('Trilha de carreira') }}:</span> {{ f.carreira.trilha }}</p>{% endif %}
+    {% if f.carreira.prontidao %}<p><span>{{ t('Prontidão de sucessão') }}:</span> {{ t(f.carreira.prontidao) }}</p>{% endif %}
+    {% if f.carreira.carreira_cgv %}<p><span>{{ t('Aspiração (Conversa de Valor)') }}:</span> {{ f.carreira.carreira_cgv }}</p>{% endif %}
+    {% for p in f.carreira.pdi %}<p class="ob-pdi">PDI: {{ p.comp }} — {{ p.acao }}{% if p.prazo %} ({{ p.prazo }}){% endif %}</p>{% endfor %}
+  </div>
+  {% endif %}
+  <form class="ob-obj" hx-post="/onebyone/item/{{ f.ref }}/objetivo"
+        hx-target="#onebyoneFicha" hx-swap="innerHTML">
+    <input type="hidden" name="id" value="{{ f.carreira_obj.id if f.carreira_obj else '' }}">
+    <input type="hidden" name="ano" value="0"><input type="hidden" name="trimestre" value="0">
+    <input name="titulo" placeholder="{{ t('Onde quero chegar (longo prazo)') }}"
+           value="{{ f.carreira_obj.conteudo.titulo if f.carreira_obj else '' }}" {{ 'disabled' if motivo_edicao }}>
+    <textarea name="descricao" rows="2" placeholder="{{ t('O plano para chegar lá') }}"
+              {{ 'disabled' if motivo_edicao }}>{{ f.carreira_obj.conteudo.descricao if f.carreira_obj else '' }}</textarea>
+    {% if not motivo_edicao %}<button class="bt" type="submit">{{ t('Salvar objetivo de carreira') }}</button>{% endif %}
+  </form>
+
+  {# --- Ciclo de vida -------------------------------------------------- #}
+  <h3 class="ob-sec-titulo">{{ t('Ciclo de vida') }}</h3>
+  <form class="ob-item" hx-post="/onebyone/item/{{ f.ref }}/ciclo"
+        hx-target="#onebyoneFicha" hx-swap="innerHTML">
+    <input type="hidden" name="id" value="{{ f.ciclo.id if f.ciclo else '' }}">
+    <select name="estagio" {{ 'disabled' if motivo_edicao }}>
+      <option value="">—</option>
+      {% for cod, rot in estagios %}<option value="{{ cod }}"
+        {{ 'selected' if f.ciclo and f.ciclo.conteudo.estagio == cod }}>{{ t(rot) }}</option>{% endfor %}
+    </select>
+    <input name="nota" placeholder="{{ t('nota') }}"
+           value="{{ f.ciclo.conteudo.nota if f.ciclo else '' }}" {{ 'disabled' if motivo_edicao }}>
+    {% if not motivo_edicao %}<button class="bt bt-min" type="submit">{{ t('Salvar') }}</button>{% endif %}
+  </form>
+
+  {# --- Pulso (Escuta Ativa) ------------------------------------------- #}
+  <h3 class="ob-sec-titulo">{{ t('Pulso') }} <small>{{ t('Escuta ativa') }}</small></h3>
+  {% if not motivo_edicao %}
+  <form class="ob-form-linha ob-pulso-form" hx-post="/onebyone/item/{{ f.ref }}/pulso"
+        hx-target="#onebyoneFicha" hx-swap="innerHTML">
+    <input type="hidden" name="data" value="{{ hoje }}">
+    <label>{{ t('Sentimento') }}<input type="number" name="sentimento" min="1" max="5" required></label>
+    <label>{{ t('Energia') }}<input type="number" name="energia" min="1" max="5"></label>
+    <label class="ob-pulso-com">{{ t('Comentário') }}<input name="comentario"></label>
+    <button class="bt bt-min" type="submit">+ {{ t('Pulso') }}</button>
+  </form>{% endif %}
+  <div class="ob-pulsos">
+    {% for p in f.pulsos %}
+    <span class="ob-pulso-selo" title="{{ p.conteudo.comentario }}">{{ p.data }}
+      · {{ t('clima') }} {{ p.conteudo.sentimento }}/5{% if p.conteudo.energia %} · {{ t('energia') }} {{ p.conteudo.energia }}/5{% endif %}</span>
+    {% else %}<p class="rh-vazio">{{ t('Sem pulso registrado ainda.') }}</p>{% endfor %}
+  </div>
+</div>
+{% endif %}

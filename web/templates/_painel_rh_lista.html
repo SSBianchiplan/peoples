@@ -1,0 +1,26 @@
+{# Lista de colaboradores de uma fatia do Painel RH (barra/segmento/número
+   clicado), em MODAL sobre #unidadeFicha. Cada pessoa abre a própria ficha,
+   trocando esta lista pela ficha no mesmo overlay. Fecha no ×, fora ou Esc. #}
+<div class="dcr-ficha rh-lista-modal">
+  <div class="dcr-cabeca">
+    <div>
+      <h2 style="margin:0;font-size:15px">{{ titulo }}{% if fatia %} · {{ fatia }}{% endif %}</h2>
+      <div class="trilha" style="margin-top:2px">{{ total }} {{ t('colaborador(es)') }}</div>
+    </div>
+    <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
+            onclick="document.getElementById('unidadeFicha').innerHTML=''">×</button>
+  </div>
+
+  <div class="rh-lista rh-lista-modal-corpo">
+    {% for p in itens %}
+    <div class="rh-item" role="button" tabindex="0"
+         hx-get="/unidades/{{ p.id }}/ficha" hx-target="#unidadeFicha" hx-swap="innerHTML">
+      <span class="rh-item-nome">{{ p.nome }}
+        {% if p.status and p.status|lower != 'ativo' %}<b class="rh-selo cinza">{{ t('inativo') }}</b>{% endif %}</span>
+      <span class="rh-item-meta">{{ p.cargo }}{% if p.area %} · {{ p.area }}{% endif %} · {{ p.vinculo }}</span>
+      <span class="rh-item-data">
+        {% if p.data %}{{ p.data }}{% if p.anos is not none %} · {{ p.anos }} {{ t('anos') }}{% endif %}{% endif %}</span>
+    </div>
+    {% else %}<p class="rh-vazio">{{ t('Ninguém nesta fatia.') }}</p>{% endfor %}
+  </div>
+</div>

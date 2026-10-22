@@ -1,0 +1,65 @@
+{#
+  Referência — o método por trás do Peoples Trust Index: os cinco pilares, a escala,
+  os níveis de maturidade, as 60 afirmações (Anexo A) e as decisões de anonimato
+  e LGPD. Fonte única do instrumento; a tela de resposta lê daqui.
+#}
+<h2>{{ t('O método') }}</h2>
+<p class="sub">{{ t('Trust Index™ adaptado para condução 100% interna. Um excelente lugar para trabalhar é aquele em que as pessoas confiam em quem lideram e trabalham ao lado, têm orgulho do que fazem e gostam de quem têm como colegas. A confiança é o pilar estruturante.') }}</p>
+
+<h3>{{ t('Os cinco pilares') }}</h3>
+<div class="gptw-pilar-cards">
+  {% for pcod, prot, pdesc in pilares %}
+  <div class="gptw-pilar-card">
+    <div class="gptw-pilar-topo"><b>{{ t(prot) }}</b></div>
+    <p class="sub">{{ t(pdesc) }}</p>
+  </div>
+  {% endfor %}
+</div>
+
+<h3>{{ t('Escala Likert de 5 pontos') }}</h3>
+<div class="gptw-escala">
+  {% for val, rot in likert %}
+  <div class="gptw-escala-item"><b>{{ val }}</b><span>{{ t(rot) }}</span></div>
+  {% endfor %}
+</div>
+<p class="pista">{{ t('O PTI conta 4 e 5 como positivo. 3 é neutro, não positivo.') }}</p>
+
+<h3>{{ t('Níveis de maturidade') }}</h3>
+<div class="rolagem-x"><table>
+  <thead><tr>
+    <th scope="col">{{ t('Faixa do PTI') }}</th>
+    <th scope="col">{{ t('Nível') }}</th>
+    <th scope="col">{{ t('Descrição') }}</th>
+  </tr></thead>
+  <tbody>
+    {% for piso_m, cod, rot, desc in maturidades %}
+    <tr>
+      <td class="num">{% if cod == 'excelencia' %}90–100 %{% elif cod == 'alto' %}75–89 %{% elif cod == 'desenvolvimento' %}60–74 %{% elif cod == 'alerta' %}45–59 %{% else %}< 45 %{% endif %}</td>
+      <td><span class="gptw-mat mat-{{ cod }}">{{ t(rot) }}</span></td>
+      <td>{{ t(desc) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table></div>
+
+<h3>{{ t('As 60 afirmações (Anexo A)') }}</h3>
+<p class="pista">{{ t('12 por pilar; as 15 marcadas com ★ compõem o pulso semestral. Redação na primeira pessoa, sob a ótica do colaborador; a liderança referida é o gestor direto.') }}</p>
+{% for pcod, prot, pdesc in pilares %}
+<div class="grupo">
+  <h4 class="gptw-ref-pilar">{{ t(prot) }}</h4>
+  <ol class="gptw-ref-lista">
+    {% for aid, ap, texto, pulso in todas_afirmacoes %}
+    {% if ap == pcod %}
+    <li value="{{ aid }}">{% if pulso %}<span class="gptw-estrela" title="{{ t('pulso semestral') }}">★</span>{% endif %}{{ t(texto) }}</li>
+    {% endif %}
+    {% endfor %}
+  </ol>
+</div>
+{% endfor %}
+
+<h3>{{ t('Anonimato e LGPD') }}</h3>
+<ul class="gptw-notas">
+  <li><b>{{ t('Anônima por construção') }}.</b> {{ t('Nenhuma resposta guarda quem respondeu. O vínculo com o sistema é pelos estratos (nível, área, vínculo, faixa de casa) que o organograma já conhece — derivados no envio e gravados sem a identidade.') }}</li>
+  <li><b>{{ t('Piso de 5 respondentes') }}.</b> {{ t('Nenhum recorte com menos de cinco respostas é publicado — o mesmo piso de amostra que o Skills aplica nas matrizes. Recorte pequeno sobe agregado.') }}</li>
+  <li><b>{{ t('Idade e gênero de fora') }}.</b> {{ t('O organograma não guarda data de nascimento nem gênero (LGPD). A pesquisa não os coleta; recorte etário ou de gênero, se preciso, é opt-in e fora daqui.') }}</li>
+</ul>

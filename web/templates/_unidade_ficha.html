@@ -1,0 +1,323 @@
+{#
+  Ficha completa do colaborador, em MODAL (aberta pelo botão "Editar ficha" do
+  painel). Todos os campos num só lugar + os vínculos no sistema. Salva pela
+  mesma rota do painel (/salvar) — a edição reflete em todo o sistema. Fecha no
+  ×, no clique fora ou no Esc.
+
+  IDs prefixados `ff-` para não colidir com o painel lateral (`f-`), que pode
+  estar aberto ao mesmo tempo.
+#}
+{% set alvo = "#canvas" if oob else "#painel" %}
+{% set troca = "outerHTML" if oob else "innerHTML" %}
+<div class="dcr-ficha">
+  <div class="dcr-cabeca">
+    <div>
+      <h2 style="margin:0;font-size:15px">{{ u.codigo }} · {{ u.nome }}</h2>
+      {% if trilha %}
+      <div class="trilha" style="margin-top:2px">
+        {% for a in trilha %}{% if not loop.first %} › {% endif %}{{ a.nome }}{% endfor %}
+      </div>{% endif %}
+    </div>
+    <div class="dcr-cabeca-acoes">
+      <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
+              onclick="document.getElementById('unidadeFicha').innerHTML=''">×</button>
+    </div>
+  </div>
+
+  {# Atalhos para os módulos onde a pessoa aparece — no TOPO do modal (print 4).
+     Respeitam a visibilidade de módulos do usuário. #}
+  <div class="acoes acoes-mods" style="flex-wrap:wrap;gap:6px;margin:2px 0 12px;
+       padding-bottom:12px;border-bottom:1px solid var(--linha)">
+    {% for chave, rotulo in modulos_vinculo %}
+    {% if modulo_visivel(chave) %}
+    {# Skills/Conversa de Valor/Talentos têm ficha por pessoa: abrem no MESMO overlay global
+       (#unidadeFicha), trocando esta ficha pela do módulo — sem sair da tela.
+       Tempo (agregado) e Avaliação Mestre (anônimo) não têm ficha individual: navegam. #}
+    {% if chave == 'dcr' %}
+    <button type="button" class="bt bt-min" hx-get="/dcr/ficha/{{ dcr_chave|urlencode }}"
+            hx-target="#unidadeFicha" hx-swap="innerHTML">{{ t(rotulo) }}</button>
+    {% elif chave == 'cgv' %}
+    <button type="button" class="bt bt-min" hx-get="/cgv/ficha/{{ ref|urlencode }}"
+            hx-target="#unidadeFicha" hx-swap="innerHTML">{{ t(rotulo) }}</button>
+    {% elif chave == 'talentos' %}
+    <button type="button" class="bt bt-min" hx-get="/talentos/ficha/{{ ref|urlencode }}"
+            hx-target="#unidadeFicha" hx-swap="innerHTML">{{ t(rotulo) }}</button>
+    {% else %}
+    <button type="button" class="bt bt-min" hx-get="/vistas/{{ chave }}"
+            hx-target="#area" hx-swap="innerHTML"
+            onclick="document.getElementById('unidadeFicha').innerHTML=''; if(window.aba)aba(null)">
+      {{ t(rotulo) }}</button>
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  {# Skills do cargo — a matriz de competências lida contra o que a pessoa
+     declara: ✓ coberta, ○ gap (insumo direto do PDI e da Conversa de Valor). #}
+  <div class="grupo skills-cargo">
+    <h3 style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:0">
+      {{ t('Skills do cargo') }}
+      {% if skills_cargo.tem %}<span class="etq">{{ t(skills_cargo.papel) }}</span>{% endif %}
+      <a class="bt bt-min" style="margin-left:auto" href="/unidades/{{ u.id }}/skills.md" download>
+        {{ t('Baixar Skills (.md)') }}</a>
+    </h3>
+    {% if skills_cargo.tem %}
+    {% if skills_cargo.missao %}<p class="pista" style="margin-top:0">{{ skills_cargo.missao }}</p>{% endif %}
+    <div class="fatos">
+      <div><span>{{ t('Aderência') }}</span><b>{{ skills_cargo.ok }}/{{ skills_cargo.total }} · {{ skills_cargo.pct }}%</b></div>
+      <div><span>{{ t('Técnicas') }}</span><b>{{ skills_cargo.total }}</b></div>
+      <div><span>{{ t('Comportamentais') }}</span><b>{{ skills_cargo.comportamentais }}</b></div>
+      <div><span>{{ t('Requisitos') }}</span><b>{{ skills_cargo.requisitos }}</b></div>
+    </div>
+    <ul class="dcr-itens skills-lista">
+      {% for c in skills_cargo.tecnicas %}
+      <li class="{{ 'ok' if c.ok else 'gap' }}"><span class="skills-marca">{{ '✓' if c.ok else '○' }}</span>{{ c.texto }}</li>
+      {% endfor %}
+    </ul>
+    <p class="pista">{{ t('✓ = competência declarada no cadastro da pessoa; ○ = desejável no cargo e ainda não declarada (gap para o PDI).') }}</p>
+    {% else %}
+    <p class="pista">{{ t('Cargo sem ficha Skills no recorte atual.') }}</p>
+    {% endif %}
+  </div>
+
+  {% if not pode_editar %}
+  <div class="aviso">{{ t('Perfil sem permissão de edição nesta unidade. Os campos estão em leitura.') }}</div>
+  {% endif %}
+
+  <form hx-post="/unidades/{{ u.id }}/salvar" hx-target="{{ alvo }}" hx-swap="{{ troca }}"
+        hx-on::after-request="if(event.detail.successful){document.getElementById('unidadeFicha').innerHTML=''}">
+    <input type="hidden" name="vista" value="{{ vista_origem }}">
+    <input type="hidden" name="contexto" value="{{ contexto_origem }}">
+    <fieldset style="border:0;padding:0;margin:0" {% if not pode_editar %}disabled{% endif %}>
+      <div class="dupla">
+        <div>
+          <label for="ff-nome">{{ t('Nome / pessoa') }}</label>
+          <input id="ff-nome" name="nome" value="{{ u.nome }}" maxlength="80" required>
+        </div>
+        <div>
+          <label for="ff-tipo">{{ t('Nível') }}</label>
+          <select id="ff-tipo" name="tipo">
+            {% for k, rotulo in rotulos_nivel.items() %}
+            <option value="{{ k }}" {% if u.tipo == k %}selected{% endif %}>{{ t(rotulo) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="dupla">
+        <div>
+          <label for="ff-cargo">{{ t('Cargo / função') }}</label>
+          <input id="ff-cargo" name="cargo" value="{{ u.cargo }}" maxlength="80"
+                 list="ff-cargos" autocomplete="off">
+          <datalist id="ff-cargos">
+            {% for c in cargos_conhecidos %}<option value="{{ c }}"></option>{% endfor %}
+          </datalist>
+        </div>
+        <div>
+          <label for="ff-cc">{{ t('Centro de custo') }}</label>
+          <input id="ff-cc" name="centro_custo" value="{{ u.centro_custo }}"
+                 maxlength="12" list="ff-lista-cc" autocomplete="off">
+          <datalist id="ff-lista-cc">
+            {% for c in centros %}<option value="{{ c.n3 }}">{{ c.departamento }}</option>{% endfor %}
+          </datalist>
+        </div>
+      </div>
+
+      <div class="dupla">
+        <div>
+          <label for="ff-area">{{ t('Departamento') }}</label>
+          <input id="ff-area" name="area" value="{{ u.area }}" maxlength="60">
+        </div>
+        <div>
+          <label for="ff-vert">{{ t('Vertical (N2)') }}</label>
+          <input id="ff-vert" name="vertical" value="{{ u.vertical }}" maxlength="12">
+        </div>
+      </div>
+
+      <div class="dupla">
+        <div>
+          <label for="ff-vinculo">{{ t('Vínculo') }}</label>
+          <select id="ff-vinculo" name="vinculo">
+            {% for chave, (rotulo, _cor) in vinculos.items() %}
+            <option value="{{ chave }}" {% if u.vinculo == chave %}selected{% endif %}>{{ t(rotulo) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="ff-resp">{{ t('Responsável') }}</label>
+          <input id="ff-resp" name="responsavel" value="{{ u.responsavel }}"
+                 maxlength="60" placeholder="{{ t('se o card for uma área') }}">
+        </div>
+      </div>
+
+      <div class="dupla">
+        <div>
+          <label for="ff-email">{{ t('E-mail corporativo') }}
+            {% if u.email %}<a class="mailto" href="mailto:{{ u.email }}" aria-label="{{ t('Escrever para {quem}', quem=u.email) }}">✉</a>{% endif %}</label>
+          <input id="ff-email" name="email" type="email" value="{{ u.email }}" maxlength="120">
+        </div>
+        <div>
+          <label for="ff-inicio">{{ t('Data de admissão') }}</label>
+          <input id="ff-inicio" name="data_inicio" type="date" value="{{ u.data_inicio }}" max="{{ hoje_iso }}">
+          {% if anos_de_casa is not none %}
+          <p class="pista">{{ t('{anos} ano(s) de casa · {faixa}', anos=anos(anos_de_casa), faixa=t(rotulo_faixa)) }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="dupla">
+        <div>
+          <label for="ff-status">{{ t('Situação') }}</label>
+          <select id="ff-status" name="status">
+            <option value="">{{ t('— não declarada') }}</option>
+            {% for chave, rotulo in status_opcoes.items() %}
+            <option value="{{ chave }}" {% if u.status == chave %}selected{% endif %}>{{ t(rotulo) }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="ff-destino">{{ t('Responde a') }}</label>
+          <select id="ff-destino" name="destino" form="ff-mover"
+                  {% if not u.parent_id or not pode_editar %}disabled{% endif %}>
+            {% for d in destinos %}
+            <option value="{{ d.id }}" {% if d.id == u.parent_id %}selected{% endif %}>{{ d.codigo }} · {{ d.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      {# Planilha completa (bd_completo_org) — campos organizacionais. O dinheiro
+         (salário, custo, venda) NÃO fica aqui: mora na view bd_completo_org, só
+         Admin, e sempre em branco (LGPD). #}
+      <div class="dupla">
+        <div>
+          <label for="ff-nasc">{{ t('Data de nascimento') }}</label>
+          <input id="ff-nasc" name="data_nascimento" type="date" value="{{ u.data_nascimento }}" max="{{ hoje_iso }}">
+          {% if idade is not none %}<p class="pista">{{ t('{n} anos', n=anos(idade)) }}</p>{% endif %}
+        </div>
+        <div>
+          {# Gênero selecionável (print 3); um valor fora da lista (import antigo)
+             é preservado como opção própria. #}
+          <label for="ff-genero">{{ t('Gênero') }}</label>
+          <select id="ff-genero" name="genero">
+            <option value="">{{ t('— não declarado') }}</option>
+            <option value="Masculino" {% if u.genero == 'Masculino' %}selected{% endif %}>{{ t('Masculino') }}</option>
+            <option value="Feminino" {% if u.genero == 'Feminino' %}selected{% endif %}>{{ t('Feminino') }}</option>
+            <option value="Outro" {% if u.genero == 'Outro' %}selected{% endif %}>{{ t('Outro') }}</option>
+            <option value="Prefiro não informar" {% if u.genero == 'Prefiro não informar' %}selected{% endif %}>{{ t('Prefiro não informar') }}</option>
+            {% if u.genero and u.genero not in ["Masculino","Feminino","Outro","Prefiro não informar"] %}
+            <option value="{{ u.genero }}" selected>{{ u.genero }}</option>{% endif %}
+          </select>
+        </div>
+      </div>
+
+      <div class="dupla">
+        <div>
+          {# Tipo de mão de obra selecionável (print 2). #}
+          <label for="ff-tipomo">{{ t('Tipo de mão de obra') }}</label>
+          <select id="ff-tipomo" name="tipo_mo">
+            <option value="">—</option>
+            <option value="Vendável" {% if u.tipo_mo == 'Vendável' %}selected{% endif %}>{{ t('Vendável') }}</option>
+            <option value="Não vendável" {% if u.tipo_mo == 'Não vendável' %}selected{% endif %}>{{ t('Não vendável') }}</option>
+            {% if u.tipo_mo and u.tipo_mo not in ["Vendável","Não vendável"] %}
+            <option value="{{ u.tipo_mo }}" selected>{{ u.tipo_mo }}</option>{% endif %}
+          </select>
+        </div>
+        <div>
+          {# Classificação selecionável (print 2). #}
+          <label for="ff-tipoclass">{{ t('Classificação') }}</label>
+          <select id="ff-tipoclass" name="tipo_class">
+            <option value="">—</option>
+            <option value="Direto" {% if u.tipo_class == 'Direto' %}selected{% endif %}>{{ t('Direto') }}</option>
+            <option value="Indireto" {% if u.tipo_class == 'Indireto' %}selected{% endif %}>{{ t('Indireto') }}</option>
+            {% if u.tipo_class and u.tipo_class not in ["Direto","Indireto"] %}
+            <option value="{{ u.tipo_class }}" selected>{{ u.tipo_class }}</option>{% endif %}
+          </select>
+        </div>
+      </div>
+
+      <div class="dupla">
+        <div>
+          <label for="ff-mo">{{ t('MO (MOI/MOD)') }}</label>
+          <input id="ff-mo" name="mo_classe" value="{{ u.mo_classe }}" maxlength="40">
+        </div>
+        <div>
+          {# Categoria de nível ligada aos valores já usados no sistema. #}
+          <label for="ff-catnivel">{{ t('Categoria de nível') }}</label>
+          <input id="ff-catnivel" name="categoria_nivel" value="{{ u.categoria_nivel }}"
+                 maxlength="40" list="ff-op-categoria_nivel" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="dupla">
+        <div>
+          {# BU ligada ao sistema (print 1): sugere as BUs já cadastradas. #}
+          <label for="ff-bu">{{ t('BU (unidade de negócio)') }}</label>
+          <input id="ff-bu" name="bu" value="{{ u.bu }}" maxlength="60"
+                 list="ff-op-bu" autocomplete="off">
+        </div>
+        <div>
+          <label for="ff-ccequipe">{{ t('CC_Equipe') }}</label>
+          <input id="ff-ccequipe" name="cc_equipe" value="{{ u.cc_equipe }}" maxlength="40"
+                 list="ff-op-cc_equipe" autocomplete="off">
+        </div>
+      </div>
+
+      <label>{{ t('Níveis de centro de custo (N2 / N4 / N5)') }}</label>
+      <div class="trio" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <input name="n2" value="{{ u.n2 }}" maxlength="20" placeholder="N2"
+               aria-label="N2" class="cod" list="ff-op-n2" autocomplete="off">
+        <input name="n4" value="{{ u.n4 }}" maxlength="20" placeholder="N4"
+               aria-label="N4" class="cod" list="ff-op-n4" autocomplete="off">
+        <input name="n5" value="{{ u.n5 }}" maxlength="20" placeholder="N5"
+               aria-label="N5" class="cod" list="ff-op-n5" autocomplete="off">
+      </div>
+      {# Datalists "vincular ao sistema": as opções são os valores que já existem
+         nos nós (print 1). #}
+      {% for campo, valores in opcoes_org.items() %}
+      <datalist id="ff-op-{{ campo }}">
+        {% for v in valores %}<option value="{{ v }}"></option>{% endfor %}
+      </datalist>
+      {% endfor %}
+      <p class="pista">{{ t('N3 é o Centro de custo acima. As colunas financeiras (salário, custos, vendas) ficam na base bd_completo_org, só para Admin — aqui não entram (LGPD).') }}</p>
+
+      <label for="ff-itens">{{ t('Accountabilities') }}</label>
+      <textarea id="ff-itens" name="responsabilidades" spellcheck="false" rows="4">{{ texto }}</textarea>
+
+      <label for="ff-skills">{{ t('Competências') }}</label>
+      <input id="ff-skills" name="competencias" value="{{ skills }}" maxlength="240"
+             placeholder="{{ t('separadas por vírgula') }}">
+
+      <div class="acoes" style="margin-top:16px">
+        <button type="submit" class="bt forte" style="flex:0 0 160px">{{ t('Salvar') }}</button>
+        <button type="button" class="bt"
+                onclick="document.getElementById('unidadeFicha').innerHTML=''">{{ t('Cancelar') }}</button>
+      </div>
+    </fieldset>
+  </form>
+
+  {# O "Responde a" acima pertence a este formulário de mover (via form=), para
+     não brigar com o de salvar. #}
+  {% if u.parent_id %}
+  <form id="ff-mover" hx-post="/unidades/{{ u.id }}/mover" hx-target="{{ alvo }}" hx-swap="{{ troca }}"
+        hx-on::after-request="if(event.detail.successful){document.getElementById('unidadeFicha').innerHTML=''}"
+        style="margin-top:-6px">
+    <input type="hidden" name="vista" value="{{ vista_origem }}">
+    <input type="hidden" name="contexto" value="{{ contexto_origem }}">
+    <button type="submit" class="bt bt-min" {% if not pode_editar %}disabled{% endif %}>{{ t('Mover reporte') }}</button>
+  </form>
+  {% endif %}
+
+  {# ---------------- Vínculos no sistema ---------------- #}
+  <div class="grupo">
+    <h3>{{ t('Vínculos no sistema') }}</h3>
+    <div class="fatos">
+      <div><span>{{ t('nível lógico') }}</span><b>N{{ u_nivel }}</b></div>
+      <div><span>{{ t('responde a') }}</span><b>{{ pai.nome if pai else t("— (raiz)") }}</b></div>
+      <div><span>{{ t('subordinados diretos') }}</span><b>{{ n_filhos }}</b></div>
+      <div><span>{{ t('na subárvore') }}</span><b>{{ n_descendentes }}</b></div>
+      <div><span>{{ t('identificador') }}</span><b>{{ u.id }}</b></div>
+    </div>
+    {# Os atalhos de módulo agora estão no TOPO do modal (print 4). #}
+  </div>
+</div>

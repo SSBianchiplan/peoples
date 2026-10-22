@@ -1,0 +1,13 @@
+{# One-on-One — shell da vista. Como a Conversa de Valor: inclui os filtros e envolve o corpo em
+   #onebyoneCorpo (o único que o /filtros troca). A ficha de cada pessoa abre num
+   overlay próprio que sobrevive à troca do corpo. #}
+<div class="vista">
+  {% include "_filtros.html" %}
+  <div class="folha">
+    <div id="onebyoneCorpo">
+      {% include "_onebyone_corpo.html" %}
+    </div>
+  </div>
+</div>
+<div id="onebyoneFicha" class="ficha-painel"
+     onclick="if(event.target===this)this.innerHTML=''"></div>

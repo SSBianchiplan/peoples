@@ -1,0 +1,69 @@
+# Segredos — nunca versionar (só o .env.exemplo, sem valores reais)
+.env
+.env.*
+!.env.exemplo
+!.env.example
+
+# Dados (LGPD): estado do organograma, credenciais do login, planilhas de RH.
+# A base de demonstração é gerada localmente (ver README) e também fica fora.
+dados/
+data/
+planilhas/
+*.xlsx
+*.xls
+*.csv
+Estrutura*.pdf
+mapa-nomes.json
+
+# Documentos internos que não acompanham o repositório público
+docs/panorama.html
+docs/boas-vindas.html
+docs/apresentacao/
+docs/CGV/*.pdf
+docs/CGV/*.xlsx
+
+# Bancos, backups e cópias
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sql.gz
+*.dump
+*.bak
+*.bak*
+*-bak-*
+backups/
+
+# Ajuste de compose por máquina (reabre a porta do Postgres só em dev)
+docker-compose.override.yml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / ferramentas
+node_modules/
+
+# Logs e temporários
+*.log
+*.tmp
+tmp/
+
+# Chaves e certificados
+*.pem
+*.key
+*.crt
+*.p12
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

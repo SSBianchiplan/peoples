@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>MarIA — a maestrina do GPlanSiS|ORG</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232D3336'/><rect x='3' y='9' width='10' height='4' rx='1' fill='%23EB6A20'/><rect x='3' y='3' width='4' height='4' rx='1' fill='%237D8286'/><rect x='9' y='3' width='4' height='4' rx='1' fill='%237D8286'/></svg>">
+<style>
+:root{--lar:#EB6A20;--amb:#F6A709;--gra:#2D3336;--cin:#7D8286;--fundo:#F6F5F3;--papel:#FFFFFF;--tinta:#1F2426;--tinta2:#4A5053;--linha:#DED9D5;--lar-txt:#B4460F;
+  --disp:"Bahnschrift","Segoe UI Semibold","Segoe UI",system-ui,sans-serif;--body:"Segoe UI",system-ui,-apple-system,Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fundo:#121517;--papel:#1C2124;--tinta:#E8E9EA;--tinta2:#A4AAAD;--linha:#343C41;--lar-txt:#F0854A}}
+:root[data-theme="dark"]{--fundo:#121517;--papel:#1C2124;--tinta:#E8E9EA;--tinta2:#A4AAAD;--linha:#343C41;--lar-txt:#F0854A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--tinta);font-family:var(--body);line-height:1.65;font-size:16.5px}
+.wrap{max-width:820px;margin:0 auto;padding:0 24px 72px}
+header{background:var(--gra);color:#EDEBE9;padding:48px 0 40px}
+header .wrap{padding-bottom:0;display:grid;grid-template-columns:1fr 200px;gap:24px;align-items:end}
+@media (max-width:640px){header .wrap{grid-template-columns:1fr}}
+.eyebrow{font-family:Consolas,ui-monospace,monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--amb);font-weight:700;margin:0 0 10px}
+h1{font-family:var(--disp);font-size:clamp(32px,5vw,50px);color:#fff;margin:0 0 10px;line-height:1.08}
+header p{color:#C9CDCF;margin:0;font-size:18px}
+header img{width:200px;height:auto;display:block;justify-self:end}
+h2{font-family:var(--disp);font-size:26px;margin:44px 0 8px}
+p{margin:10px 0}
+blockquote{margin:22px 0;padding:16px 20px;border-left:5px solid var(--lar);background:var(--papel);border-radius:0 12px 12px 0;font-size:18px;font-family:var(--disp)}
+.card{background:var(--papel);border:1px solid var(--linha);border-radius:14px;padding:18px 20px;margin:14px 0}
+ul{padding-left:20px}li{margin:5px 0}
+a{color:var(--lar-txt)}
+.rod{margin-top:44px;color:var(--tinta2);font-size:13px;border-top:1px solid var(--linha);padding-top:16px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div>
+    <p class="eyebrow">GPlanSiS|ORG · agente 01</p>
+    <h1>MarIA, a maestrina</h1>
+    <p>A assistente que fala com as pessoas — e que sabe quando a resposta é de outro agente.</p>
+  </div>
+  <img src="/marca/maria/MarIA_acenando.png" alt="MarIA acenando" onerror="this.remove()">
+</div></header>
+
+<main class="wrap">
+  <h2>De onde ela vem</h2>
+  <p>MarIA nasceu no hub GPlanSiS como o <b>copiloto contextual</b> dos sistemas da casa: a mesma assistente que responde no PriorIA sobre um projeto atrasado, ou no PCP sobre uma ordem parada, responde aqui, no Peoples, sobre a estrutura, as pessoas e os talentos. Ela é uma só de propósito — quem trabalha em três sistemas não deveria ter de aprender três jeitos de perguntar.</p>
+  <p>O método por trás dela tem dezoito anos: planejamento estratégico, tático e operacional, processos e fluxos, pessoas e estrutura. Em 2026, quando os agentes GPlanSiS|ORG ganharam especialidades — PlanIA, RotIA, OperIA, FluxIA e GentIA —, MarIA recebeu o papel que sempre teve na prática: <b>a maestrina</b>. Ela ouve a pergunta, entende quem pergunta e o que essa pessoa pode ver, escolhe quem responde e devolve a resposta em linguagem de gente, com a fonte ao lado.</p>
+
+  <blockquote>“Eu não decido nada sobre ninguém. Eu preparo a decisão para quem tem o direito de tomá-la.”</blockquote>
+
+  <h2>O que ela faz no Peoples</h2>
+  <div class="card"><b>Recebe quem chega.</b> Na primeira entrada ela acena, entra pela direita e leva a pessoa por cada controle da tela — dezenove passos, um por vez. Desliga-se em Configurações; volta quando alguém pede.</div>
+  <div class="card"><b>Responde no recorte.</b> Toda pergunta é respondida sobre o que o perfil de quem pergunta pode ver: um líder vê a sua subárvore, o RH vê a organização, o colaborador vê a si mesmo. Não há pergunta que atravesse a parede do RBAC.</div>
+  <div class="card"><b>Escreve o relatório.</b> Quando a resposta merece papel, ela gera o PDF com o carimbo do sistema — a estrutura, o Skills, a Conversa de Valor — e registra no histórico quem pediu, quando e quanto custou.</div>
+  <div class="card"><b>Orquestra.</b> “Quem está pronto para coordenar a automação?” é pergunta de GentIA; “cabe o trimestre com esta equipe?” é de RotIA. MarIA sabe a diferença e não finge saber o que outro sabe melhor.</div>
+
+  <h2>O que ela não faz — e por quê</h2>
+  <ul>
+    <li><b>Não altera a estrutura.</b> Mover, promover, excluir e editar são atos de gente, com nome no ledger. MarIA sugere; o operador executa.</li>
+    <li><b>Não classifica pessoas.</b> Ela apresenta o 9-box, os gaps do Skills e a aderência — a leitura é da liderança e do RH.</li>
+    <li><b>Não lê fora do escopo.</b> Nem para “ajudar”. O escopo é uma decisão de governança (LGPD), não uma inconveniência técnica.</li>
+    <li><b>Não inventa.</b> Sem dado, ela diz que não há dado e indica onde alguém pode saber.</li>
+  </ul>
+
+  <h2>Human Gate</h2>
+  <p>Todo agente GPlanSiS|ORG entrega uma recomendação com <b>evidência, alternativa e critério</b>, e para diante do portão: a decisão é humana, assinada e auditável. MarIA é a guardiã desse portão na conversa — é ela que lembra, sempre que preciso, que <b>a IA propõe e o humano decide</b>.</p>
+
+  <p class="rod">GPlanSiS|ORG · MarIA · rev 1.0 · 2026 · <a href="/agentes">os seis agentes</a> · <a href="/">voltar ao GPlanSiS|Peoples</a></p>
+</main>
+</body>
+</html>

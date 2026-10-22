@@ -1,0 +1,52 @@
+{#
+  A mesma tabela para vínculo, nível e departamento: a pergunta é a mesma —
+  "quem tem mais tempo de casa" —, muda só o corte. Três tabelas escritas à mão
+  divergiriam na terceira edição.
+
+  `grupos` vem do `{% set %}` de quem inclui. `campo` também: quando presente
+  (ex.: 'area'), cada linha vira clicável e abre/fecha a lista de colaboradores
+  daquele grupo — os nomes já estão na página (`linhas`), só escondidos.
+#}
+<div class="tw"><table>
+  <thead><tr>
+    <th scope="col">{{ t('Grupo') }}</th>
+    <th scope="col" class="num">{{ t('Pessoas') }}</th>
+    <th scope="col" class="num">{{ t('Média') }}</th>
+    <th scope="col" class="num">{{ t('Mediana') }}</th>
+    <th scope="col" class="num">{{ t('Até 1 ano') }}</th>
+    <th scope="col" class="num">{{ t('Mais de 10') }}</th>
+  </tr></thead>
+  <tbody>
+    {% for g in grupos %}
+    {% set exp = (campo is defined and campo) %}
+    <tr {% if exp %}class="tw-linha-exp" onclick="toggleGrupo(this)" tabindex="0"
+        role="button" aria-expanded="false"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleGrupo(this)}"{% endif %}
+        title="{{ t('{rotulo}: {n} pessoa(s) · de {min} a {max} anos de casa',
+                    rotulo=t(g.rotulo), n=g.n, min=anos(g.minimo), max=anos(g.maximo)) }}">
+      <td>{% if exp %}<span class="tw-chevron" aria-hidden="true">▸</span> {% endif %}{{ t(g.rotulo) }}</td>
+      <td class="num">{{ g.n }}</td>
+      <td class="num">{{ anos(g.media) }}</td>
+      {# Mediana em branco não é zero: é grupo pequeno demais para ela dizer
+         alguma coisa. O travessão diz isso; um `0,00` mentiria — e o `title`
+         explica o travessão para quem passa o mouse esperando um número. #}
+      <td class="num"{% if g.mediana is none %}
+          title="{{ t('Menos de {n} pessoas com data: a mediana diria mais sobre o acaso que sobre o grupo.', n=piso_grupo) }}"{% endif %}>{{ anos(g.mediana) }}</td>
+      <td class="num">{{ g.novatos or "" }}</td>
+      <td class="num">{{ g.veteranos or "" }}</td>
+    </tr>
+    {% if exp %}
+    <tr class="tw-gente" hidden>
+      <td colspan="6">
+        <div class="tw-gente-lista">
+          {% for p in linhas|selectattr(campo, 'equalto', g.chave)|sort(attribute='nome') %}
+          <span class="tw-pessoa">{{ p.nome }}{% if p.cargo %} <small>· {{ p.cargo }}</small>{% endif %}
+            {% if p.anos is not none and p.faixa != 'futuro' %}<b>{{ anos(p.anos) }}</b>{% endif %}</span>
+          {% endfor %}
+        </div>
+      </td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+  </tbody>
+</table></div>

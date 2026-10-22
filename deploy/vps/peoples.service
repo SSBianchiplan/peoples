@@ -1,0 +1,32 @@
+# GPlanSiS|Peoples — uvicorn no loopback, um worker (o estado vive em memória e
+# é gravado em JSON + Postgres; dois workers seriam dois estados divergentes).
+# Modelo: instalar.sh troca __APP__, __DADOS__ e __USUARIO__.
+[Unit]
+Description=GPlanSiS|Peoples (organograma, pessoas e talentos)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=__USUARIO__
+Group=__USUARIO__
+WorkingDirectory=__APP__
+# O .env é lido pelo próprio app (orga.ambiente) — aqui só a porta, para o
+# ExecStart e o app concordarem sem depender de ler o arquivo duas vezes.
+EnvironmentFile=__APP__/.env
+ExecStart=__APP__/.venv/bin/uvicorn orga.main:app --host 127.0.0.1 --port ${ORG_PORT} --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+RestartSec=5
+
+# Endurecimento: só o estado é gravável.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=__DADOS__
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,268 @@
+{#
+  Módulo MarIA. A tela abre mesmo sem ANTHROPIC_API_KEY: ela explica o que a
+  assistente faria e onde está o limite. Tela que some quando não configurada
+  esconde o que existe.
+#}
+<div class="folha maria-folha">
+
+  <div class="maria-cabeca">
+    <img src="/marca/maria/MarIA_acenando.png" alt="MarIA" class="maria-figura">
+    <div>
+      <h1>MarIA</h1>
+      <p class="sub">{{ t('Assistente de estrutura organizacional. Lê o organograma no recorte de quem pergunta, descreve, analisa e propõe — e para aí.') }}</p>
+      <div class="maria-estado">
+        {% if maria.configurada %}
+        <span class="selo-ok">{{ t('Ativa · modelo {modelo}', modelo=maria.modelo) }}</span>
+        {% else %}
+        <span class="selo-falha">{{ t('Sem ANTHROPIC_API_KEY') }}</span>
+        {% endif %}
+        <span class="maria-escopo">{{ t('Recorte: {escopo}', escopo=maria.escopo) }}</span>
+      </div>
+    </div>
+  </div>
+
+  {% if not maria.configurada %}
+  <div class="aviso">{{ t('Defina <code>ANTHROPIC_API_KEY</code> no ambiente para conversar. O restante desta tela — capacidades, limites, custos e histórico — continua valendo.')|safe }}</div>
+  {% endif %}
+
+  {# ------------------------------------------------------------------ #}
+  <div class="cartao">
+    <h2>{{ t('Perguntar') }}</h2>
+    <p class="sub">{{ t('A MarIA responde sobre o que você pode ver. Se algo está fora do seu escopo, ela diz que está fora — não supõe.') }}</p>
+
+    <form hx-post="/maria/perguntar" hx-target="#area" hx-swap="innerHTML"
+          hx-indicator="#mariaPensando">
+      <div class="dupla">
+        <div>
+          <label for="m-cap">{{ t('Capacidade') }}</label>
+          <select id="m-cap" name="capacidade">
+            {% for chave, rotulo, verbo, efeito, autoridade, ok in maria.capacidades %}
+            {% if ok %}
+            <option value="{{ chave }}" {% if chave == 'descrever' %}selected{% endif %}>
+              {{ t(rotulo) }} — {{ t(verbo) }}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="m-modelo">{{ t('Modelo') }}</label>
+          <select id="m-modelo" name="modelo">
+            {% for m in maria.modelos %}
+            <option value="{{ m }}" {% if m == maria.modelo %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          {# O recorte é escolhido antes de perguntar, e fica gravado na
+             assistência: sem ele não dá para auditar se a contagem batia. #}
+          <label for="m-recorte">{{ t('Recorte') }}</label>
+          <select id="m-recorte" name="recorte">
+            <option value="" {% if not maria.recorte %}selected{% endif %}
+              >{{ t('Tudo o que posso ver') }}</option>
+            <option value="canvas" {% if maria.recorte == 'canvas' %}selected{% endif %}
+              >{{ t('Só o que está no canvas') }}</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="m-pergunta">{{ t('Pergunta') }}</label>
+      <textarea id="m-pergunta" name="pergunta" rows="3" maxlength="2000"
+                placeholder="{{ t('Ex.: quais departamentos têm gestor sem subordinados diretos?') }}"
+                {% if not maria.configurada %}disabled{% endif %}></textarea>
+
+      <div class="acoes">
+        <button class="bt forte" style="flex:0 0 150px"
+                {% if not maria.configurada %}disabled{% endif %}>{{ t('Perguntar') }}</button>
+        <span class="maria-pensando" id="mariaPensando">
+          <img src="/marca/maria/MarIA_pensativa.png" alt="">
+          {{ t('MarIA está pensando…') }}
+        </span>
+      </div>
+    </form>
+
+    {% if maria.ultima %}
+    <div class="maria-resposta {{ 'erro' if not maria.ultima.ok }}">
+      <div class="maria-resposta-topo">
+        <b>{{ t(maria.ultima.capacidade|capitalize) }}</b>
+        <span class="cod">{{ maria.ultima.modelo }}</span>
+        {% if maria.ultima.ok %}
+        <span class="cod">{{ maria.ultima.entrada }}→{{ maria.ultima.saida }} tok ·
+          US$ {{ '%.4f'|format(maria.ultima.custo_usd) }}</span>
+        {% endif %}
+      </div>
+      {% if maria.ultima.ok %}
+      <div class="md">{{ maria.ultima.resposta|md|safe }}</div>
+      <div class="acoes" style="margin:10px 0 0">
+        <a class="bt bt-min" href="/maria/assistencia/{{ maria.ultima.id }}/pdf"
+           onclick="pdfMaria(event, this.href)">{{ t('Baixar PDF') }}</a>
+      </div>
+      {% else %}
+      <pre>{{ maria.ultima.resposta }}</pre>
+      {% endif %}
+      {% if maria.ultima.capacidade == 'planejar' and maria.ultima.ok %}
+      {# Rascunho não vira mutação por engano: não há botão de aplicar aqui, e
+         não existe caminho de código que aplique o que a MarIA propôs. #}
+      <p class="pista">{{ t('Isto é um rascunho. Nada foi aplicado ao organograma — aplicar exige ação humana, campo a campo, no painel da unidade.') }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {# ------------------------------------------------------------------ #}
+  <div class="cartao">
+    <h2>{{ t('Agente Organograma') }}</h2>
+    <p class="sub">{{ t('Descreva o time em uma frase. A MarIA devolve a estrutura proposta — cargos, níveis e quantidades — e nada é criado até você ler a lista inteira e aprovar.') }}</p>
+
+    <form hx-post="/maria/agente" hx-target="#area" hx-swap="innerHTML"
+          hx-indicator="#mariaPensando2">
+      <label for="m-pedido">{{ t('Pedido') }}</label>
+      <textarea id="m-pedido" name="pedido" rows="2" maxlength="1000"
+                placeholder="{{ t('Ex.: Crie um novo time de Growth Marketing com 1 Diretor, 2 Coordenadores e 4 Analistas focado na América Latina') }}"
+                {% if not maria.configurada %}disabled{% endif %}></textarea>
+      <div class="acoes">
+        <button class="bt" style="flex:0 0 190px"
+                {% if not maria.configurada %}disabled{% endif %}>{{ t('Propor estrutura') }}</button>
+        <span class="maria-pensando" id="mariaPensando2">
+          <img src="/marca/maria/MarIA_pensativa.png" alt="">{{ t('MarIA está pensando…') }}
+        </span>
+      </div>
+    </form>
+
+    {% if maria.agente and not maria.agente.resultado.ok %}
+    <div class="maria-resposta erro">
+      <pre>{{ maria.agente.resultado.mensagem or maria.agente.resultado.texto }}</pre>
+      {% for p in maria.agente.resultado.problemas or [] %}
+      <p class="pista">· {{ p }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% for p in maria.propostas %}
+    {# A proposta fica guardada com identificador: aprovar depois se refere a
+       ESTA lista, já lida — o modelo não é chamado de novo na aprovação. #}
+    <div class="proposta">
+      <div class="proposta-topo">
+        <b>{{ p.time or t('Estrutura proposta') }}</b>
+        <span class="cod">{{ t('{n} unidade(s)', n=p.total) }}</span>
+        <span class="cod">{{ t('sob {pai}', pai=p.sob or t('a raiz')) }}</span>
+      </div>
+      {% if p.departamento %}
+      <p class="pista">{{ t('Departamento: {dep}', dep=p.departamento) }}</p>
+      {% endif %}
+      <table>
+        <thead><tr><th>{{ t('Cargo') }}</th><th style="width:150px">{{ t('Nível') }}</th>
+          <th style="width:90px">{{ t('Quantidade') }}</th></tr></thead>
+        <tbody>
+          {% for u in p.unidades %}
+          <tr><td>{{ u.cargo }}</td>
+            <td>{{ t(rotulos_nivel.get(u.nivel, u.nivel)) }}</td>
+            <td class="cod">{{ u.quantidade }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if p.observacoes %}<p class="pista">{{ p.observacoes }}</p>{% endif %}
+      {% for x in p.problemas %}<p class="pista">· {{ x }}</p>{% endfor %}
+      <div class="acoes">
+        <button class="bt forte" style="flex:0 0 210px"
+                hx-post="/maria/agente/{{ p.id }}/aplicar"
+                hx-target="#area" hx-swap="innerHTML"
+                hx-confirm="{{ t('Criar {n} unidade(s) sob {pai}? As pessoas entram como “A definir” e podem ser nomeadas depois. Desfazer reverte tudo de uma vez.', n=p.total, pai=p.sob or t('a raiz')) }}">
+          {{ t('Aprovar e criar') }}</button>
+        <button class="bt" style="flex:0 0 130px"
+                hx-post="/maria/agente/{{ p.id }}/descartar"
+                hx-target="#area" hx-swap="innerHTML">{{ t('Descartar') }}</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ------------------------------------------------------------------ #}
+  <div class="cartao">
+    <h2>{{ t('As sete capacidades — cada uma com seu limite') }}</h2>
+    <p class="sub">{{ t('O que define a MarIA não é o que ela sabe fazer: é o que ela não pode fazer sem alguém autorizar. As duas últimas linhas são recusadas no código, não desencorajadas no prompt.') }}</p>
+    <div class="rolagem-x">
+      <table>
+        <thead><tr>
+          <th style="width:34px">#</th><th style="width:150px">{{ t('Capacidade') }}</th>
+          <th style="width:150px">{{ t('Verbo') }}</th><th style="width:160px">{{ t('Efeito') }}</th>
+          <th>{{ t('Autoridade exigida') }}</th><th style="width:110px">{{ t('Nesta onda') }}</th>
+        </tr></thead>
+        <tbody>
+          {% for chave, rotulo, verbo, efeito, autoridade, ok in maria.capacidades %}
+          <tr class="{{ 'fora-de-escopo' if not ok }}">
+            <td class="cod">{{ loop.index }}</td>
+            <td><b>{{ t(rotulo) }}</b></td>
+            <td>{{ t(verbo) }}</td>
+            <td>{{ t(efeito) }}</td>
+            <td>{{ t(autoridade) }}</td>
+            <td>{% if ok %}<span class="selo-ok">{{ t('disponível') }}</span>
+                {% else %}<span class="selo-falha">{{ t('recusada') }}</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ------------------------------------------------------------------ #}
+  <div class="cartao">
+    <h2>{{ t('Custos') }}</h2>
+    <p class="sub">{{ t('Somado do histórico, não estimado. Preço por milhão de tokens da tabela do modelo escolhido.') }}</p>
+    <div class="fatos">
+      <div><span>{{ t('assistências') }}</span><b>{{ maria.resumo.total }}</b></div>
+      <div><span>{{ t('tokens de entrada') }}</span><b>{{ '{:,}'.format(maria.resumo.entrada)|replace(',', '.') }}</b></div>
+      <div><span>{{ t('tokens de saída') }}</span><b>{{ '{:,}'.format(maria.resumo.saida)|replace(',', '.') }}</b></div>
+      <div><span>{{ t('custo (USD)') }}</span><b>{{ '%.4f'|format(maria.resumo.usd) }}</b></div>
+      <div><span>{{ t('custo (BRL)') }}</span><b>{{ '%.2f'|format(maria.resumo.brl) }}</b></div>
+    </div>
+
+    <form hx-post="/maria/modelo" hx-target="#area" hx-swap="innerHTML"
+          style="margin-top:16px">
+      <label for="m-modelo-padrao">{{ t('Modelo padrão do sistema') }}</label>
+      <select id="m-modelo-padrao" name="modelo">
+        {% for m in maria.modelos %}
+        <option value="{{ m }}" {% if m == maria.modelo %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+      <p class="pista">{{ t('Sobrepõe <code>MARIA_MODEL</code> do ambiente. A chave da API continua vindo só do ambiente — credencial em estado gravado vai junto no backup.')|safe }}</p>
+      <div class="acoes"><button class="bt" style="flex:0 0 170px">{{ t('Salvar modelo') }}</button></div>
+    </form>
+  </div>
+
+  {# ------------------------------------------------------------------ #}
+  <div class="cartao">
+    <h2>{{ t('Histórico de assistências') }}</h2>
+    <p class="sub">{{ t('Toda resposta fica gravada com quem perguntou, em que recorte e quanto custou. Sem o recorte não dá para auditar depois se a resposta era compatível com o que a pessoa podia ver.') }}</p>
+    {% if maria.historico %}
+    {# O detalhe abre aqui em cima, não numa página nova: quem está auditando
+       compara uma resposta com a de baixo sem perder a lista. #}
+    <div id="detMaria" class="det-maria-vaga"></div>
+    <div class="rolagem" style="max-height:460px">
+      {% for a in maria.historico %}
+      <div class="maria-log {{ 'erro' if not a.ok }}">
+        <div class="maria-log-topo">
+          <b>{{ a.quem or '—' }}</b>
+          <span class="tag">{{ t(a.capacidade|capitalize) }}</span>
+          <span class="cod">{{ a.modelo }}</span>
+          <span class="cod">{{ a.escopo }}</span>
+          <span class="maria-log-data">{{ a.quando[:16]|replace('T', ' ') }}</span>
+        </div>
+        <p class="maria-log-p"><b>{{ t('Pergunta') }}:</b> {{ a.pergunta }}</p>
+        <p class="maria-log-r">{{ a.resposta }}</p>
+        {% if a.ok %}
+        <div class="maria-log-acoes">
+          <button class="bt bt-min" hx-get="/maria/assistencia/{{ a.id }}"
+                  hx-target="#detMaria" hx-swap="innerHTML"
+                  onclick="rolarParaDetalhe()">{{ t('Ver resposta') }}</button>
+          <a class="bt bt-min" href="/maria/assistencia/{{ a.id }}/pdf"
+             onclick="pdfMaria(event, this.href)">PDF</a>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="pista">{{ t('Nenhuma assistência registrada ainda.') }}</p>
+    {% endif %}
+  </div>
+</div>

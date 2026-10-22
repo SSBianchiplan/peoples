@@ -1,0 +1,141 @@
+{#
+  O corpo da Avaliação. Quem inclui é `_talentos.html` (tela inteira) e a
+  rota `/filtros` (só o corpo, alvo `#talentosCorpo`).
+
+  Quatro seções: o 9-box (risco × impacto de perda), a Lista (uma linha por
+  pessoa, clique abre a ficha), a Prontidão (quem está pronto para suceder) e o
+  Comitê de Meritocracia (os indicados, cruzados com a cobertura de Conversa de Valor).
+#}
+<h1>{{ t('Avaliação') }}</h1>
+<p class="sub">
+  {{ t('A leitura de sucessão da casa: risco e impacto de perda, prontidão e a ação imediata. A base vem da estrutura vigente; a leitura é gravada por pessoa e ano.') }}
+  {% if ativo %}<b>{{ t('filtro ativo') }}</b> —
+  {{ t('os números são do recorte que está na tela.') }}{% endif %}
+</p>
+
+<div class="painel-numeros">
+  <div><span>{{ t('pessoas') }}</span><b class="numero">{{ r.pessoas }}</b></div>
+  <div><span>{{ t('mapeadas') }}</span><b class="numero">{{ r.mapeados }}</b></div>
+  <div><span>{{ t('cobertura') }}</span><b class="numero">{{ r.pct }} %</b></div>
+  <div><span>{{ t('críticos') }}</span><b class="numero">{{ r.criticos }}</b></div>
+  <div><span>{{ t('prontos agora') }}</span><b class="numero">{{ r.prontos_agora }}</b></div>
+  <div><span>{{ t('indicados') }}</span><b class="numero">{{ r.indicados }}</b></div>
+</div>
+{% if fonte_banco %}
+<p class="sub">{{ t('Mapa durável no PostgreSQL: a leitura de anos anteriores vem do banco e sobrevive à reimportação da base.') }}</p>
+{% else %}
+<p class="sub">{{ t('Banco não configurado: o Mapa vive no estado de trabalho. Ligue o PostgreSQL (aba Configurações) para a leitura atravessar anos.') }}</p>
+{% endif %}
+
+{% if not r.pessoas %}
+<p class="vazio">{{ t('Nenhuma pessoa neste recorte. Afrouxe o filtro para ver o Mapa.') }}</p>
+{% else %}
+
+<div class="cfg">
+  <nav class="cfg-nav" aria-label="{{ t('Seções da Avaliação') }}">
+    {% for chave, rotulo in [("mapa", t("9-box")),
+                             ("lista", t("Lista")),
+                             ("prontidao", t("Prontidão")),
+                             ("comite", t("Comitê de Meritocracia"))] %}
+    <button class="{% if secao == chave %}on{% endif %}"
+            hx-get="/vistas/talentos?aba={{ chave }}"
+            hx-target="#area" hx-swap="innerHTML">{{ rotulo }}</button>
+    {% endfor %}
+  </nav>
+
+  <div class="cfg-corpo">
+
+  {# ------------------------------------------------------------------ #}
+  {% if secao == "mapa" %}
+  <div class="ficha-lado">
+   <div class="ficha-lista">
+    <div class="dcr-topo">
+      <h2>{{ t('9-box · {ano}', ano=ano) }}</h2>
+      <a class="bt bt-min" href="/talentos.csv">{{ t('Exportar CSV') }}</a>
+    </div>
+    <p class="sub">{{ t('Risco de perda no eixo vertical, impacto da perda no horizontal. O canto Alto × Alto é a retenção urgente. Clique num nome para abrir a ficha.') }}</p>
+    {% set matriz = nine_box %}
+    {% include "_talentos_matriz.html" %}
+   </div>
+   <div id="talentosFicha" class="ficha-painel"
+        onclick="if(event.target===this)this.innerHTML=''"></div>
+  </div>
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "lista" %}
+  <div class="ficha-lado">
+   <div class="ficha-lista">
+    <div class="dcr-topo">
+      <h2>{{ t('Colaboradores · {ano}', ano=ano) }}</h2>
+      <a class="bt bt-min" href="/talentos.csv">{{ t('Exportar CSV') }}</a>
+    </div>
+    <p class="sub">{{ t('Uma linha por pessoa, em ordem hierárquica: cada líder vem seguido da sua equipe. Clique para abrir ou editar o Mapa.') }}</p>
+    <div class="rolagem-x"><table>
+      <thead><tr>
+        <th scope="col">{{ t('Colaborador') }}</th>
+        <th scope="col">{{ t('Cargo') }}</th>
+        <th scope="col">{{ t('Líder direto') }}</th>
+        <th scope="col" class="num">{{ t('Tempo de casa') }}</th>
+        <th scope="col">{{ t('Risco') }}</th>
+        <th scope="col">{{ t('Impacto') }}</th>
+        <th scope="col">{{ t('Prontidão') }}</th>
+        <th scope="col">{{ t('Ação') }}</th>
+      </tr></thead>
+      <tbody>
+        {% for a in agenda %}
+        <tr class="clicavel" hx-get="/talentos/ficha/{{ a.ref|urlencode }}"
+            hx-target="#talentosFicha" hx-swap="innerHTML"
+            title="{{ t('Abrir o Mapa de {nome}', nome=a.nome) }}">
+          <td><span class="cgv-ident" style="padding-left:{{ [a.profundidade, 8]|min * 13 }}px">{{ a.nome }}</span></td>
+          <td>{{ a.cargo or '—' }}</td>
+          <td>{{ a.lider_nome or '—' }}</td>
+          <td class="num">{% if a.anos_casa is not none %}{{ a.anos_casa|round(1) }}{% else %}—{% endif %}</td>
+          <td>{% if a.risco_perda %}<span class="tal-selo risco-{{ a.risco_perda }}">{{ t(rot_risco[a.risco_perda]) }}</span>{% else %}—{% endif %}</td>
+          <td>{% if a.impacto_perda %}<span class="tal-selo imp-{{ a.impacto_perda }}">{{ t(rot_impacto[a.impacto_perda]) }}</span>{% else %}—{% endif %}</td>
+          <td>{% if a.prontidao %}{{ t(rot_prontidao[a.prontidao]) }}{% else %}—{% endif %}</td>
+          <td>{% if a.acao %}<span class="tal-acao">{{ t(rot_acao[a.acao]) }}</span>{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+   </div>
+   <div id="talentosFicha" class="ficha-painel"
+        onclick="if(event.target===this)this.innerHTML=''"></div>
+  </div>
+
+  {# ------------------------------------------------------------------ #}
+  {% elif secao == "prontidao" %}
+  <h2>{{ t('Prontidão de sucessão') }}</h2>
+  <p class="sub">{{ t('Quando cada pessoa mapeada estará pronta para o próximo passo. «Pronto agora» é o banco de sucessores imediato.') }}</p>
+  <div class="tal-prontidao">
+    {% for p in prontidao %}
+    <div class="tal-pront-linha">
+      <span class="tal-pront-rot">{{ t(p.rotulo) }}</span>
+      <div class="cgv-barra" role="img" aria-label="{{ p.pct }} %"><i style="width:{{ p.pct }}%"></i></div>
+      <span class="tal-pront-num"><b>{{ p.n }}</b> · {{ p.pct }} %</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2 style="margin-top:calc(var(--u,16px))">{{ t('Ação imediata') }}</h2>
+  <p class="sub">{{ t('O encaminhamento que a folha propõe para cada pessoa. Alimenta o Comitê de Meritocracia.') }}</p>
+  <div class="g3">
+    {% for cod, rot in acoes %}
+    <div class="cart base">
+      <span class="num">{{ por_acao[cod].pessoas|length }}</span>
+      <h3>{{ t(rot) }}</h3>
+      <p>{% for pe in por_acao[cod].pessoas[:6] %}{{ pe.nome }}{% if not loop.last %} · {% endif %}{% endfor %}
+        {% if por_acao[cod].pessoas|length > 6 %} …{% endif %}
+        {% if not por_acao[cod].pessoas %}<span class="pista">{{ t('ninguém indicado') }}</span>{% endif %}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ------------------------------------------------------------------ #}
+  {% else %}
+  {% include "_talentos_comite.html" %}
+  {% endif %}
+
+  </div>
+</div>
+{% endif %}

@@ -1,0 +1,140 @@
+{#
+  O corpo da vista de tempo, separado da casca pelo mesmo motivo que o da
+  tabela: filtrar troca só isto, e não a barra de filtros — trocar a barra a
+  cada tecla roubaria o foco de quem está digitando na busca.
+
+  Quem inclui é `_tempo.html` (tela inteira) e a rota `/filtros` (só o corpo,
+  alvo `#tempoCorpo`).
+#}
+<h1>{{ t('Tempo de empresa') }}</h1>
+<p class="sub">
+  {{ t('Calculado da data de admissão, na mesma régua do RH: dias corridos sobre 365.') }}
+  {% if ativo %}<b>{{ t('filtro ativo') }}</b> —
+  {{ t('os números são do recorte que está na tela.') }}{% endif %}
+</p>
+
+{# Os quatro números do topo. `média` e `mediana` lado a lado de propósito:
+   a distância entre elas é a informação — onde divergem muito, há alguém
+   sozinho no topo puxando a média. #}
+<div class="painel-numeros">
+  <div><span>{{ t('pessoas') }}</span>
+    <b class="numero">{{ r.pessoas }}</b></div>
+  <div><span>{{ t('média') }}</span>
+    <b class="numero">{{ anos(r.media) }}</b></div>
+  <div><span>{{ t('mediana') }}</span>
+    <b class="numero">{{ anos(r.mediana) }}</b></div>
+  <div><span>{{ t('anos somados') }}</span>
+    <b class="numero">{{ r.anos_somados|round|int }}</b></div>
+  {% if r.sem_data %}
+  <div><span>{{ t('sem data') }}</span>
+    <b class="numero">{{ r.sem_data }}</b></div>
+  {% endif %}
+  {% if r.futuros %}
+  <div><span>{{ t('a começar') }}</span>
+    <b class="numero">{{ r.futuros }}</b></div>
+  {% endif %}
+</div>
+<p class="sub">{{ t('Anos somados é o que a empresa perde de uma vez se todos saírem no mesmo dia.') }}</p>
+
+{# Recorte que não sobrou ninguém: as tabelas abaixo seriam cinco cabeçalhos
+   sobre nada, e a média de zero pessoa não é zero — é pergunta sem resposta.
+   Uma linha dizendo isso vale mais que cinco tabelas vazias. #}
+{% if not r.pessoas %}
+<p class="vazio">{{ t('Nenhuma pessoa neste recorte. Afrouxe o filtro para ver os números.') }}</p>
+{% else %}
+
+<h2>{{ t('Distribuição') }}</h2>
+<div class="tw"><table>
+  <thead><tr>
+    <th scope="col">{{ t('Faixa') }}</th>
+    <th scope="col" class="num">{{ t('Pessoas') }}</th>
+    <th scope="col" class="num">%</th>
+    <th scope="col">{{ t('Proporção') }}</th>
+  </tr></thead>
+  <tbody>
+    {% for f in faixas %}
+    <tr>
+      <td>{{ t(f.rotulo) }}</td>
+      <td class="num">{{ f.n }}</td>
+      <td class="num">{{ f.pct }}</td>
+      {# A barra é decoração de uma célula que já traz o número: quem usa
+         leitor de tela lê a contagem e a porcentagem, e não perde nada.
+         O `title` fica no <td>, e não no <span>: a barra de 0,4 % tem dois
+         pixels, e mirar dois pixels com o mouse é um teste de pontaria. #}
+      <td aria-hidden="true"
+          title="{{ t('{rotulo}: {n} de {total} pessoas ({pct} %)',
+                      rotulo=t(f.rotulo), n=f.n, total=r.pessoas, pct=f.pct) }}">
+        <span class="barra-t" style="width:{{ f.pct }}%"></span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table></div>
+
+<h2>{{ t('Por vínculo') }}</h2>
+{% set campo = none %}{% set grupos = por_vinculo %}{% include "_tempo_grupos.html" %}
+
+<h2>{{ t('Por nível') }}</h2>
+{% set campo = none %}{% set grupos = por_nivel %}{% include "_tempo_grupos.html" %}
+
+{# Só o departamento é expansível: seus grupos têm tamanho de time (até ~20). Por
+   nível ou vínculo abririam listas de 100+ nomes, que não é leitura, é despejo. #}
+<h2>{{ t('Por departamento') }}</h2>
+{% set grupos = por_area %}{% set campo = 'area' %}{% include "_tempo_grupos.html" %}
+
+{% if admissoes %}
+<h2>{{ t('Quem está hoje, pelo ano em que entrou') }}</h2>
+<p class="sub">{{ t('Não é histórico de contratação: quem saiu não está aqui. A linha diz quantos dos que estão hoje entraram naquele ano.') }}</p>
+<div class="tw"><table>
+  <thead><tr>
+    <th scope="col">{{ t('Ano') }}</th>
+    <th scope="col" class="num">{{ t('Pessoas') }}</th>
+    <th scope="col">{{ t('Proporção') }}</th>
+  </tr></thead>
+  <tbody>
+    {% for a in admissoes %}
+    <tr>
+      <td class="cod">{{ a.ano }}</td>
+      <td class="num">{{ a.n }}</td>
+      <td aria-hidden="true"
+          title="{{ t('{n} pessoa(s) que estão hoje entraram em {ano}',
+                      n=a.n, ano=a.ano) }}">
+        <span class="barra-t" style="width:{{ a.pct }}%"></span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+
+{% if gestores %}
+<h2>{{ t('Onde a casa é mais nova') }}</h2>
+<p class="sub">{{ t('Equipes diretas com pelo menos {n} pessoas, da média mais baixa para a mais alta. Uma equipe inteira abaixo de um ano é um time sem memória — pode ser crescimento, pode ser rotatividade, e as duas leituras pedem ação diferente.', n=piso_grupo) }}</p>
+<div class="tw"><table>
+  <thead><tr>
+    <th scope="col">{{ t('Gestor') }}</th>
+    <th scope="col">{{ t('Departamento') }}</th>
+    <th scope="col" class="num">{{ t('Equipe') }}</th>
+    <th scope="col" class="num">{{ t('Média') }}</th>
+    <th scope="col" class="num">{{ t('Mediana') }}</th>
+    <th scope="col" class="num">{{ t('Até 1 ano') }}</th>
+  </tr></thead>
+  <tbody>
+    {% for g in gestores[:15] %}
+    {# Um `title` só: dois no mesmo elemento e o navegador fica com o
+       primeiro, então o segundo — "Abrir na gaveta" — nunca apareceria. #}
+    <tr class="clicavel"
+        hx-get="/fragmentos/painel/{{ g.id }}?canvas=0&amp;vista=tempo"
+        hx-target="#painel" hx-swap="innerHTML"
+        title="{{ t('{n} pessoa(s) na equipe direta · {novatos} com menos de um ano',
+                    n=g.n, novatos=g.novatos) }} — {{ t('Abrir na gaveta') }}">
+      <td>{{ g.nome }}</td>
+      <td>{{ g.area }}</td>
+      <td class="num">{{ g.n }}</td>
+      <td class="num">{{ anos(g.media) }}</td>
+      <td class="num">{{ anos(g.mediana) }}</td>
+      <td class="num">{{ g.novatos }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+{% endif %}

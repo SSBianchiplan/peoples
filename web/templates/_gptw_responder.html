@@ -1,0 +1,85 @@
+{#
+  O questionário Peoples Trust Index — anônimo. As afirmações do ciclo em Likert de
+  5, o modelo de trabalho (a única demografia perguntada) e as abertas. O estrato
+  vem do sistema, mostrado só para o respondente conferir — nunca gravado com a
+  identidade. O root carrega o próprio id para o htmx trocar a si mesmo (troca de
+  ciclo, envio) sem depender da moldura.
+#}
+<div id="gptwResponder" class="gptw-responder">
+  <div class="gptw-resp-cabeca">
+    <div>
+      <h2>{{ t('Pesquisa de Clima — Peoples Trust Index') }}</h2>
+      <p class="sub">{{ t('Anônima. Nenhuma resposta é ligada a você — o sistema guarda só o estrato e as marcações. Leva poucos minutos.') }}</p>
+    </div>
+    {# o ciclo é escolhido nas abas do topo da vista; aqui, só o selo do que vale #}
+    {% set ciclo_rot = (ciclos|selectattr('0','equalto',ciclo)|list|first) %}
+    <span class="gptw-resp-selo">{{ t(ciclo_rot[1]) }} · {{ t('{n} afirmações', n=afirmacoes|length) }}</span>
+  </div>
+
+  {# o estrato derivado — leitura, para conferência; não é editável nem enviado #}
+  <div class="gptw-estrato">
+    <span>{{ t('Seu recorte (do sistema, anônimo)') }}:</span>
+    <b>{{ t(estrato.nivel) or '—' }}</b> ·
+    <b>{{ estrato.area or '—' }}</b> ·
+    <b>{{ estrato.vinculo|upper or '—' }}</b>
+  </div>
+
+  <form hx-post="/gptw/responder" hx-target="#gptwResponder" hx-swap="outerHTML">
+    <input type="hidden" name="ano" value="{{ ano }}">
+    <input type="hidden" name="ciclo" value="{{ ciclo }}">
+
+    {# modelo de trabalho — a única pergunta demográfica #}
+    <fieldset class="cgv-secao">
+      <legend>{{ t('Modelo de trabalho') }}</legend>
+      <p class="pista">{{ t('O único dado que a estrutura não carrega — por isso é perguntado.') }}</p>
+      <div class="gptw-modelo-opts">
+        {% for cod, rot in modelos %}
+        <label class="gptw-radio-pill"><input type="radio" name="modelo" value="{{ cod }}">{{ t(rot) }}</label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    {# as afirmações, agrupadas por pilar #}
+    {% for pcod, prot, pdesc in pilares %}
+    {% set do_pilar = afirmacoes|selectattr('1','equalto',pcod)|list %}
+    {% if do_pilar %}
+    <fieldset class="cgv-secao gptw-pilar-bloco">
+      <legend>{{ t(prot) }}</legend>
+      {% for aid, ap, texto, pulso in do_pilar %}
+      <div class="gptw-af">
+        <p class="gptw-af-txt">{{ t(texto) }}</p>
+        <div class="gptw-likert">
+          {% for val, lrot in likert %}
+          <label class="gptw-likert-op" title="{{ t(lrot) }}">
+            <input type="radio" name="af_{{ aid }}" value="{{ val }}">
+            <span>{{ val }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </fieldset>
+    {% endif %}
+    {% endfor %}
+
+    <p class="pista gptw-likert-legenda">
+      {{ t('Escala') }}: 1 {{ t('Discordo totalmente') }} · 3 {{ t('Neutro') }} · 5 {{ t('Concordo totalmente') }}
+    </p>
+
+    {# abertas — só no ciclo anual #}
+    {% if ciclo == 'anual' %}
+    <fieldset class="cgv-secao">
+      <legend>{{ t('Perguntas abertas (opcionais)') }}</legend>
+      {% for qid, texto in abertas %}
+      <label class="gptw-aberta-rot">{{ t(texto) }}</label>
+      <textarea name="ab_{{ qid }}" rows="2"></textarea>
+      {% endfor %}
+    </fieldset>
+    {% endif %}
+
+    <div class="acoes">
+      <button class="bt forte" type="submit">{{ t('Enviar resposta anônima') }}</button>
+      <span class="pista">{{ t('Suas respostas entram no agregado; nunca no seu nome.') }}</span>
+    </div>
+  </form>
+</div>

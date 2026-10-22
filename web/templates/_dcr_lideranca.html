@@ -1,0 +1,36 @@
+{#
+  Liderança de um recorte. Recebe `grupos` (o que `dcr.lideranca` devolve) e
+  serve a BU, vertical e setor com o mesmo código — a pergunta é a mesma, muda
+  só o corte.
+
+  Amplitude vazia sai como travessão, e não como zero: um grupo sem gestor
+  próprio não tem amplitude infinita nem nula — não tem amplitude.
+#}
+<div class="rolagem-x"><table>
+  <thead><tr>
+    <th scope="col">{{ t('Unidade') }}</th>
+    <th scope="col" class="num">{{ t('Pessoas') }}</th>
+    <th scope="col" class="num">{{ t('Diretoria') }}</th>
+    <th scope="col" class="num">{{ t('Gerência') }}</th>
+    <th scope="col" class="num">{{ t('Coordenação') }}</th>
+    <th scope="col" class="num">{{ t('Liderança técnica') }}</th>
+    <th scope="col" class="num">{{ t('Especialista') }}</th>
+    <th scope="col" class="num">{{ t('Amplitude') }}</th>
+    <th scope="col" class="num">{{ t('Funções') }}</th>
+  </tr></thead>
+  <tbody>
+    {% for g in grupos %}
+    <tr>
+      <td>{{ g.rotulo }}</td>
+      <td class="num">{{ g.n }}</td>
+      <td class="num{% if not g.diretoria %} zero{% endif %}">{{ g.diretoria or '' }}</td>
+      <td class="num{% if not g.gerencia %} zero{% endif %}">{{ g.gerencia or '' }}</td>
+      <td class="num{% if not g.coordenacao %} zero{% endif %}">{{ g.coordenacao or '' }}</td>
+      <td class="num{% if not g.lideranca %} zero{% endif %}">{{ g.lideranca or '' }}</td>
+      <td class="num{% if not g.especialista %} zero{% endif %}">{{ g.especialista or '' }}</td>
+      <td class="num">{{ anos(g.amplitude) }}</td>
+      <td class="num">{{ g.funcoes }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table></div>

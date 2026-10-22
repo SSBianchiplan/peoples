@@ -1,0 +1,44 @@
+{#
+  Como este desenho é lido: as duas pirâmides e a árvore indentada.
+
+  Fragmento próprio pelo mesmo motivo do agrupamento e do histórico: os botões
+  descrevem o modo vigente e precisam voltar **fora de banda** quando ele troca.
+  O alvo continua sendo `#canvas` (INT-01), e eles acompanham por `hx-swap-oob`.
+  Sem isto, clicar em "Lateral" redesenhava o organograma e deixava o botão
+  apagado — a tela mostrando uma coisa e o controle dizendo outra.
+
+  Nenhum dos dois lê `layout`: o modo vigente é estado do servidor, e depender
+  do desenho faria o fragmento precisar de um layout inteiro para renderizar
+  dois botões.
+#}
+<span class="orient" id="btOrientacao" {% if oob %}hx-swap-oob="true"{% endif %}>
+  {# O rótulo é a pirâmide que este botão entrega: estando numa delas, a outra
+     vem por inversão; estando na lateral, vem a que ficou guardada. #}
+  {% set invertida = piramide_do_botao == 'invertida' %}
+  <button class="bt" hx-post="/orientacao" hx-target="#canvas" hx-swap="outerHTML"
+          aria-label="{% if invertida %}{{ t('▼ Invertida') }}{% else %}{{ t('▲ Convencional') }}{% endif %}"
+          title="{{ t('Alterna entre pirâmide invertida e convencional') }}">
+    <svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      {% if invertida %}<path d="M4 6h16l-8 12z"/>{% else %}<path d="M12 5l8 13H4z"/>{% endif %}
+    </svg>
+    <span class="rot">{% if invertida %}{{ t('▼ Invertida') }}{% else %}{{ t('▲ Convencional') }}{% endif %}</span>
+  </button>
+
+  {# Ao lado da orientação porque é a mesma pergunta — como este desenho é
+     lido. As duas pirâmides discutem de que lado fica a liderança; esta troca
+     o eixo: a leitura desce e a profundidade anda para a direita. Interruptor
+     com estado, e não um terceiro modo na mesma chave: sair daqui devolve a
+     pirâmide de onde se veio. #}
+  <button class="bt{% if e_lateral %} apertado{% endif %}"
+          hx-post="/orientacao/lateral" hx-target="#canvas" hx-swap="outerHTML"
+          aria-pressed="{{ 'true' if e_lateral else 'false' }}"
+          aria-label="{{ t('▸ Lateral') }}"
+          title="{{ t('Árvore indentada: a leitura desce e a profundidade anda para a direita') }}">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 5h6"/><path d="M10 12h10"/><path d="M10 19h10"/>
+      <path d="M7 5v14"/><path d="M7 12h3"/>
+    </svg>
+    <span class="rot">{{ t('▸ Lateral') }}</span>
+  </button>
+</span>

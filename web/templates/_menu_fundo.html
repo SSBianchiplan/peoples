@@ -1,0 +1,86 @@
+{#
+  Botão direito no vazio do palco.
+
+  O menu do card responde "o que faço com esta pessoa"; este responde "o que
+  faço com este desenho". São perguntas diferentes, e até agora a segunda só
+  tinha resposta na barra e no canto — longe da mão de quem está lendo, e fora
+  da tela quem arrastou o organograma para o lado.
+
+  INT-03: a habilitação vem pronta do servidor. Botão que parece clicável e
+  responde "nada a fazer" ensina a desconfiar da tela.
+
+  Zoom e enquadramento são os dois únicos itens do cliente: eles não mudam o
+  desenho, só a câmera (ADR-010), e mandá-los ao servidor seria um round-trip
+  para mover uma matriz de transformação.
+#}
+<div class="ctx-tit">{{ t('Ações do desenho') }}</div>
+
+<button onclick="fecharMenu(); ajustar()">
+  <i>⊙</i> {{ t('Ajustar à tela') }}
+</button>
+<button onclick="fecharMenu(); ajustarLargura()">
+  <i>↔</i> {{ t('Ajustar à largura') }}
+</button>
+
+<hr>
+
+<button hx-post="/arvore/mais?vista=canvas" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_abrir %}disabled{% endif %}>
+  <i>∨</i> {{ t('Abrir mais um nível') }}
+</button>
+<button hx-post="/arvore/menos?vista=canvas" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_fechar %}disabled{% endif %}>
+  <i>∧</i> {{ t('Fechar um nível') }}
+</button>
+<button hx-post="/arvore/expandir?vista=canvas" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_abrir %}disabled{% endif %}>
+  <i>≡</i> {{ t('Abrir todos os níveis') }}
+</button>
+<button hx-post="/arvore/colapsar?vista=canvas" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not pode_fechar %}disabled{% endif %}>
+  <i>≣</i> {{ t('Recolher todos os níveis') }}
+</button>
+
+<hr>
+
+{# Os mesmos três interruptores da barra: como este desenho é lido. O `<i>` fica
+   vazio de propósito — estes rótulos já carregam o próprio glifo, e repeti-lo
+   na coluna da esquerda escrevia "▼ ▼ Invertida". A coluna continua ali para
+   os quatro itens não saírem do alinhamento dos demais. #}
+<button hx-post="/orientacao" hx-target="#canvas" hx-swap="outerHTML">
+  <i></i>
+  {% if piramide_do_botao == 'invertida' %}{{ t('▼ Invertida') }}{% else %}{{ t('▲ Convencional') }}{% endif %}
+</button>
+<button hx-post="/orientacao/lateral" hx-target="#canvas" hx-swap="outerHTML"
+        aria-pressed="{{ 'true' if e_lateral else 'false' }}">
+  <i></i> {{ t('▸ Lateral') }}
+</button>
+<button hx-post="/agrupamento" hx-target="#canvas" hx-swap="outerHTML"
+        aria-pressed="{{ 'true' if por_equipe else 'false' }}">
+  <i></i>
+  {% if por_equipe %}{{ t('▣ Por equipe') }}{% else %}{{ t('▢ Por pessoa') }}{% endif %}
+</button>
+
+<hr>
+
+{# Os dois recortes que prendem a pessoa num pedaço do organograma. Sair do
+   foco só existia na pílula do cabeçalho, que sai da tela assim que alguém
+   arrasta o desenho — era a saída mais escondida do sistema. #}
+<button hx-post="/foco/limpar" hx-target="#canvas" hx-swap="outerHTML"
+        {% if not tem_foco %}disabled{% endif %}>
+  <i>◎</i> {{ t('Sair do foco') }}
+</button>
+<button hx-post="/filtros/limpar?vista=canvas" hx-target="#area" hx-swap="innerHTML"
+        {% if not tem_filtro %}disabled{% endif %}>
+  <i>×</i> {{ t('Limpar todos os filtros') }}
+</button>
+
+<hr>
+
+{# Rótulo próprio, e não o `title` do botão da barra: aquele é uma frase de
+   ajuda, e frase de ajuda dentro de menu vira parede de texto. #}
+<button hx-post="/unidades/{{ raiz_id }}/filho" hx-target="#canvas" hx-swap="outerHTML"
+        title="{{ t('Adiciona uma unidade subordinada à raiz da vista') }}"
+        {% if not pode_criar %}disabled{% endif %}>
+  <i>+</i> {{ t('Adicionar unidade na raiz') }}
+</button>

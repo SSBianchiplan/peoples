@@ -1,0 +1,207 @@
+{#
+  A ficha da Avaliação: o GEP-FOR-004 de uma pessoa, com a leitura ao
+  lado. A parte de cima é o documento (leitura); a de baixo, o formulário, que
+  só aparece com o botão «Editar» ligado — trava contra reclassificar alguém no
+  9-box por engano ao só querer consultar.
+
+  Idade é campo opcional: o organograma não guarda data de nascimento (LGPD), e
+  o GEP-FOR-004 a pede. Fica em branco quando o RH não informa — nunca derivada.
+#}
+{% if not f %}
+<div class="dcr-ficha">
+  <p class="vazio">
+    <strong>{{ t('Pessoa fora do recorte') }}</strong>
+    {{ t('Essa matrícula não existe na estrutura vigente ou está fora do filtro atual. Pessoa some da base a cada carga — um link guardado cai aqui.') }}
+  </p>
+</div>
+{% else %}
+{% set ct = f.conteudo %}
+<div class="dcr-ficha">
+  {% if not motivo_edicao %}<input type="checkbox" id="tal-edt" class="toggle-edicao" hidden>{% endif %}
+
+  <div class="dcr-cabeca">
+    <div>
+      <h2>{{ t('Avaliação') }} · {{ f.ano }}</h2>
+      <span class="cod">{{ f.nome }} · {{ f.cargo or '—' }}
+        {% if f.lider_nome %}· {{ t('líder') }}: {{ f.lider_nome }}{% endif %}</span>
+    </div>
+    <div class="dcr-cabeca-acoes">
+      <a class="bt bt-min" href="/talentos/ficha/{{ f.ref|urlencode }}/pdf">{{ t('Baixar PDF') }}</a>
+      {% if not motivo_edicao %}
+      <label for="tal-edt" class="bt bt-min bt-editar"
+             title="{{ t('Alternar edição') }}">{{ t('Editar') }}</label>
+      {% endif %}
+      <button class="mc-x" type="button" aria-label="{{ t('Fechar') }}"
+              hx-get="/talentos/vazio" hx-target="closest .ficha-painel" hx-swap="innerHTML">×</button>
+    </div>
+  </div>
+
+  {# ---------------- leitura ---------------- #}
+  <div class="ficha-leitura">
+    <div class="grupo">
+      <div class="fatos">
+        <div><span>{{ t('Tempo de empresa') }}</span>
+          <b>{% if f.anos_casa is not none %}{{ t('{n} anos', n=f.anos_casa|round(1)) }}{% else %}—{% endif %}</b></div>
+        <div><span>{{ t('Idade') }}</span><b>{{ ct.idade or '—' }}</b></div>
+        <div><span>{{ t('Papel') }}</span><b>{{ t(f.papel) }}</b></div>
+        <div><span>{{ t('Risco de perda') }}</span>
+          <b>{% if f.risco_perda %}<span class="tal-selo risco-{{ f.risco_perda }}">{{ t(rot_risco[f.risco_perda]) }}</span>{% else %}—{% endif %}</b></div>
+        <div><span>{{ t('Impacto da perda') }}</span>
+          <b>{% if f.impacto_perda %}<span class="tal-selo imp-{{ f.impacto_perda }}">{{ t(rot_impacto[f.impacto_perda]) }}</span>{% else %}—{% endif %}</b></div>
+        <div><span>{{ t('Prontidão') }}</span>
+          <b>{% if f.prontidao %}{{ t(rot_prontidao[f.prontidao]) }}{% else %}—{% endif %}</b></div>
+        <div><span>{{ t('Ação Imediata') }}</span>
+          <b>{% if f.acao %}<span class="tal-acao">{{ t(rot_acao[f.acao]) }}</span>{% else %}—{% endif %}</b></div>
+      </div>
+    </div>
+
+    <table class="dcr-form"><tbody>
+      {% for rot, val in [(t('Trajetória na empresa'), ct.trajetoria),
+                          (t('Formações e cursos'), ct.formacoes),
+                          (t('Perfil comportamental'), ct.perfil),
+                          (t('Performance'), ct.performance),
+                          (t('Bem-estar'), ct.bem_estar)] %}
+      <tr class="dcr-secao"><td colspan="2">{{ rot }}</td></tr>
+      <tr><td colspan="2">{% if val %}{{ val }}{% else %}<i class="dcr-vazio">{{ t('não preenchido — clique em Editar') }}</i>{% endif %}</td></tr>
+      {% endfor %}
+
+      <tr class="dcr-secao"><td colspan="2">{{ t('Aderência aos Valores Organizacionais') }}</td></tr>
+      <tr><td colspan="2"><ul class="dcr-itens">
+        {% for cod, sig, rot, frase in valores %}
+        {% set docgv = f.cgv.valores.get(cod) %}
+        <li><b>{{ sig }}</b> ({{ t(rot) }}):
+          {% if docgv %}{{ docgv }} <span class="tal-docgv">{{ t('da Conversa de Valor') }}</span>
+          {% elif ct.valores[cod] %}{{ ct.valores[cod] }}
+          {% else %}<i class="dcr-vazio">—</i>{% endif %}</li>
+        {% endfor %}
+      </ul></td></tr>
+
+      {% if f.cgv.pdi %}
+      <tr class="dcr-secao"><td colspan="2">{{ t('PDI — vindo da Conversa de Valor') }}</td></tr>
+      <tr><td colspan="2"><ul class="dcr-itens">
+        {% for p in f.cgv.pdi %}
+        <li><b>{{ p.comp }}</b>{% if p.prazo %} · {{ p.prazo }}{% endif %}{% if p.acao %} — {{ p.acao }}{% endif %}</li>
+        {% endfor %}
+      </ul></td></tr>
+      {% endif %}
+
+      <tr class="dcr-secao"><td colspan="2">{{ t('Oportunidades e Potencialidades') }}</td></tr>
+      <tr><td colspan="2"><b>{{ t('Ferramentas') }}:</b> {% if ct.ferramentas %}{{ ct.ferramentas }}{% else %}<i class="dcr-vazio">—</i>{% endif %}</td></tr>
+      <tr><td colspan="2"><b>{{ t('Inglês') }}:</b> {% if ct.ingles %}{{ ct.ingles }}{% else %}<i class="dcr-vazio">—</i>{% endif %}</td></tr>
+
+      <tr class="dcr-secao"><td colspan="2">{{ t('Trilha de Carreira') }}</td></tr>
+      <tr><td colspan="2">{% if ct.trilha_posicao %}{{ ct.trilha_posicao }}{% else %}<i class="dcr-vazio">—</i>{% endif %}</td></tr>
+      {% if ct.acao_nota %}
+      <tr><td colspan="2"><b>{{ t('Nota da ação') }}:</b> {{ ct.acao_nota }}</td></tr>
+      {% endif %}
+    </tbody></table>
+  </div>
+
+  {# ---------------- edição ---------------- #}
+  <form class="grupo ficha-edicao" hx-post="/talentos/ficha/{{ f.ref|urlencode }}"
+        hx-target="#talentosFicha" hx-swap="innerHTML">
+    <input type="hidden" name="ano" value="{{ f.ano }}">
+    <h3>{{ t('Escrever o Mapa') }}</h3>
+
+    {# classificação — o que posiciona no 9-box #}
+    <fieldset class="cgv-secao">
+      <legend>{{ t('Classificação de sucessão') }}</legend>
+      <div class="tal-grid4">
+        <div><label for="tal-risco">{{ t('Risco de perda') }}</label>
+          <select id="tal-risco" name="risco_perda" {% if motivo_edicao %}disabled{% endif %}>
+            <option value="">—</option>
+            {% for cod, rot in riscos %}<option value="{{ cod }}" {% if f.risco_perda == cod %}selected{% endif %}>{{ t(rot) }}</option>{% endfor %}
+          </select></div>
+        <div><label for="tal-impacto">{{ t('Impacto da perda') }}</label>
+          <select id="tal-impacto" name="impacto_perda" {% if motivo_edicao %}disabled{% endif %}>
+            <option value="">—</option>
+            {% for cod, rot in impactos %}<option value="{{ cod }}" {% if f.impacto_perda == cod %}selected{% endif %}>{{ t(rot) }}</option>{% endfor %}
+          </select></div>
+        <div><label for="tal-pront">{{ t('Prontidão') }}</label>
+          <select id="tal-pront" name="prontidao" {% if motivo_edicao %}disabled{% endif %}>
+            <option value="">—</option>
+            {% for cod, rot in prontidoes %}<option value="{{ cod }}" {% if f.prontidao == cod %}selected{% endif %}>{{ t(rot) }}</option>{% endfor %}
+          </select></div>
+        <div><label for="tal-acao">{{ t('Ação Imediata') }}</label>
+          <select id="tal-acao" name="acao" {% if motivo_edicao %}disabled{% endif %}>
+            <option value="">—</option>
+            {% for cod, rot in acoes %}<option value="{{ cod }}" {% if f.acao == cod %}selected{% endif %}>{{ t(rot) }}</option>{% endfor %}
+          </select></div>
+      </div>
+      <label for="tal-acao-nota">{{ t('Nota da ação') }}</label>
+      <textarea id="tal-acao-nota" name="acao_nota" rows="2" {% if motivo_edicao %}disabled{% endif %}
+        placeholder="{{ t('Por que esta ação, e o que ela pede.') }}">{{ ct.acao_nota }}</textarea>
+    </fieldset>
+
+    {# pessoa #}
+    <fieldset class="cgv-secao">
+      <legend>{{ t('Sobre a pessoa') }}</legend>
+      <label for="tal-idade">{{ t('Idade') }} <span class="pista">({{ t('opcional — o sistema não deriva; LGPD') }})</span></label>
+      <input id="tal-idade" name="idade" value="{{ ct.idade }}" {% if motivo_edicao %}disabled{% endif %}
+             inputmode="numeric" placeholder="{{ t('em anos') }}">
+      <label for="tal-traj">{{ t('Trajetória na empresa') }}</label>
+      <textarea id="tal-traj" name="trajetoria" rows="3" {% if motivo_edicao %}disabled{% endif %}
+        placeholder="{{ t('Movimentações, promoções, projetos marcantes.') }}">{{ ct.trajetoria }}</textarea>
+      <label for="tal-form">{{ t('Formações e cursos') }}</label>
+      <textarea id="tal-form" name="formacoes" rows="2" {% if motivo_edicao %}disabled{% endif %}>{{ ct.formacoes }}</textarea>
+      <label for="tal-perfil">{{ t('Perfil comportamental') }}</label>
+      <textarea id="tal-perfil" name="perfil" rows="2" {% if motivo_edicao %}disabled{% endif %}
+        placeholder="{{ t('DISC, âncoras, estilo de trabalho.') }}">{{ ct.perfil }}</textarea>
+      <label for="tal-perf">{{ t('Performance') }}</label>
+      <textarea id="tal-perf" name="performance" rows="2" {% if motivo_edicao %}disabled{% endif %}>{{ ct.performance }}</textarea>
+      <label for="tal-bem">{{ t('Bem-estar') }}</label>
+      <textarea id="tal-bem" name="bem_estar" rows="2" {% if motivo_edicao %}disabled{% endif %}>{{ ct.bem_estar }}</textarea>
+    </fieldset>
+
+    {# valores GPlanSiS — vêm da Conversa de Valor quando a conversa existe; editáveis aqui só quando não há #}
+    <fieldset class="cgv-secao">
+      <legend>{{ t('Aderência aos Valores Organizacionais') }}</legend>
+      {% if f.cgv.tem %}<p class="pista">{{ t('A aderência aos valores vem da Conversa de Valor Completa deste ano — editável lá, exibida aqui, sem redigitar.') }}</p>{% endif %}
+      {% for cod, sig, rot, frase in valores %}
+      {% set docgv = f.cgv.valores.get(cod) %}
+      <div class="cgv-valor">
+        <div class="cgv-valor-rot"><b>{{ sig }}</b><span>{{ t(frase) }}</span></div>
+        {% if docgv %}
+        <div class="tal-do-cgv">{{ docgv }} <span class="tal-docgv">{{ t('da Conversa de Valor') }}</span></div>
+        {% else %}
+        <textarea name="val_{{ cod }}" rows="2" {% if motivo_edicao %}disabled{% endif %}
+          placeholder="{{ t('Comportamento observado neste valor.') }}">{{ ct.valores[cod] }}</textarea>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </fieldset>
+
+    {# oportunidades e trilha #}
+    <fieldset class="cgv-secao">
+      <legend>{{ t('Oportunidades e Trilha de Carreira') }}</legend>
+      <label for="tal-ferr">{{ t('Ferramentas') }}</label>
+      <textarea id="tal-ferr" name="ferramentas" rows="2" {% if motivo_edicao %}disabled{% endif %}
+        placeholder="{{ t('Sistemas e ferramentas a desenvolver.') }}">{{ ct.ferramentas }}</textarea>
+      <label for="tal-ing">{{ t('Inglês') }}</label>
+      <input id="tal-ing" name="ingles" value="{{ ct.ingles }}" {% if motivo_edicao %}disabled{% endif %}
+             placeholder="{{ t('Nível e meta.') }}">
+      <label for="tal-trilha">{{ t('Trilha de Carreira — posição desejada') }}</label>
+      <textarea id="tal-trilha" name="trilha_posicao" rows="2" {% if motivo_edicao %}disabled{% endif %}
+        placeholder="{{ t('Próximo passo na trilha e horizonte.') }}">{{ ct.trilha_posicao }}</textarea>
+      {% if f.cgv.pdi %}
+      <div class="tal-pdi-cgv">
+        <b>{{ t('PDI vindo da Conversa de Valor') }}</b>
+        <span class="pista">{{ t('O plano de desenvolvimento é o mesmo da Conversa de Valor — editável lá.') }}</span>
+        <ul class="dcr-itens">
+          {% for p in f.cgv.pdi %}<li>{{ p.comp }}{% if p.prazo %} · {{ p.prazo }}{% endif %}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </fieldset>
+
+    {% if not motivo_edicao %}
+    <div class="acoes">
+      <button class="bt forte" type="submit">{{ t('Gravar o Mapa') }}</button>
+      <span class="pista">{{ t('Salva na base de dados. Sem depender do Excel.') }}</span>
+    </div>
+    {% else %}
+    <p class="pista">{{ motivo_edicao }}</p>
+    {% endif %}
+  </form>
+</div>
+{% endif %}

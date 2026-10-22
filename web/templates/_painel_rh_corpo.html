@@ -1,0 +1,232 @@
+{# Painel de RH / DP — dashboard. Recarrega #painelCorpo (auto a cada 60s e após
+   sincronizar o N5). Toda fatia é clicável: barra, segmento da rosca e ponto da
+   curva abrem #unidadeFicha com a lista de gente daquela fatia. #}
+{% macro barras(serie, cor, dim) %}
+<div class="rh-barras">
+  {% for it in serie %}
+  <div class="rh-barra{{ ' clic' if dim }}"
+       {% if dim %}role="button" tabindex="0"
+       hx-get="/painel-rh/lista?dim={{ dim }}&chave={{ it.chave|urlencode }}&rotulo={{ it.rotulo|urlencode }}"
+       hx-target="#unidadeFicha" hx-swap="innerHTML"{% endif %}>
+    <span class="rh-barra-rot" title="{{ it.rotulo }}">{{ it.rotulo }}</span>
+    <span class="rh-barra-track">
+      <span class="rh-barra-fill{{ ' ambar' if cor == 'ambar' }}" style="width:{{ it.barra }}%"></span>
+    </span>
+    <span class="rh-barra-val">{{ it.valor }}<small>{{ it.pct }}%</small></span>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+<div id="painelCorpo-in" hx-get="/painel-rh/corpo" hx-trigger="every 60s"
+     hx-target="#painelCorpo" hx-swap="innerHTML">
+
+  <div class="rh-topo">
+    <div>
+      <h1 class="rh-titulo">{{ t('Painel de RH / Departamento Pessoal') }}</h1>
+      <p class="rh-sub">{{ t('Indicadores do seu recorte') }} · {{ hoje }}</p>
+    </div>
+    <div class="rh-acoes">
+      {% if pode_admin %}
+      <a class="bt" href="/painel-rh/export.xlsx"
+         title="{{ t('Baixa um Excel com todas as tabelas e o painel') }}">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        <span class="rot">{{ t('Exportar Excel') }}</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# --- Vínculo N5 ↔ centros de custo ------------------------------------ #}
+  {% if pode_admin and cobertura_n5.pendentes > 0 %}
+  <div class="rh-n5">
+    <div>
+      <b>{{ t('N5 dos colaboradores') }}</b>
+      {{ t('{ok} de {total} preenchidos · {p} pendentes (o N5 vive no cadastro de CC).',
+            ok=cobertura_n5.preenchidos, total=cobertura_n5.total, p=cobertura_n5.pendentes) }}
+    </div>
+    <button class="bt forte" hx-post="/painel-rh/sincronizar-n5"
+            hx-target="#painelCorpo" hx-swap="innerHTML"
+            hx-confirm="{{ t('Preencher o N5 de {p} colaborador(es) a partir do centro de custo?', p=cobertura_n5.pendentes) }}">
+      {{ t('Vincular N5 ao centro de custo') }}
+    </button>
+  </div>
+  {% endif %}
+
+  {# --- KPIs (com tooltip: o que é e como calcula) ----------------------- #}
+  <div class="rh-kpis">
+    {% for rot, val, cor, dica in [
+        (t('Colaboradores'), kpis.total, 'laranja',
+         t('Total de pessoas no recorte visível (cada nó-pessoa do organograma).')),
+        (t('Gestores'), kpis.gestores, '',
+         t('Quantos têm pelo menos um liderado direto (aparecem como pai de alguém).')),
+        (t('Departamentos'), kpis.departamentos, '',
+         t('Áreas distintas no recorte (o campo Área de cada pessoa).')),
+        (t('Verticais'), kpis.verticais, '',
+         t('Verticais de negócio distintas no recorte (o campo Vertical / N2).')),
+        (t('Tempo médio de casa'), (kpis.tempo_medio|string) + ' ' + t('anos'), 'ambar',
+         t('Média dos anos desde a admissão, só de quem tem data de admissão. Dias corridos ÷ 365,25.')),
+        (t('Span médio'), kpis.span_medio, '',
+         t('Média de liderados por gestor: (colaboradores − 1) ÷ gestores.')),
+        (t('% CLT'), (kpis.pct_clt|string) + '%', '',
+         t('Percentual de vínculo CLT sobre o total do recorte.')),
+        (t('% Terceirizados'), (kpis.pct_terceiros|string) + '%', 'laranja',
+         t('Percentual de PJ, estágio, RPA e consultoria somados, sobre o total.')) ] %}
+    <div class="rh-kpi{{ ' ' + cor if cor }}" title="{{ rot }} — {{ dica }}">
+      <span class="rh-kpi-val">{{ val }}</span>
+      <span class="rh-kpi-rot">{{ rot }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# --- Rosca (vínculo) + Curva de crescimento, lado a lado -------------- #}
+  <div class="rh-par">
+    <div class="rh-card">
+      <h2>{{ t('Distribuição por vínculo') }}</h2>
+      <p class="rh-card-sub">{{ t('CLT') }} {{ kpis.clt }} · {{ t('terceirizados') }} {{ kpis.terceiros }}</p>
+      <div class="rh-rosca-wrap">
+        <svg viewBox="0 0 42 42" class="rh-rosca" role="img"
+             aria-label="{{ t('Distribuição por vínculo') }}">
+          <circle class="rh-rosca-fundo" cx="21" cy="21" r="15.9155"></circle>
+          {% set ns = namespace(acc=0) %}
+          {% set tot = (dist.vinculo|sum(attribute='valor')) or 1 %}
+          {% for it in dist.vinculo %}
+          {% set frac = (it.valor / tot * 100)|round(3) %}
+          <circle class="rh-rosca-seg s{{ loop.index }}" cx="21" cy="21" r="15.9155"
+                  stroke-dasharray="{{ frac }} {{ (100 - frac)|round(3) }}"
+                  stroke-dashoffset="{{ (25 - ns.acc)|round(3) }}"
+                  role="button" tabindex="0"
+                  hx-get="/painel-rh/lista?dim=vinculo&chave={{ it.chave|urlencode }}&rotulo={{ it.rotulo|urlencode }}"
+                  hx-target="#unidadeFicha" hx-swap="innerHTML">
+            <title>{{ it.rotulo }} · {{ it.valor }} ({{ it.pct }}%)</title>
+          </circle>
+          {% set ns.acc = ns.acc + frac %}
+          {% endfor %}
+          <text x="21" y="20.5" class="rh-rosca-num">{{ kpis.total }}</text>
+          <text x="21" y="25.5" class="rh-rosca-cap">{{ t('pessoas') }}</text>
+        </svg>
+        <div class="rh-legenda">
+          {% for it in dist.vinculo %}
+          <div class="rh-leg s{{ loop.index }}" role="button" tabindex="0"
+               hx-get="/painel-rh/lista?dim=vinculo&chave={{ it.chave|urlencode }}&rotulo={{ it.rotulo|urlencode }}"
+               hx-target="#unidadeFicha" hx-swap="innerHTML">
+            <span class="rh-leg-cor"></span>
+            <span class="rh-leg-rot">{{ it.rotulo }}</span>
+            <b>{{ it.valor }}</b> <small>{{ it.pct }}%</small>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="rh-card">
+      <h2>{{ t('Curva de crescimento') }}
+        <small>({{ t('contratações acumuladas') }})</small></h2>
+      {% if crescimento %}
+      <div class="rh-curva-wrap">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="rh-curva" aria-hidden="true">
+          <polygon class="rh-curva-area"
+                   points="0,100 {% for p in crescimento %}{{ p.x }},{{ p.y }} {% endfor %}100,100"></polygon>
+          <polyline class="rh-curva-linha" vector-effect="non-scaling-stroke"
+                    points="{% for p in crescimento %}{{ p.x }},{{ p.y }} {% endfor %}"></polyline>
+        </svg>
+        <div class="rh-curva-pts">
+          {% for p in crescimento %}
+          <button class="rh-curva-pt" style="left:{{ p.x }}%;top:{{ p.y }}%"
+                  hx-get="/painel-rh/lista?dim=admissao_ano&chave={{ p.ano }}&rotulo={{ p.ano }}"
+                  hx-target="#unidadeFicha" hx-swap="innerHTML"
+                  aria-label="{{ p.ano }}"
+                  title="{{ p.ano }}: +{{ p.novos }} {{ t('no ano') }} · {{ t('acumulado') }} {{ p.acumulado }} {{ t('pessoas') }}"></button>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="rh-curva-eixo">
+        <span>{{ crescimento[0].ano }}</span>
+        <span class="rh-curva-pico">{{ t('hoje') }}: {{ crescimento[-1].acumulado }} {{ t('pessoas') }}</span>
+        <span>{{ crescimento[-1].ano }}</span>
+      </div>
+      {% else %}<p class="rh-vazio">{{ t('Sem datas de admissão para traçar a curva.') }}</p>{% endif %}
+    </div>
+  </div>
+
+  {# --- Gráficos de barras (clicáveis) ----------------------------------- #}
+  <div class="rh-trio">
+    <div class="rh-card">
+      <h2>{{ t('Tempo de casa') }}</h2>
+      {{ barras(dist.tempo_casa, '', 'tempo_casa') }}
+    </div>
+    <div class="rh-card">
+      <h2>{{ t('Pirâmide por nível') }}</h2>
+      {{ barras(dist.nivel, '', 'nivel') }}
+    </div>
+    <div class="rh-card">
+      <h2>{{ t('Admissões por ano') }}</h2>
+      {{ barras(dist.admissao_ano, 'ambar', 'admissao_ano') }}
+    </div>
+  </div>
+  <div class="rh-card rh-solo">
+    <h2>{{ t('Headcount por departamento') }} <small>({{ t('top 12') }})</small></h2>
+    {{ barras(dist.departamento, '', 'departamento') }}
+  </div>
+  {% if dist.vertical %}
+  <div class="rh-card rh-solo">
+    <h2>{{ t('Headcount por vertical') }} <small>({{ t('top 12') }})</small></h2>
+    {{ barras(dist.vertical, '', 'vertical') }}
+  </div>
+  {% endif %}
+
+  {# --- Movimentação: contratações, desligamentos, inativos -------------- #}
+  <div class="rh-duo">
+    <div class="rh-card">
+      <h2 class="rh-h2-clic" role="button" tabindex="0"
+          hx-get="/painel-rh/lista?dim=contratacoes_mes" hx-target="#unidadeFicha" hx-swap="innerHTML">
+        {{ t('Últimas contratações') }}
+        {% if n_contratacoes_mes %}<span class="rh-selo">{{ n_contratacoes_mes }} {{ t('no mês') }}</span>{% endif %}</h2>
+      <div class="rh-lista">
+        {% for c in contratacoes %}
+        <div class="rh-item{{ ' novo' if c.no_mes }}" role="button" tabindex="0"
+             hx-get="/unidades/{{ c.id }}/ficha" hx-target="#unidadeFicha" hx-swap="innerHTML">
+          <span class="rh-item-nome">{{ c.nome }}</span>
+          <span class="rh-item-meta">{{ c.cargo }} · {{ c.area }} · {{ c.vinculo }}</span>
+          <span class="rh-item-data">{{ c.data }}{% if c.no_mes %} <b>·{{ t('novo') }}</b>{% endif %}</span>
+        </div>
+        {% else %}<p class="rh-vazio">{{ t('Sem admissões registradas.') }}</p>{% endfor %}
+      </div>
+    </div>
+
+    <div class="rh-card">
+      <h2 class="rh-h2-clic" role="button" tabindex="0"
+          hx-get="/painel-rh/lista?dim=desligamentos" hx-target="#unidadeFicha" hx-swap="innerHTML">
+        {{ t('Desligamentos (RH)') }}
+        {% if desligamentos %}<span class="rh-selo cinza">{{ desligamentos|length }}</span>{% endif %}</h2>
+      <div class="rh-lista">
+        {% for d in desligamentos %}
+        <div class="rh-item" role="button" tabindex="0"
+             hx-get="/unidades/{{ d.id }}/ficha" hx-target="#unidadeFicha" hx-swap="innerHTML">
+          <span class="rh-item-nome">{{ d.nome }}</span>
+          <span class="rh-item-meta">{{ d.cargo }}{% if d.area %} · {{ d.area }}{% endif %} · {{ d.vinculo }}</span>
+          <span class="rh-item-data"><b class="rh-nunca">{{ t('inativo') }}</b></span>
+        </div>
+        {% else %}<p class="rh-vazio">{{ t('Ninguém desligado no recorte.') }}</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="rh-card rh-solo">
+    <h2>{{ t('Usuários inativos') }}
+        <span class="rh-selo cinza">{{ mov.n_inativos }} {{ t('inativos') }} · {{ mov.n_nunca }} {{ t('nunca acessaram') }}</span></h2>
+      <div class="rh-lista rh-lista-cols">
+        {% for iv in mov.inativos %}
+        <div class="rh-item" role="button" tabindex="0"
+             hx-get="/unidades/{{ iv.id }}/ficha" hx-target="#unidadeFicha" hx-swap="innerHTML">
+          <span class="rh-item-nome">{{ iv.nome }}</span>
+          <span class="rh-item-meta">{{ iv.cargo }} · {{ iv.area }}</span>
+          <span class="rh-item-data">
+            {% if iv.nunca %}<b class="rh-nunca">{{ t('nunca acessou') }}</b>
+            {% else %}{{ t('há {d} dias', d=iv.dias) }} · {{ iv.ultimo_acesso }}{% endif %}</span>
+        </div>
+        {% else %}<p class="rh-vazio">{{ t('Todo mundo com acesso recente.') }}</p>{% endfor %}
+      </div>
+    </div>
+</div>

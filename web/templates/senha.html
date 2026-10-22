@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="{{ idioma }}" data-tema="escuro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>{{ t('Trocar senha') }} · GPlanSiS|Peoples</title>
+<link rel="icon" href="/marca/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/marca/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/marca/icone-180.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#2D3336">
+<meta name="apple-mobile-web-app-title" content="Peoples">
+<style>
+:root{
+  --laranja:#EB6A20; --grafite:#2D3336; --tinta:#F1F3F3; --tinta-2:#B6BCBE;
+  --nevoa:#7D8286; --painel:#1F2426; --linha:#3D4548; --campo:#262C2F;
+  --fonte:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:var(--fonte);color:var(--tinta);background:#0E1112;
+     font-size:14px;line-height:1.45}
+.fundo{position:fixed;inset:0;background:url(/marca/fundo-organograma.jpg) center/cover;
+       opacity:.55}
+.entrada{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+         padding:24px;z-index:2}
+.cartao{width:min(430px,100%);background:rgba(31,36,38,.94);border:1px solid var(--linha);
+        border-top:3px solid var(--laranja);border-radius:10px;padding:28px 32px 24px;
+        box-shadow:0 26px 70px rgba(0,0,0,.66);backdrop-filter:blur(9px)}
+.logo{display:block;width:min(158px,62%);height:auto;margin:2px auto 14px}
+h1{margin:0 0 6px;font-size:17px;text-align:center}
+.dica{margin:0 0 20px;text-align:center;font-size:12.5px;color:var(--tinta-2)}
+.aviso{margin:0 0 18px;padding:9px 12px;border-radius:4px;font-size:12.5px;
+       background:#3A2F1A;color:#F6A709;border-left:3px solid #F6A709}
+label{display:block;margin:12px 0 5px;font-size:11px;font-weight:600;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--nevoa)}
+input{width:100%;background:var(--campo);color:var(--tinta);border:1px solid var(--linha);
+      border-radius:4px;font:inherit;font-size:14px;padding:10px 12px}
+input:focus{outline:2px solid var(--laranja);outline-offset:1px;border-color:var(--laranja)}
+.bt{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;border:0;
+    border-radius:5px;font:inherit;font-size:14px;font-weight:700;padding:12px 16px;
+    cursor:pointer;margin-top:18px;background:var(--laranja);color:#2D3336}
+.bt:hover{filter:brightness(1.07)}
+.erro{margin:14px 0 0;padding:9px 12px;border-radius:4px;font-size:12.5px;
+      background:#3A2A20;color:#F0854A;border-left:3px solid var(--laranja)}
+.ok{margin:14px 0 0;padding:9px 12px;border-radius:4px;font-size:12.5px;
+    background:#1F3326;color:#8FD19E;border-left:3px solid #4CAF50}
+.volta{display:block;margin:18px 0 0;text-align:center;font-size:12.5px;color:var(--tinta-2)}
+.volta a{color:var(--tinta)}
+.rodape{position:fixed;left:0;right:0;bottom:14px;text-align:center;z-index:2;
+        font-size:11px;color:rgba(255,255,255,.42);letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div class="fundo" aria-hidden="true"></div>
+<main class="entrada">
+  <div class="cartao">
+    <img class="logo" src="/marca/peoples-branco.png" alt="GPlanSiS|Peoples">
+    <h1>{{ t('Trocar senha') }}</h1>
+    <p class="dica">{{ email }}</p>
+    {% if obrigatoria %}
+    <p class="aviso" role="status">{{ t('Defina uma nova senha para continuar.') }}</p>
+    {% endif %}
+    <form action="/senha" method="post" autocomplete="off">
+      <label for="atual">{{ t('Senha atual') }}</label>
+      <input id="atual" name="atual" type="password" autocomplete="current-password" required autofocus>
+      <label for="nova">{{ t('Nova senha') }}</label>
+      <input id="nova" name="nova" type="password" autocomplete="new-password" required minlength="{{ minimo }}">
+      <label for="repetir">{{ t('Repita a senha') }}</label>
+      <input id="repetir" name="repetir" type="password" autocomplete="new-password" required minlength="{{ minimo }}">
+      <button class="bt" type="submit">{{ t('Salvar nova senha') }}</button>
+    </form>
+    {% if erro %}<p class="erro" role="alert">{{ erro }}</p>{% endif %}
+    {% if ok %}<p class="ok" role="status">{{ ok }}</p>{% endif %}
+    {% if not obrigatoria %}<p class="volta"><a href="/">{{ t('Voltar ao sistema') }}</a></p>{% endif %}
+  </div>
+</main>
+<p class="rodape">{% if cfg.tenant and cfg.tenant != 'GPlanSiS|Peoples' %}{{ cfg.tenant }} · {% endif %}GPlanSiS|Peoples</p>
+</body>
+</html>
