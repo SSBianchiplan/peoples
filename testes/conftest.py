@@ -71,8 +71,6 @@ def estado_isolado(tmp_path_factory):
     # cria e apaga contas, e o `dados/usuarios.json` de quem usa o sistema não
     # pode ser tocado por isso.
     os.environ["ORG_USUARIOS_ARQUIVO"] = str(tmp_path_factory.mktemp("usuarios") / "usuarios.json")
-    # O gasto da MarIA (freio de custo) também: a suíte não soma no `dados/`.
-    os.environ["MARIA_USO_ARQUIVO"] = str(tmp_path_factory.mktemp("maria") / "maria-uso.json")
     yield
 
 

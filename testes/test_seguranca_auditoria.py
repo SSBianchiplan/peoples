@@ -3,7 +3,7 @@
 A5  /banco/carga.sql e /banco/schema.sql só para o superadmin.
 A6  aviso do servidor escapado; `th` escapa parâmetros; CSP com script-src sem
     'unsafe-inline'; páginas sem manipulador inline; lake só com token ou Admin.
-M5  freio de custo da MarIA: cota mensal e ritmo por pessoa.
+M5  (cota da MarIA) fica na entrega transversal — ver DEPLOY.md.
 M21 revogação de sessão por versão; Origin em POST; padrões fechados (acessos
     vazios, primeiro acesso, superadmin sem e-mail no código).
 Extra: /api/v1/configuracao sem os registros de RH; módulo oculto também nas
@@ -16,7 +16,7 @@ import re
 import pytest
 from fastapi.testclient import TestClient
 
-from orga import acesso, main, maria, usuarios
+from orga import acesso, main, usuarios
 from orga import configuracao as cfgmod
 
 SENHA = "senha-de-teste-123"
@@ -273,64 +273,3 @@ def test_helper_global_exige_admin(monkeypatch):
     antes = main.ESTADO.config.helper
     r = TestClient(main.app).post("/config/helper", data={"ligado": "0" if antes else "1"})
     assert r.status_code == 403 and main.ESTADO.config.helper == antes
-
-
-# ------------------------------------------------------------------- M5
-@pytest.fixture()
-def maria_falsa(monkeypatch, tmp_path):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "teste")
-    monkeypatch.setenv("MARIA_USO_ARQUIVO", str(tmp_path / "uso.json"))
-    maria._RECENTES.clear()
-    maria._EM_CURSO.clear()
-    chamadas = []
-
-    def falso(texto, ctx, idioma, capacidade, modelo, max_tokens, tempo):
-        chamadas.append(max_tokens)
-        return {"ok": True, "texto": "ok", "modelo": "m", "entrada": 1,
-                "saida": 1, "custo_usd": 0.6}
-    monkeypatch.setattr(maria, "_chamar", falso)
-    return chamadas
-
-
-def test_cota_mensal_por_pessoa(maria_falsa, monkeypatch):
-    monkeypatch.setenv("MARIA_COTA_USD_MES", "1.0")
-    assert maria.perguntar("oi", {}, quem="a@x")["ok"]
-    assert maria.perguntar("oi", {}, quem="a@x")["ok"]          # 1,20 gasto
-    r = maria.perguntar("oi", {}, quem="a@x")
-    assert not r["ok"] and r["motivo"] == "cota"
-    assert maria.perguntar("oi", {}, quem="b@x")["ok"]          # outra pessoa
-
-
-def test_teto_global(maria_falsa, monkeypatch):
-    monkeypatch.setenv("MARIA_COTA_GLOBAL_USD_MES", "1.0")
-    maria.perguntar("oi", {}, quem="a@x")
-    maria.perguntar("oi", {}, quem="b@x")
-    assert maria.perguntar("oi", {}, quem="c@x")["motivo"] == "cota"
-
-
-def test_ritmo_por_minuto(maria_falsa, monkeypatch):
-    monkeypatch.setattr(maria, "POR_MINUTO", 2)
-    monkeypatch.setattr(maria, "custo", lambda *a: 0.0)
-    maria.perguntar("oi", {}, quem="a@x")
-    maria.perguntar("oi", {}, quem="a@x")
-    assert maria.perguntar("oi", {}, quem="a@x")["motivo"] == "ritmo"
-
-
-def test_simultaneas(maria_falsa):
-    for _ in range(maria.SIMULTANEAS):
-        assert maria.reservar("a@x") is None
-    assert maria.reservar("a@x")["motivo"] == "ritmo"
-    maria.liberar("a@x")
-    assert maria.reservar("a@x") is None
-
-
-def test_max_tokens_tem_teto(maria_falsa):
-    maria.perguntar("oi", {}, quem="a@x", max_tokens=64000)
-    assert maria_falsa[-1] <= maria.MAX_TOKENS_TETO
-
-
-def test_rota_da_maria_passa_pelo_freio(maria_falsa, monkeypatch):
-    monkeypatch.setenv("MARIA_COTA_USD_MES", "0")
-    r = TestClient(main.app).post("/maria/perguntar", data={"pergunta": "oi"})
-    assert r.status_code == 200 and "Cota mensal" in r.text
-    assert maria_falsa == []

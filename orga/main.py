@@ -4311,32 +4311,20 @@ def contexto_maria(ultima: dict | None = None, agente: dict | None = None,
     }
 
 
-def quem_chama(req: Request) -> str:
-    """A chave do freio de custo da MarIA: o e-mail da sessão (ou o nó)."""
-    carga = sessao_atual(req) or {}
-    return (carga.get("sub") or acesso_vigente().usuario_id or "anonimo").lower()
-
-
 @app.post("/maria/perguntar", response_class=HTMLResponse)
 async def maria_perguntar(req: Request):
     """Uma pergunta à MarIA. Toda resposta vira registro no histórico."""
     form = await req.form()
     capacidade = str(form.get("capacidade", mariamod.DESCREVER))
-    pergunta = str(form.get("pergunta", ""))[:mariamod.PERGUNTA_MAX]
-    # O modelo do formulário só vale para Admin e só se for um dos conhecidos:
-    # escolher o modelo mais caro é escolher a fatura.
-    modelo = str(form.get("modelo", ""))
-    if negado(NIVEL_ADMIN) or modelo not in mariamod.modelos():
-        modelo = ""
-    modelo = modelo or ESTADO.config.maria_modelo
+    pergunta = str(form.get("pergunta", ""))
+    modelo = str(form.get("modelo", "")) or ESTADO.config.maria_modelo
     recorte = str(form.get("recorte", ""))
     ids, rotulo = escopo_visivel(recorte)
 
     r = mariamod.perguntar(
         pergunta,
         mariamod.contexto(ESTADO.unidades, mapa_cc(), ESTADO.config, ids),
-        idioma=ESTADO.config.idioma, capacidade=capacidade, modelo=modelo,
-        quem=quem_chama(req))
+        idioma=ESTADO.config.idioma, capacidade=capacidade, modelo=modelo)
 
     registro = mariamod.assistencia(pergunta, r, usuario_atual(), capacidade,
                                     ESTADO.config.idioma, rotulo)
@@ -4580,7 +4568,7 @@ async def chat_perguntar(req: Request):
     não lembra do que foi dito não é conversa.
     """
     form = await req.form()
-    pergunta = str(form.get("pergunta", "")).strip()[:mariamod.PERGUNTA_MAX]
+    pergunta = str(form.get("pergunta", "")).strip()
     recorte = str(form.get("recorte", ""))
     # A capacidade vem da gaveta e passa pelo filtro: ela muda o prompt, e um
     # valor forjado no formulário não pode virar autoridade que a tela não deu.
@@ -4602,7 +4590,7 @@ async def chat_perguntar(req: Request):
     r = mariamod.perguntar(
         entrada, mariamod.contexto(ESTADO.unidades, mapa_cc(), ESTADO.config, ids),
         idioma=ESTADO.config.idioma, capacidade=capacidade,
-        modelo=ESTADO.config.maria_modelo, quem=quem_chama(req))
+        modelo=ESTADO.config.maria_modelo)
 
     registro = mariamod.assistencia(pergunta, r, usuario_atual(),
                                     capacidade, ESTADO.config.idioma,
@@ -4648,8 +4636,7 @@ async def maria_agente(req: Request):
         pedido, mariamod.contexto(ESTADO.unidades, mapa_cc(), ESTADO.config, ids),
         niveis={n["codigo"] for n in ESTADO.config.niveis if n.get("ativo", True)},
         nomes={u.nome for u in us},
-        idioma=ESTADO.config.idioma, modelo=ESTADO.config.maria_modelo,
-        quem=quem_chama(req))
+        idioma=ESTADO.config.idioma, modelo=ESTADO.config.maria_modelo)
 
     ESTADO.assistencias.append(mariamod.assistencia(
         pedido, r, usuario_atual(), mariamod.PLANEJAR, ESTADO.config.idioma,
